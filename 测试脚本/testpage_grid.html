@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>复刻知乎专栏页两栏布局 · grid 变体（单独验证用）</title>
+<style>
+  /* grid 变体单独成页，保证落在 393px 视口可见范围内，便于截图取证 */
+  body { margin: 0; font: 15px/1.7 system-ui, sans-serif; }
+  .css-hdr001 { background: #066ac9; color: #fff; padding: 12px 16px; min-width: 1175px; }
+
+  /* ---- grid 变体：固定侧栏列宽 ---- */
+  .css-wrap02 { display: grid; grid-template-columns: 1fr 296px; gap: 16px;
+                max-width: 1000px; margin: 16px auto; padding: 16px; }
+  .css-main02 { padding: 8px; min-width: 0; }
+  .css-side02 { padding: 8px; background: #f6f6f6; }
+
+  .css-card { border: 1px solid #eee; padding: 12px; margin-bottom: 12px; }
+  h1 { font-size: 22px; }
+  .RichText p { margin: 0 0 12px; }
+</style>
+</head>
+<body>
+
+<header class="css-hdr001">知乎专栏 · 顶栏（模拟 1175px 硬编码 min-width）</header>
+
+<div class="css-wrap02">
+  <div class="css-main02">
+    <h1>grid 布局变体：右侧栏列宽固定 296px</h1>
+    <div class="RichText">
+      <p>这个变体使用 CSS Grid 实现两栏布局，右侧栏列宽固定为 296px。在这种情况下，即使主列设置了 min-width: 0，grid 的 1fr 仍然会被压缩到很窄，因为列宽是硬性分配的。</p>
+      <p>继续填充正文内容，让主列的文本量明显大于侧栏。适配脚本需要能够识别这种 grid 两栏布局，并把 grid-template-columns 改成单列，让侧栏落到正文下方。</p>
+      <p>第三段文字。保证主列的 innerText 长度超过阈值，这样启发式判断才能稳定工作。同时也验证脚本不会误判：侧栏文本量小，主列文本量大。</p>
+    </div>
+  </div>
+  <aside class="css-side02">
+    <div class="css-card"><b>关于作者</b><br>另一位创作者<br>关注者 6,789</div>
+    <div class="css-card"><b>大家都在搜</b><br>话题四<br>话题五</div>
+  </aside>
+</div>
+
+</body>
+</html>

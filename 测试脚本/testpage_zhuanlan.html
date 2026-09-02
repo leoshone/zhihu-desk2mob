@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>复刻知乎专栏页两栏布局（测试用）</title>
+<style>
+  /* 用 emotion 风格哈希类名，不依赖语义 class，验证启发式识别 */
+  body { margin: 0; font: 15px/1.7 system-ui, sans-serif; }
+  .css-hdr001 { background: #066ac9; color: #fff; padding: 12px 16px; min-width: 1175px; }
+
+  /* ---- 变体 A：flex，侧栏 flex-shrink:0 不收缩 → 主列被挤窄 ---- */
+  .css-wrap01 { display: flex; max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .css-main01 { flex: 0 1 694px; min-width: 0; padding: 8px; }
+  .css-side01 { flex: 0 0 296px; padding: 8px; background: #f6f6f6; }
+
+  /* ---- 变体 B：grid，固定侧栏列宽 ---- */
+  .css-wrap02 { display: grid; grid-template-columns: 1fr 296px; gap: 16px;
+                max-width: 1000px; margin: 24px auto; padding: 16px; }
+  .css-main02 { padding: 8px; min-width: 0; }
+  .css-side02 { padding: 8px; background: #f6f6f6; }
+
+  .css-card { border: 1px solid #eee; padding: 12px; margin-bottom: 12px; }
+  h1 { font-size: 22px; }
+  .RichText p { margin: 0 0 12px; }
+</style>
+</head>
+<body>
+
+<header class="css-hdr001">知乎专栏 · 顶栏（模拟 1175px 硬编码 min-width）</header>
+
+<!-- 变体 A -->
+<div class="css-wrap01">
+  <div class="css-main01">
+    <h1>这是一篇专栏文章的标题，用来占据主列位置</h1>
+    <div class="RichText">
+      <p>这是正文第一段。在真实场景下，主列会被右侧栏挤压成很窄的一条，用户看到的正是这个问题。这里放足够的文字，让主列的文本量明显大于侧栏，以便启发式算法能够正确识别哪一边是主内容。</p>
+      <p>这是正文第二段。专栏文章的正文通常很长，包含大量的段落、图片和代码块。为了模拟真实情况，这里继续填充文字内容，确保主列的 innerText 长度超过 200 个字符这一阈值，同时也远多于右侧栏的文本量。</p>
+      <p>这是正文第三段。再补充一些内容，让主列的体量足够明显。知乎的专栏页面在桌面版下采用两栏布局，左侧是文章主体，右侧是作者卡片、推荐阅读、热门搜索等辅助信息。在手机上如果直接套用桌面版的布局比例，正文就会被挤成一条窄缝。</p>
+      <p>第四段。继续填充，保证文本量。适配脚本应该把主列撑满整个手机宽度，并把右侧栏移动到正文下方，这样阅读体验才正常。</p>
+    </div>
+  </div>
+  <aside class="css-side01">
+    <div class="css-card"><b>关于作者</b><br>某科技领域创作者<br>关注者 12,345</div>
+    <div class="css-card"><b>大家都在搜</b><br>话题一<br>话题二<br>话题三</div>
+  </aside>
+</div>
+
+<!-- 变体 B -->
+<div class="css-wrap02">
+  <div class="css-main02">
+    <h1>第二篇专栏文章（grid 布局变体）</h1>
+    <div class="RichText">
+      <p>这个变体使用 CSS Grid 实现两栏布局，右侧栏列宽固定为 296px。在这种情况下，即使主列设置了 min-width: 0，grid 的 1fr 仍然会被压缩到很窄，因为列宽是硬性分配的。</p>
+      <p>继续填充正文内容，让主列的文本量明显大于侧栏。适配脚本需要能够识别这种 grid 两栏布局，并把 grid-template-columns 改成单列，让侧栏落到正文下方。</p>
+      <p>第三段文字。保证主列的 innerText 长度超过阈值，这样启发式判断才能稳定工作。同时也验证脚本不会误判：侧栏文本量小，主列文本量大。</p>
+    </div>
+  </div>
+  <aside class="css-side02">
+    <div class="css-card"><b>关于作者</b><br>另一位创作者<br>关注者 6,789</div>
+    <div class="css-card"><b>大家都在搜</b><br>话题四<br>话题五</div>
+  </aside>
+</div>
+
+</body>
+</html>

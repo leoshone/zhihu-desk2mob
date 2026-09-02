@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.1.0
+// @version      0.2.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -47,6 +47,7 @@
     debug:        true,   // 右上角状态角标（点一下可临时关闭适配，再点恢复）
     fitHeader:    true,   // 顶栏自适应裁剪（超过宽度的导航项自动收起）
     hideSidebar:  true,   // 隐藏右侧栏、悬浮按钮、App 下载条
+    sideColumn:   'bottom', // 右侧栏处理：'bottom' 移到底部 / 'hide' 直接隐藏 / 'keep' 不动
     fixVUnits:    true,   // 修正 vh/vw 在 zoom 下的失真
     bodyFont:     16,     // 正文字号（px）；设 0 表示不改
     maxScan:      4500,   // 单次宽度修复最多扫描的元素数
@@ -206,14 +207,40 @@
       '.SearchBar,.SearchBar-tool{min-width:0!important;max-width:100%!important;flex:1 1 80px!important}',
       '.SearchBar > a{display:none!important}',
 
-      /* ---- 隐藏侧栏 / 悬浮件 / 推广 ---- */
+      /* ---- 侧栏 / 悬浮件 / 推广 ----
+         关键：光把侧栏 display:none 是不够的。如果容器是 grid，列宽是硬分配的，
+         隐藏内容并不会让列消失 —— 主列照样被压成一条缝（实测只剩 49px）。
+         所以必须 simultaneously 把容器改成单列 / 允许换行。 */
       CONFIG.hideSidebar ? [
-        '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
-        '.GlobalSideBar,.Profile-sideColumn,.CornerButtons,.QuestionButtonGroup,',
-        '.AppBanner,.MobileAppBanner,[class*="BackToTop"],[class*="DownloadApp"],',
-        '[class*="MobileAppHeader"],.Toast,.Toast-wrapper,',
-        'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
-        '[class*="QRCode"],[class*="QrCode"],[class*="Adblock"]{display:none!important}'
+        /* 推广、悬浮件：始终隐藏，不影响布局结构 */
+        '.AppBanner,.MobileAppBanner,[class*="DownloadApp"],[class*="MobileAppHeader"],',
+        '[class*="QRCode"],[class*="QrCode"],[class*="BackToTop"],[class*="Adblock"],',
+        '.Toast,.Toast-wrapper,.CornerButtons,.QuestionButtonGroup{display:none!important}',
+        /* 侧栏本身：按 sideColumn 模式处理 */
+        CONFIG.sideColumn === 'hide'
+          ? [
+            '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
+            '.GlobalSideBar,.Profile-sideColumn,.ColumnPageSidebar,.Post-Row-Content-right,',
+            '.AuthorCard,[class*="AuthorCard"],[class*="HotList"],',
+            'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
+            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"],',
+            '[class*="Recommend"],[class*="Related"]{display:none!important}'
+          ].join('')
+          : [
+            '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
+            '.GlobalSideBar,.Profile-sideColumn,.ColumnPageSidebar,.Post-Row-Content-right,',
+            '.AuthorCard,[class*="AuthorCard"],[class*="HotList"],',
+            'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
+            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"],',
+            '[class*="Recommend"],[class*="Related"]{',
+              'width:100%!important;max-width:100%!important;min-width:0!important;',
+              'flex:1 1 100%!important;margin-top:16px!important;box-sizing:border-box!important}'
+          ].join(''),
+        /* 容器兜底：含侧栏的容器强制单列 / 允许换行（:has 需 Chrome 105+） */
+        'div:has(> aside),div:has(> [class*="SideColumn"]),div:has(> [class*="SideBar"]),',
+        'div:has(> [class*="Sidebar"]),div:has(> [class*="Post-Side"]),',
+        'main:has(> aside),section:has(> aside){',
+          'grid-template-columns:1fr!important;flex-wrap:wrap!important}',
       ].join('') : '',
       /* 顶栏里的「切换模式 / 划线」等次要项 */
       'header.AppHeader .Popover{display:none!important}',
@@ -258,6 +285,7 @@
 
       /* ---- 内边距 ---- */
       '.Question-mainColumn,.Topstory-mainColumn,.Post-NormalMain,.QuestionHeader-content,',
+      '.Post-Main,[class*="Post-Main"],.Post-RichTextContainer,.ColumnPage-main,',
       '.ExploreHomePage-ContentSection{padding-left:' + P + 'px!important;padding-right:' + P + 'px!important}',
       'header.AppHeader > div{padding-left:' + P + 'px!important;padding-right:' + P + 'px!important}',
 
@@ -441,6 +469,100 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // 5.5 两栏布局处理（专栏页等）
+  //     知乎专栏页是「主列 + 右侧栏」两栏，窄屏下侧栏会把正文挤成一条。
+  //     这里不依赖类名（知乎改版就失效），而是按「同一行、左主右辅」的
+  //     结构识别：左边那个文本量大的当主列，右边那个当侧栏。
+  //     注意按 left 位置而非宽度判断 —— 正文被挤窄时它反而更窄。
+  // ═══════════════════════════════════════════════════════════════
+  function fitColumns() {
+    var mode = CONFIG.sideColumn;
+    if (mode === 'keep' || !document.body || !CONFIG.hideSidebar) return 0;
+    var base = S.BASE;
+    var all = document.body.querySelectorAll('*');
+    var n = Math.min(all.length, CONFIG.maxScan);
+    var done = 0;
+
+    for (var i = 0; i < n && done < 6; i++) {
+      var box = all[i];
+      var bw = box.offsetWidth;
+      if (bw < base * 0.6) continue;          // 只看够宽的容器
+      var kids = box.children;
+      if (kids.length < 2 || kids.length > 8) continue;
+
+      // 收集块级、可见、有宽度的子元素
+      var row = [];
+      for (var k = 0; k < kids.length; k++) {
+        var el = kids[k];
+        var cs;
+        try { cs = getComputedStyle(el); } catch (e) { continue; }
+        if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
+        if (cs.display === 'inline' || cs.display === 'inline-block') continue;
+        if (cs.position === 'fixed' || cs.position === 'absolute') continue;
+        var w = el.offsetWidth;
+        if (w < 60) continue;
+        var r = el.getBoundingClientRect();
+        row.push({ el: el, w: w, left: r.left / S.Z, top: r.top / S.Z,
+                   txt: (el.innerText || '').length, cs: cs });
+      }
+      if (row.length < 2) continue;
+
+      // 取 top 相近（同一行）里元素最多的那组
+      var best = [], grp;
+      for (var a = 0; a < row.length; a++) {
+        grp = [row[a]];
+        for (var b = 0; b < row.length; b++) {
+          if (b === a) continue;
+          if (Math.abs(row[b].top - row[a].top) <= 40) grp.push(row[b]);
+        }
+        if (grp.length > best.length) best = grp;
+      }
+      if (best.length < 2) continue;
+
+      best.sort(function (x, y) { return x.left - y.left; });
+      var main = best[0], side = best[best.length - 1];
+      if (main.el === side.el) continue;
+
+      // 侧栏得占够比例才处理（小挂件不是侧栏）
+      if (side.w < bw * 0.2) continue;
+      // 主列文本量应多于侧栏，避免把辅助栏误判成主列
+      if (main.txt < side.txt) continue;
+      // 主列至少得有点内容
+      if (main.txt < 200) continue;
+
+      // 主列撑满
+      main.el.style.setProperty('flex', '1 1 auto', 'important');
+      main.el.style.setProperty('width', '100%', 'important');
+      main.el.style.setProperty('min-width', '0', 'important');
+      main.el.style.setProperty('max-width', '100%', 'important');
+      main.el.style.setProperty('box-sizing', 'border-box', 'important');
+
+      if (mode === 'hide') {
+        side.el.style.setProperty('display', 'none', 'important');
+      } else {
+        // 移到底部：父容器允许换行，侧栏独占一整行
+        var bcs = getComputedStyle(box);
+        if (bcs.display === 'grid' || bcs.display === 'inline-grid') {
+          box.style.setProperty('grid-template-columns', '1fr', 'important');
+        } else {
+          box.style.setProperty('display', 'flex', 'important');
+          box.style.setProperty('flex-wrap', 'wrap', 'important');
+        }
+        side.el.style.setProperty('flex', '1 1 100%', 'important');
+        side.el.style.setProperty('width', '100%', 'important');
+        side.el.style.setProperty('min-width', '0', 'important');
+        side.el.style.setProperty('max-width', '100%', 'important');
+        side.el.style.setProperty('margin-top', '16px', 'important');
+        side.el.style.setProperty('box-sizing', 'border-box', 'important');
+      }
+      done++;
+    }
+    if (done) log('两栏布局处理 ' + done + ' 处（右侧栏 → ' +
+                  (mode === 'hide' ? '隐藏' : '底部') + '）');
+    return done;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // 6. vh / vw 单位修正
   //    zoom 之后 100vh = layout viewport 高度（约 2130px），
   //    在 393 的布局里等于 5 个屏幕高，弹窗会直接顶飞。
@@ -537,6 +659,7 @@
     a = safe('fixWidths', function () { return fixWidths(); }) || 0;
     b = safe('fixFixedLayers', fixFixedLayers) || 0;
     safe('fitHeader', fitHeader);
+    safe('fitColumns', fitColumns);
     safe('wrapTables', wrapTables);
     var t1 = (performance && performance.now) ? performance.now() : Date.now();
 
@@ -639,7 +762,7 @@
               if (list[i] === document.body || list[i].querySelectorAll('*').length > 120) { big = true; break; }
               safe('sub', function () { fixWidths(list[i], 2); });
             }
-            if (big) { safe('full', function () { markScrollables(); fixWidths(null, 3); fitHeader(); }); }
+            if (big) { safe('full', function () { markScrollables(); fixWidths(null, 3); fitHeader(); fitColumns(); }); }
             safe('fixed', fixFixedLayers);
             safe('tables', wrapTables);
             safe('badge', drawBadge);

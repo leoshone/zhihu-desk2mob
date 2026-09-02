@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>复刻知乎专栏页 · 宽度崩塌（用诊断数据里的真实类名与层级）</title>
+<style>
+  body { margin: 0; font: 15px/1.7 system-ui, sans-serif; }
+
+  /* 顶栏：知乎硬编码 min-width */
+  .AppHeader { background: #066ac9; color: #fff; padding: 12px 16px; min-width: 1175px; }
+
+  /* 按诊断数据里的真实层级复刻：
+     .Post-content > .css-kjzwqj > .css-c0fani > .css-yq5nsh > (article.Post-Main + 评论区)
+     每层的 flex / min-width / flex-shrink 按知乎桌面版的常见写法模拟 */
+  .Post-content { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+
+  .css-kjzwqj { display: flex; min-width: 694px; }
+
+  .css-c0fani { display: flex; flex-shrink: 0; min-width: 694px; flex: 1 1 auto; }
+
+  .css-yq5nsh { display: block; flex: 1 1 auto; min-width: 0; }
+
+  article.Post-Main {
+    flex-shrink: 0;
+    min-width: 694px;
+    flex: 1 1 auto;
+    padding: 8px;
+  }
+
+  .Comments-container { padding: 8px; }
+
+  h1 { font-size: 22px; }
+  .RichText p { margin: 0 0 12px; }
+</style>
+</head>
+<body>
+
+<header class="AppHeader">知乎专栏 · 顶栏（min-width: 1175px）</header>
+
+<div class="Post-content">
+  <div class="css-kjzwqj">
+    <div class="css-c0fani">
+      <div class="css-yq5nsh">
+
+        <article class="Post-Main Post-NormalMain">
+          <h1>OpenCode 避雷指南与正确打开方式</h1>
+          <div class="RichText">
+            <p>这是正文第一段。在真实场景下，这一层如果宽度被压塌，正文就会显示成很窄的一条。这里放足够的文字，让主列的文本量足够大，以便模拟真实的专栏文章长度。</p>
+            <p>这是正文第二段。专栏文章的正文通常很长，包含大量的段落、图片和代码块。为了模拟真实情况，这里继续填充文字内容，让元素的文本量接近真实页面的量级，这样诊断脚本才能正确地把这一层识别为正文。</p>
+            <p>这是正文第三段。再补充一些内容。知乎的专栏页面在桌面版下正文区域有硬编码的 min-width，配合 flex-shrink: 0，在窄屏下如果不能正确处理，就会出现宽度逐层塌缩的现象——每一层都比上一层更窄，最后正文只剩几十像素宽。</p>
+            <p>第四段。继续填充，保证文本量足够大，让 article 元素成为页面上文本量最大的语义元素之一，从而被诊断脚本准确地选作正文锚点。</p>
+          </div>
+        </article>
+
+        <div class="Comments-container">
+          <p>评论区占位。这里有一些评论内容，用来模拟真实页面里评论区也是一个大文本块的情况，避免诊断脚本把评论区误当成正文。</p>
+          <p>第二条评论。评论内容通常比正文短很多，但也足以超过诊断脚本的阈值，所以锚点选择必须优先看语义类名而不是单纯的文本量。</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

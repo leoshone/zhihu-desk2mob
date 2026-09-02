@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.2.1
+// @version      0.3.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.2.1';
+  var VER = '0.3.0';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -49,6 +49,7 @@
     fitHeader:    true,   // 顶栏自适应裁剪（超过宽度的导航项自动收起）
     hideSidebar:  true,   // 隐藏右侧栏、悬浮按钮、App 下载条
     sideColumn:   'bottom', // 右侧栏处理：'bottom' 移到底部 / 'hide' 直接隐藏 / 'keep' 不动
+    fixFlexRows:  true,   // 修「多列 flex 把正文压成一条」：容器换行，内容块各占一行
     fixVUnits:    true,   // 修正 vh/vw 在 zoom 下的失真
     bodyFont:     16,     // 正文字号（px）；设 0 表示不改
     maxScan:      4500,   // 单次宽度修复最多扫描的元素数
@@ -645,6 +646,86 @@
   var applied = 0;
 
   // 任何一步出错都不能让整条适配链断掉
+  // ═══════════════════════════════════════════════════════════════
+  // 5.6 flex / grid 行崩塌修复
+  //
+  //     场景（真机专栏页实测）：flex 容器里一排 item 都有硬编码宽度。
+  //     fixWidths 只处理「超宽」的那个（把它的 min-width 清零、允许收缩），
+  //     其余兄弟的 min-width 原样保留。于是收缩时压力全落在唯一被解锁的
+  //     那个 item 身上 —— 正文从 694px 被压到 16px，正文区只剩 24px。
+  //
+  //     判据：容器里存在「内容很多（txt>=200）但被压得很窄（< 容器 30%）」
+  //     的 item。这个组合只会出现在被压塌的内容块上，顶栏图标、导航条
+  //     因为文本量不够不会被误伤。
+  //
+  //     处理：容器改成换行，内容块各占一整行。手机上本就该纵向堆叠，
+  //     横向硬挤 7 列没有任何意义。
+  //
+  //     必须放在 fixWidths 之后 —— 崩塌是它造成的，得先发生才能检测到。
+  // ═══════════════════════════════════════════════════════════════
+  function fixFlexRows() {
+    if (!CONFIG.fixFlexRows || !document.body) return 0;
+    var base = S.BASE;
+    var nodes = document.body.querySelectorAll('*');
+    var n = Math.min(nodes.length, CONFIG.maxScan);
+    var done = 0;
+
+    for (var i = 0; i < n; i++) {
+      var box = nodes[i];
+      if (SKIP_TAGS[box.tagName]) continue;
+      var cs;
+      try { cs = getComputedStyle(box); } catch (e) { continue; }
+      if (!cs) continue;
+      var isFlex = cs.display === 'flex' || cs.display === 'inline-flex';
+      var isGrid = cs.display === 'grid' || cs.display === 'inline-grid';
+      if (!isFlex && !isGrid) continue;
+      if (cs.flexWrap === 'wrap' || cs.flexWrap === 'wrap-reverse') continue;
+      if (box.hasAttribute('data-zskip')) continue;
+
+      var boxW = box.offsetWidth;
+      if (boxW < base * 0.5) continue;
+      var kids = box.children;
+      if (kids.length < 2) continue;
+
+      // 有没有「内容多却被压得窄」的 item？
+      var victim = false;
+      for (var k = 0; k < kids.length && k < 12; k++) {
+        var kid = kids[k], kcs;
+        try { kcs = getComputedStyle(kid); } catch (e2) { continue; }
+        if (!kcs || kcs.display === 'none' || kcs.visibility === 'hidden') continue;
+        if (kcs.position === 'fixed' || kcs.position === 'absolute') continue;
+        if ((kid.innerText || '').trim().length < 200) continue;   // 不是内容块
+        if (kid.offsetWidth >= boxW * 0.3) continue;               // 没被压塌
+        victim = true;
+        break;
+      }
+      if (!victim) continue;
+
+      if (isGrid) {
+        box.style.setProperty('grid-template-columns', '1fr', 'important');
+      } else {
+        box.style.setProperty('flex-wrap', 'wrap', 'important');
+      }
+      // 内容块各占一整行；小挂件（图标、按钮）保持原样，不撑满
+      for (var v = 0; v < kids.length && v < 12; v++) {
+        var el = kids[v], ecs;
+        try { ecs = getComputedStyle(el); } catch (e3) { continue; }
+        if (!ecs || ecs.display === 'none' || ecs.visibility === 'hidden') continue;
+        if (ecs.position === 'fixed' || ecs.position === 'absolute') continue;
+        if ((el.innerText || '').trim().length < 200 && el.offsetHeight < 60) continue;
+        el.style.setProperty('flex', '1 1 100%', 'important');
+        el.style.setProperty('width', '100%', 'important');
+        el.style.setProperty('min-width', '0', 'important');
+        el.style.setProperty('max-width', '100%', 'important');
+        el.style.setProperty('box-sizing', 'border-box', 'important');
+      }
+      done++;
+      if (done >= 6) break;
+    }
+    if (done) log('flex 行崩塌修复 ' + done + ' 处');
+    return done;
+  }
+
   function safe(name, fn) {
     try { return fn(); } catch (e) { log(name + ' 失败', e && e.message); return undefined; }
   }
@@ -661,6 +742,7 @@
     b = safe('fixFixedLayers', fixFixedLayers) || 0;
     safe('fitHeader', fitHeader);
     safe('fitColumns', fitColumns);
+    safe('fixFlexRows', fixFlexRows);
     safe('wrapTables', wrapTables);
     var t1 = (performance && performance.now) ? performance.now() : Date.now();
 
@@ -763,7 +845,7 @@
               if (list[i] === document.body || list[i].querySelectorAll('*').length > 120) { big = true; break; }
               safe('sub', function () { fixWidths(list[i], 2); });
             }
-            if (big) { safe('full', function () { markScrollables(); fixWidths(null, 3); fitHeader(); fitColumns(); }); }
+            if (big) { safe('full', function () { markScrollables(); fixWidths(null, 3); fitHeader(); fitColumns(); fixFlexRows(); }); }
             safe('fixed', fixFixedLayers);
             safe('tables', wrapTables);
             safe('badge', drawBadge);

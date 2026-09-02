@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>复现宽度崩塌：flex 容器多个 item 分摊 393px</title>
+<style>
+  body { margin: 0; font: 15px/1.7 system-ui, sans-serif; }
+  .AppHeader { background: #066ac9; color: #fff; padding: 12px 16px; min-width: 1175px; }
+  .Post-content { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+
+  /* 知乎专栏页的真实结构特征：flex 容器 + 若干硬编码宽度的 item */
+  .css-kjzwqj { display: flex; }
+
+  .css-c0fani { width: 694px; min-width: 694px; padding: 8px; }
+  .css-other1 { width: 300px; min-width: 300px; padding: 8px; background: #f6f6f6; }
+  .css-other2 { width: 300px; min-width: 300px; padding: 8px; background: #fafafa; }
+  .css-other3 { width: 260px; min-width: 260px; padding: 8px; }
+  .css-other4 { width: 240px; min-width: 240px; padding: 8px; }
+  .css-other5 { width: 220px; min-width: 220px; padding: 8px; }
+  .css-other6 { width: 200px; min-width: 200px; padding: 8px; }
+
+  article.Post-Main { padding: 8px; }
+  h1 { font-size: 22px; }
+  .RichText p { margin: 0 0 12px; }
+</style>
+</head>
+<body>
+
+<header class="AppHeader">知乎专栏 · 顶栏（min-width: 1175px）</header>
+
+<div class="Post-content">
+  <div class="css-kjzwqj">
+
+    <div class="css-c0fani">
+      <div class="css-yq5nsh">
+        <article class="Post-Main Post-NormalMain">
+          <h1>OpenCode 避雷指南与正确打开方式</h1>
+          <div class="RichText">
+            <p>这是正文第一段。在真实场景下，flex 容器里如果每个 item 都有硬编码的宽度，脚本把 min-width 清零又允许收缩之后，这些 item 就会把有限的 393px 平均分摊掉，每个只剩几十像素，正文被压成一条竖线。</p>
+            <p>这是正文第二段。为了复现这个现象，这里填充足够的文字，让 article 的文本量接近真实专栏文章的量级。这样脚本在扫描时才会把它识别为需要处理的元素，进而触发宽度修复逻辑。</p>
+            <p>这是正文第三段。关键点在于：脚本把 min-width 从 694px 改成 0，又把 flex-shrink 从 0 改成 1，于是 item 失去了最小宽度保护，可以被无限压缩。多个 item 加起来远超容器宽度，收缩算法就把超出部分按比例摊薄，每个 item 都被压到很小。</p>
+            <p>第四段。正确的做法应该是：当容器宽度按 item 数量平均后明显不足以容纳内容时，让 flex 容器换行，每个 item 独占一整行，而不是继续横向挤压。这样既保住了内容可读性，也符合手机端单列阅读的习惯。</p>
+          </div>
+        </article>
+        <div class="Comments-container">
+          <p>评论区占位内容，用来模拟真实页面上评论区也是一个较大的文本块。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="css-other1"><b>关于作者</b><br>某科技领域创作者<br>关注者 12,345</div>
+    <div class="css-other2"><b>大家都在搜</b><br>话题一<br>话题二<br>话题三</div>
+    <div class="css-other3"><b>相关推荐</b><br>推荐文章一<br>推荐文章二</div>
+    <div class="css-other4"><b>热门专栏</b><br>专栏一<br>专栏二</div>
+    <div class="css-other5"><b>广告位</b><br>推广内容</div>
+    <div class="css-other6"><b>页脚信息</b><br>关于 · 联系 · 条款</div>
+
+  </div>
+</div>
+
+</body>
+</html>

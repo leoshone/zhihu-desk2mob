@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>复刻知乎评论弹层（测试返回键关闭）</title>
+<style>
+  body { margin: 0; font: 15px/1.7 system-ui, sans-serif; }
+  .AppHeader { background: #066ac9; color: #fff; padding: 12px 16px; min-width: 1175px; }
+  .Post-content { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+  .Comments-container { margin-top: 24px; }
+  .CommentItem { border-bottom: 1px solid #eee; padding: 10px 0; }
+
+  /* 弹层：模拟知乎「展开其他 N 条回复」，fixed 覆盖全屏 */
+  .Modal.css-m1a2b3 {
+    position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, .45); z-index: 1000;
+  }
+  .Modal-inner {
+    position: absolute; left: 0; bottom: 0; width: 100%; height: 72%;
+    background: #fff; border-radius: 12px 12px 0 0; padding: 16px;
+    box-sizing: border-box; overflow: auto;
+  }
+  .Modal-closeButton {
+    position: absolute; right: 12px; top: 12px;
+    background: #f0f0f0; border: 0; border-radius: 50%;
+    width: 30px; height: 30px; font-size: 15px; cursor: pointer;
+  }
+  .openBtn { padding: 8px 14px; font-size: 14px; cursor: pointer; }
+  h1 { font-size: 22px; }
+  .RichText p { margin: 0 0 12px; }
+</style>
+</head>
+<body>
+
+<header class="AppHeader">知乎 · 顶栏（min-width: 1175px）</header>
+
+<div class="Post-content">
+  <article class="Post-Main Post-NormalMain">
+    <h1>测试文章标题：弹层返回关闭</h1>
+    <div class="RichText">
+      <p>这是正文第一段。这个页面用来验证「展开其他 N 条回复」弹出的浮层能否通过手机返回键关闭。正文需要足够的长度，让脚本能够把它识别为页面的主内容区域，从而正确判断浮层与正文的关系。</p>
+      <p>这是正文第二段。浮层打开后，按手机返回键应当只关闭浮层，页面本身不发生跳转。如果浮层没有被关闭而直接退出页面，说明这个功能没有生效，需要继续排查历史记录的处理逻辑。</p>
+      <p>这是正文第三段。再补充一些内容，保证正文元素的文本量足够大，避免脚本在做位置判断时把评论区或者其他元素误认为主内容。</p>
+    </div>
+  </article>
+
+  <div class="Comments-container">
+    <div class="CommentItem">评论一：这是一条测试评论内容。</div>
+    <div class="CommentItem">评论二：这是另一条测试评论内容，稍微长一些。</div>
+    <div class="CommentItem">
+      <button class="openBtn" id="openBtn">展开其他 5 条回复</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('openBtn').addEventListener('click', function () {
+    var m = document.createElement('div');
+    m.className = 'Modal css-m1a2b3';
+    m.id = 'testModal';
+    m.innerHTML =
+      '<div class="Modal-inner">' +
+      '<button class="Modal-closeButton" id="modalClose">✕</button>' +
+      '<h2>其他 5 条回复</h2>' +
+      '<p>回复一：这是展开后的第一条回复内容。</p>' +
+      '<p>回复二：这是展开后的第二条回复内容。</p>' +
+      '<p>回复三：这是展开后的第三条回复内容。</p>' +
+      '<p>回复四：这是展开后的第四条回复内容。</p>' +
+      '<p>回复五：这是展开后的第五条回复内容。</p>' +
+      '</div>';
+    document.body.appendChild(m);
+    document.getElementById('modalClose').addEventListener('click', function () {
+      m.parentNode && m.parentNode.removeChild(m);
+    });
+  });
+</script>
+
+</body>
+</html>

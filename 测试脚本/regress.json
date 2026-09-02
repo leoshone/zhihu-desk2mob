@@ -68,7 +68,7 @@
   "bodyScrollW": 1032,
   "htmlZoomProp": "1",
   "title": "如何正确使用知乎？ - 知乎",
-  "textLen": 6818
+  "textLen": 6800
  },
  "DESKTOP/no_script/explore": {
   "zoom": 1,
@@ -139,7 +139,7 @@
   "bodyScrollW": 1032,
   "htmlZoomProp": "1",
   "title": "发现 - 知乎",
-  "textLen": 4517
+  "textLen": 4238
  },
  "DESKTOP/v3/19550225": {
   "zoom": 1,
@@ -210,7 +210,7 @@
   "bodyScrollW": 1032,
   "htmlZoomProp": "1",
   "title": "如何正确使用知乎？ - 知乎",
-  "textLen": 6798
+  "textLen": 6800
  },
  "DESKTOP/v3/explore": {
   "zoom": 1,
@@ -281,7 +281,7 @@
   "bodyScrollW": 1032,
   "htmlZoomProp": "1",
   "title": "发现 - 知乎",
-  "textLen": 4533
+  "textLen": 4388
  },
  "DESKTOP/v4/19550225": {
   "zoom": 2.4936,
@@ -295,7 +295,7 @@
   "bodyScrollW": 617,
   "htmlZoomProp": "2.49364",
   "title": "如何正确使用知乎？ - 知乎",
-  "textLen": 6230
+  "textLen": 6237
  },
  "DESKTOP/v4/explore": {
   "zoom": 2.4936,
@@ -309,7 +309,7 @@
   "bodyScrollW": 1028,
   "htmlZoomProp": "2.49364",
   "title": "发现 - 知乎",
-  "textLen": 4248
+  "textLen": 4386
  },
  "MOBILE/no_script/19550225": {
   "zoom": 1,
@@ -323,7 +323,7 @@
   "bodyScrollW": 393,
   "htmlZoomProp": "1",
   "title": "如何正确使用知乎？ - 知乎",
-  "textLen": 6081
+  "textLen": 6164
  },
  "MOBILE/no_script/explore": {
   "zoom": 1,
@@ -332,7 +332,7 @@
   "scrollWidth": 1032,
   "clientWidth": 393,
   "overflowX": 639,
-  "overflowCount": 206,
+  "overflowCount": 204,
   "worst": [
    {
     "tag": "div",
@@ -394,7 +394,7 @@
   "bodyScrollW": 1032,
   "htmlZoomProp": "1",
   "title": "发现 - 知乎",
-  "textLen": 4046
+  "textLen": 4383
  },
  "MOBILE/v3/19550225": {
   "zoom": 1,
@@ -408,7 +408,7 @@
   "bodyScrollW": 393,
   "htmlZoomProp": "1",
   "title": "如何正确使用知乎？ - 知乎",
-  "textLen": 6077
+  "textLen": 6169
  },
  "MOBILE/v3/explore": {
   "zoom": 1,
@@ -417,7 +417,7 @@
   "scrollWidth": 1032,
   "clientWidth": 393,
   "overflowX": 639,
-  "overflowCount": 206,
+  "overflowCount": 204,
   "worst": [
    {
     "tag": "div",
@@ -479,7 +479,7 @@
   "bodyScrollW": 1032,
   "htmlZoomProp": "1",
   "title": "发现 - 知乎",
-  "textLen": 4047
+  "textLen": 3931
  },
  "MOBILE/v4/19550225": {
   "zoom": 1,
@@ -493,7 +493,7 @@
   "bodyScrollW": 393,
   "htmlZoomProp": "1",
   "title": "如何正确使用知乎？ - 知乎",
-  "textLen": 6083
+  "textLen": 6018
  },
  "MOBILE/v4/explore": {
   "zoom": 1,
@@ -507,6 +507,6 @@
   "bodyScrollW": 1028,
   "htmlZoomProp": "1",
   "title": "发现 - 知乎",
-  "textLen": 3841
+  "textLen": 4229
  }
 }

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>右侧栏去除测试（侧栏只用 emotion 哈希类名）</title>
+<style>
+  body { margin: 0; font: 15px/1.7 system-ui, sans-serif; }
+  /* 知乎顶栏：硬编码 min-width，桌面模式下的溢出元凶之一 */
+  .AppHeader { background: #066ac9; color: #fff; padding: 12px 16px; min-width: 1175px; }
+
+  /* ── 全部用哈希类名，不给任何语义类名 ── */
+  .css-a1b2c3 { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .css-d4e5f6 { display: flex; gap: 20px; align-items: flex-start; }
+  .css-m7n8o9 { flex: 1 1 auto; min-width: 0; }
+  .css-r1r2r3 { flex: 0 0 300px; }
+  .css-card    { background: #f6f6f6; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+  .css-card h3 { margin: 0 0 8px; font-size: 15px; }
+  .css-hot     { list-style: none; margin: 0; padding: 0; }
+  .css-hot li  { padding: 6px 0; border-bottom: 1px solid #e6e6e6; font-size: 14px; }
+
+  .Post-Main h1 { font-size: 22px; line-height: 1.4; }
+  .RichText p   { margin: 0 0 12px; }
+  .Comments-container { margin-top: 26px; border-top: 2px solid #eee; padding-top: 12px; }
+  .CommentItem  { border-bottom: 1px solid #f0f0f0; padding: 10px 0; font-size: 14px; }
+  .openBtn      { padding: 6px 12px; font-size: 13px; cursor: pointer; color: #066ac9;
+                  border: 1px solid #cfe4f7; background: #f0f7ff; border-radius: 4px; }
+  #home, #zhuanlan { display: none; }
+  #home:target, #zhuanlan:target { display: block; }
+  body > #home:first-of-type { display: block; }
+</style>
+</head>
+<body>
+
+<header class="AppHeader">知乎 · 顶栏（min-width: 1175px）</header>
+
+<!-- ══════════ 场景 A：专栏页（正文 + 右侧作者栏） ══════════ -->
+<div id="zhuanlan">
+  <div class="css-a1b2c3">
+    <div class="css-d4e5f6">
+      <div class="css-m7n8o9">
+        <article class="Post-Main Post-NormalMain">
+          <h1>为什么在手机上打开知乎桌面版，正文会被挤成很窄的一条</h1>
+          <div class="RichText">
+            <p>这个问题的根源不在知乎，而在浏览器的视口策略上。当你在手机浏览器里勾选「桌面版网站」时，Chromium 内核会把 layout viewport 强制拉到 980 CSS 像素，然后再把整页缩放到屏幕宽度去显示。于是你在手机上看到的，是一张被缩小到大约零点四倍的完整桌面页面。</p>
+            <p>在这种模式下，知乎页面里那些写死的 min-width 就全部暴露出来了。顶栏的 1175、内容容器的 1032、正文区的 694，这些数字本来是为了保证桌面端三栏布局不会互相挤压而存在的。一旦视口变成 980，这些硬约束就开始互相打架，最终表现就是某一列被压到只剩几十像素。</p>
+            <p>更麻烦的是，知乎现在大量使用 emotion 生成的哈希类名，比如 css-a1b2c3 这种。这意味着任何基于类名的选择器都会在某次改版后集体失效。真机实测的结果很说明问题：专栏页里按照语义类名去查找侧栏，命中数量是零。一个 SideColumn 都找不到。</p>
+            <p>所以正确的做法不是猜类名，而是量位置。先找到页面上文本量最大的那个内容块，把它当作正文；再从它出发向上爬几层，检查每一层的兄弟元素，看看有没有满足这四个条件的：宽度足够大、位置在正文右侧、垂直方向和正文有重叠、文本量比正文少。四条同时成立的，基本只可能是侧栏。</p>
+            <p>这套判据的误伤风险很低。顶栏的图标太窄，会被宽度条件挡掉；评论区在正文下方，会和正文的垂直区间不重叠，被位置条件挡掉；至于比正文还长的元素，那只能是真正的主内容，不可能是什么侧栏。四个条件叠在一起，剩下的就是目标。</p>
+          </div>
+        </article>
+
+        <!-- 评论区：正文下方、垂直不重叠，必须被保住 -->
+        <div class="Comments-container" id="cmtZone">
+          <div class="CommentItem"><b>张三</b>：我也遇到过，后来发现是桌面模式的问题。</div>
+          <div class="CommentItem"><b>李四</b>：右侧那个「关于作者」确实很占地方，手机上完全没必要。</div>
+          <div class="CommentItem">
+            <button class="openBtn" id="openBtn">展开其他 5 条回复</button>
+          </div>
+        </div>
+
+        <!-- 底部推荐：同样在主列内、正文下方，必须被保住 -->
+        <div class="css-card" id="recZone" style="margin-top:18px">
+          <h3>推荐阅读</h3>
+          <div>如何评价移动浏览器的桌面模式适配策略</div>
+          <div>在手机上使用用户脚本管理网页布局的几种思路</div>
+        </div>
+      </div>
+
+      <!-- 右侧栏：纯哈希类名，没有任何 SideColumn / aside -->
+      <div class="css-r1r2r3" id="railZhuanlan">
+        <div class="css-card">
+          <h3>关于作者</h3>
+          <div>某科技领域答主 · 关注者 12,345</div>
+          <div>这个人很懒，什么都没有留下。</div>
+        </div>
+        <div class="css-card">
+          <h3>大家都在搜</h3>
+          <ul class="css-hot">
+            <li>手机浏览器桌面模式</li>
+            <li>视口缩放原理</li>
+            <li>用户脚本写法</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ 场景 B：首页（feed 主列 + 右侧热榜） ══════════ -->
+<div id="home">
+  <div class="css-a1b2c3">
+    <div class="css-d4e5f6">
+      <div class="css-m7n8o9">
+        <div class="Topstory-mainColumn">
+          <div class="card">
+            <h2>如何看待现在的移动端网页越来越重这件事</h2>
+            <p>打开一个页面要加载几十个脚本，其中一大半是为了做布局计算。移动端网络本就不稳定，这种设计让首屏时间变得难以接受。有没有可能在保证体验的前提下，把页面做得轻一些。</p>
+          </div>
+          <div class="card">
+            <h2>为什么很多网站不愿意为手机单独做一套页面</h2>
+            <p>成本是最直接的原因，但也不全是。维护两套代码意味着每次改动都要同步两次，长期看是很大的负担。响应式设计本来是为了解决这个问题，但实际落地时经常变成妥协的产物。</p>
+          </div>
+          <div class="card">
+            <h2>浏览器缩放和视口的关系究竟是怎样的</h2>
+            <p>layout viewport 和 visual viewport 是两个不同的概念，很多布局问题都源于把它们混为一谈。理解这一点之后，大部分所谓的兼容问题都能找到解释。这里再补充一段文字，让首页主列的文本量足够大，能够被正确识别为页面的正文区域而不是右边那个热榜小挂件。</p>
+          </div>
+        </div>
+      </div>
+      <div class="css-r1r2r3" id="railHome">
+        <div class="css-card">
+          <h3>知乎热榜</h3>
+          <ul class="css-hot">
+            <li>如何看待某事件的最新进展</li>
+            <li>有哪些冷门但好用的工具</li>
+            <li>为什么现在的 App 越来越大</li>
+            <li>如何评价今年的就业形势</li>
+            <li>有哪些相见恨晚的读书方法</li>
+          </ul>
+        </div>
+        <div class="css-card">
+          <h3>推荐关注</h3>
+          <div>用户 A · 1.2 万关注者</div>
+          <div>用户 B · 8,765 关注者</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card { background:#fff; border:1px solid #eee; border-radius:8px; padding:14px; margin-bottom:12px; }
+  .card h2 { font-size:17px; margin:0 0 8px; }
+  .card p { margin:0; color:#444; font-size:14px; }
+</style>
+
+<script>
+  // 用 hash 切换场景；默认是专栏页
+  function applyHash() {
+    var h = (location.hash || '').replace('#', '');
+    var showHome = (h === 'home');
+    document.getElementById('home').style.display = showHome ? 'block' : 'none';
+    document.getElementById('zhuanlan').style.display = showHome ? 'none' : 'block';
+  }
+  applyHash();
+  window.addEventListener('hashchange', applyHash);
+
+  // 弹层：复刻「展开其他 N 条回复」
+  document.getElementById('openBtn').addEventListener('click', function () {
+    var m = document.createElement('div');
+    m.className = 'Modal css-m1a2b3';
+    m.id = 'testModal';
+    m.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;' +
+                      'background:rgba(0,0,0,.45);z-index:1000;';
+    m.innerHTML =
+      '<div style="position:absolute;left:0;bottom:0;width:100%;height:72%;' +
+      'background:#fff;border-radius:12px 12px 0 0;padding:16px;box-sizing:border-box;overflow:auto">' +
+      '<button id="modalClose" style="position:absolute;right:12px;top:12px;background:#f0f0f0;' +
+      'border:0;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer">✕</button>' +
+      '<h2>其他 5 条回复</h2>' +
+      '<p>回复一：这是展开后的第一条回复内容。</p>' +
+      '<p>回复二：这是展开后的第二条回复内容。</p>' +
+      '<p>回复三：这是展开后的第三条回复内容。</p>' +
+      '<p>回复四：这是展开后的第四条回复内容。</p>' +
+      '<p>回复五：这是展开后的第五条回复内容。</p></div>';
+    document.body.appendChild(m);
+    document.getElementById('modalClose').addEventListener('click', function () {
+      m.parentNode && m.parentNode.removeChild(m);
+    });
+  });
+</script>
+
+</body>
+</html>

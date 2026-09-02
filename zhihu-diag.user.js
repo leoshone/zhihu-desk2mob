@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎适配 · 宽度崩塌诊断（临时工具）v3
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.3.0
+// @version      0.4.0
 // @author       leoshone
 // @description  定位「正文被压成窄条」：从 body 到正文逐层打印宽度与 inline style，找出变窄的断点。跑完即可删除。
 // @match        *://*.zhihu.com/*

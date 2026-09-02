@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.5.1
+// @version      0.6.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.5.1';
+  var VER = '0.6.0';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1231,6 +1231,96 @@
       基准高: Math.round(S.VH)
     };
   };
+
+  // ═══════════════════════════════════════════════════════════════
+  // 11. 早期侧栏猎手（v0.6.0）
+  //
+  //     现象：右栏（关于作者/推荐阅读）先显示、几百毫秒后才被
+  //     fixFlexRows/hideRightRail 干掉 —— 肉眼可见闪烁。
+  //     原因：无语义类名的右栏只能靠 JS 位置/文本判定，而判定链
+  //     要等布局稳定后才跑，中间是空窗。
+  //
+  //     对策：从 document-start 起常驻一个 MutationObserver，
+  //     新节点插入的**同一帧**内做文本特征判定，命中立即隐藏。
+  //     「不加载」做不到 —— DOM 是知乎自己的代码插的，脚本拦不住，
+  //     这是肉眼无闪烁的极限。
+  //
+  //     防误伤两道闸：
+  //     ① 正文富文本容器（.RichText/.RichContent/.Post-RichTextContainer/
+  //        .QuestionAnswer-content）内的节点一律不动 —— 文章里的
+  //        「相关推荐」章节、评论区里的「推荐」字样不能杀；
+  //     ② 特征词要求短文本（<400 字）：侧栏卡片文本短，正文长。
+  // ═══════════════════════════════════════════════════════════════
+  var RAIL_KEYWORDS = /关于作者|推荐阅读|大家都在搜|热门推荐|相关推荐|知乎热榜|CircleCard|作者专栏/;
+  function insideRichContent(el) {
+    for (var p = el; p && p !== document.body; p = p.parentElement) {
+      var c = p.className;
+      if (typeof c === 'string' &&
+          (c.indexOf('RichText') >= 0 || c.indexOf('RichContent') >= 0 ||
+           c.indexOf('Post-RichTextContainer') >= 0 ||
+           c.indexOf('QuestionAnswer-content') >= 0)) return true;
+    }
+    return false;
+  }
+  function earlyRailCheck(el) {
+    if (!CONFIG.hideSidebar || CONFIG.sideColumn !== 'hide') return;
+    if (el.nodeType !== 1 || el.hasAttribute('data-zrail')) return;
+    if (insideRichContent(el)) return;
+    var txt = '';
+    try { txt = (el.innerText || '').trim(); } catch (e) { return; }
+    if (!txt || txt.length >= 400) return;          // 长文本是正文，不是侧栏卡片
+    if (!RAIL_KEYWORDS.test(txt)) return;
+    // 找「该隐藏谁」：命中特征词的可能是卡片内部节点，向上爬到
+    // 「宽度 ≥ 200px 的最近块级祖先」再藏 —— 藏内部节点藏不干净
+    var target = el;
+    while (target && target !== document.body) {
+      var cs;
+      try { cs = getComputedStyle(target); } catch (e2) { break; }
+      if (cs && cs.display !== 'none' && target.offsetWidth >= 200 &&
+          cs.position !== 'fixed' && cs.position !== 'absolute') break;
+      target = target.parentElement;
+    }
+    if (!target || target === document.body) return;
+    target.style.setProperty('display', 'none', 'important');
+    target.setAttribute('data-zrail', '1');
+    log('早期猎手：拦截侧栏（含「' + (txt.match(RAIL_KEYWORDS) || ['?'])[0] + '」）');
+  }
+  var earlyMoInstalled = false;
+  function setupEarlyRailHunter() {
+    if (earlyMoInstalled || !window.MutationObserver || !document.body) return;
+    earlyMoInstalled = true;
+    var mo = new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var added = records[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          var n = added[j];
+          if (n.nodeType !== 1) continue;
+          earlyRailCheck(n);
+          // 新插入的可能是大容器，里面的子孙卡片也要查（浅查一层防抖动）
+          if (n.querySelectorAll) {
+            var subs = n.querySelectorAll('div,section,aside');
+            for (var k = 0; k < subs.length && k < 30; k++) earlyRailCheck(subs[k]);
+          }
+        }
+      }
+    });
+    try { mo.observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+  }
+  // body 一出现就装上（比 boot 的 DOMContentLoaded 更早）
+  // ⚠ document-start 时 documentElement 也可能还是 null（v3 就栽在这），
+  //   observe 前必须确认，且 observe 失败不能让后续代码挂掉
+  (function waitBody() {
+    if (document.body) { setupEarlyRailHunter(); return; }
+    var de = document.documentElement;
+    if (de && window.MutationObserver) {
+      try {
+        new MutationObserver(function (m, obs) {
+          if (document.body) { obs.disconnect(); setupEarlyRailHunter(); }
+        }).observe(de, { childList: true });
+      } catch (e) { /* documentElement 还没就绪，等下一轮 */ }
+    }
+    setTimeout(waitBody, 0);
+  })();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot, { once: true });

@@ -1,0 +1,14 @@
+<!DOCTYPE html><html><head><meta charset=utf-8><style>
+body{margin:0;font:15px/1.7 system-ui}
+.wrap{display:flex;max-width:1000px;margin:0 auto;padding:16px}
+.main{flex:0 1 694px;min-width:0;padding:8px}
+.RichText p{margin:0 0 12px}
+#rail{flex:0 0 296px;padding:8px;background:#f6f6f6}
+</style></head><body>
+<div class=wrap><div class=main><h1>标题</h1><div class=RichText id=rt></div></div><div id=railbox></div></div>
+<script>
+setTimeout(function(){
+  document.getElementById('rt').innerHTML = '<p>' + '动态正文。'.repeat(80) + '</p>';
+  document.getElementById('railbox').outerHTML = '<div class=rail2 style="flex:0 0 296px;padding:8px;background:#f6f6f6"><b>关于作者</b><br>某某<br>关注者 12345<br><b>推荐阅读</b><br>文章一<br>文章二</div>';
+}, 1500);
+</script></body></html>

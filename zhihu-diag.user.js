@@ -1,98 +1,204 @@
 // ==UserScript==
-// @name         知乎适配 · 两栏布局诊断（临时工具）
+// @name         知乎适配 · 两栏布局诊断（临时工具）v2
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.2.1
+// @version      0.2.2
 // @author       leoshone
-// @description  在知乎专栏页上显示两栏布局的真实 DOM 结构与匹配判定过程，用于定位「侧栏没被移走」的原因。跑完即可删除。
+// @description  从「正文」反查两栏容器的真实 DOM 层级，定位侧栏为什么没被移走。跑完即可删除。
 // @match        *://*.zhihu.com/*
 // @match        *://zhuanlan.zhihu.com/*
 // @grant        none
 // @run-at       document-idle
 // ==/UserScript==
 
-/* 临时诊断工具：不改页面，只读结构并把判定过程摊开给你看。
-   用法：装好 → 打开有问题的专栏页 → 等顶部浮层出现 → 点「复制诊断信息」→ 粘贴发我。 */
+/* v2 改动：全局扫描命中不了真身，改成「从正文反查祖先链」。
+   用法：装好 → 打开有问题的页面 → 等浮层 → 点「复制诊断信息」→ 粘贴发我。 */
 (function () {
   'use strict';
 
-  var BASE = 393;                 // 手机基准宽（Kiwi 桌面模式下应为 393）
-  var LINES = [];                 // 输出文本
-  var NEAR = [];                  // 差一点就命中的候选
-
+  var LINES = [];
   function say(s) { LINES.push(s); }
 
-  // ── 扫描：复刻主脚本 fitColumns 的判定逻辑，但把每一步都记下来 ──
+  // className 可能是字符串（HTML）也可能是 SVGAnimatedString（SVG）
+  function cls(el) {
+    var c = el.className;
+    if (typeof c === 'string') return c;
+    if (c && typeof c.baseVal === 'string') return c.baseVal;
+    return '';
+  }
+  function path(el) {
+    return '<' + el.tagName.toLowerCase() + '> .' + cls(el).slice(0, 40);
+  }
+
   function scan() {
     var zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     var de = document.documentElement;
     var se = document.scrollingElement || de;
-    var cssW = Math.round(de.clientWidth / zoom);
-    var overflowX = se.scrollWidth - se.clientWidth;
 
-    // 主脚本是否在工作
-    var mainOn = !!document.getElementById('zhihu-mobile-badge');
-    var badge = mainOn ? document.getElementById('zhihu-mobile-badge').textContent : '(未装主脚本)';
+    // ── 0. 版本检查：最关键，先确认装的是不是新版 ──
+    var badgeEl = document.getElementById('zhihu-mobile-badge');
+    var badge = badgeEl ? badgeEl.textContent.trim() : '(未装主脚本)';
+    var hasVer = /v\d+\.\d+/.test(badge);
 
+    say('=== 版本检查 ===');
+    say('角标     : ' + badge);
+    if (!badgeEl) {
+      say('判定     : ✗ 没检测到主脚本！先装主脚本再诊断');
+    } else if (!hasVer) {
+      say('判定     : ✗ 主脚本版本 < 0.2.1（角标不含版本号）');
+      say('           → 不含两栏布局处理功能，侧栏不动是必然的');
+      say('           → 请更新主脚本：');
+      say('             cdn.jsdelivr.net/gh/leoshone/zhihu-desk2mob@main/zhihu-desk2mob.user.js');
+    } else {
+      say('判定     : ✓ 主脚本 ' + badge.match(/v\d+\.\d+(\.\d+)?/)[0] + '，含两栏处理功能');
+    }
+    say('');
+
+    say('=== 环境 ===');
     say('URL      : ' + location.href);
     say('标题     : ' + (document.title || '').slice(0, 50));
-    say('角标     : ' + badge);
     say('zoom     : ' + zoom.toFixed(4));
-    say('布局宽   : ' + cssW + '  (期望 393)');
-    say('横向溢出 : ' + overflowX + '  (期望 0)');
+    say('布局宽   : ' + Math.round(de.clientWidth / zoom) + '  (期望 393)');
+    say('横向溢出 : ' + (se.scrollWidth - se.clientWidth) + '  (期望 0)');
     say('正文字符 : ' + (document.body.innerText || '').trim().length);
     say('');
 
-    // ── 1. 侧栏候选：按类名 ──
-    var sels = ['aside', '.Post-SideColumn', '.ColumnSideBar', '.GlobalSideBar',
-                '.Post-Row-Content-right', '.ColumnPageSidebar', '.Profile-sideColumn',
-                '.Question-sideColumn', '.Topstory-sideColumn',
-                '[class*="SideColumn"]', '[class*="SideBar"]', '[class*="Sidebar"]',
-                '[class*="sideColumn"]', '[class*="sidebar"]'];
-    var hits = [];
-    for (var i = 0; i < sels.length; i++) {
-      var els;
-      try { els = document.querySelectorAll(sels[i]); } catch (e) { continue; }
-      for (var j = 0; j < els.length; j++) {
-        var el = els[j], cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-        if (el.offsetWidth < 60) continue;
-        var r = el.getBoundingClientRect();
-        hits.push({
-          sel: sels[i],
-          tag: el.tagName.toLowerCase(),
-          cls: String(el.className || '').slice(0, 42),
-          w: Math.round(el.offsetWidth),
-          left: Math.round(r.left / zoom),
-          top: Math.round((r.top + window.scrollY) / zoom),
-          txt: (el.innerText || '').trim().length
-        });
+    // ── 1. 定位正文 ──
+    // 不能用「文本量最大」：外层容器的文本量必然最大，选出来的是 wrapper 不是正文。
+    // 改用「深度最大」：在文本量够格（>=300）的元素里取 DOM 最深的那个，
+    // 正文容器通常在最内层。
+    var all = document.body.querySelectorAll('*');
+    var n = Math.min(all.length, 6000);
+    function depth(el) { var d = 0; while (el && el !== document.body) { d++; el = el.parentElement; } return d; }
+
+    var main = null, mainDepth = -1, mainTxt = 0;
+    for (var i = 0; i < n; i++) {
+      var el = all[i];
+      var cs;
+      try { cs = getComputedStyle(el); } catch (e) { continue; }
+      if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
+      var t = (el.innerText || '').trim().length;
+      if (t < 300) continue;
+      var d = depth(el);
+      if (d > mainDepth) { mainDepth = d; main = el; mainTxt = t; }
+    }
+    if (!main) { say('!! 找不到正文元素（没有文本量 >=300 的可见块）'); return; }
+
+    var mr = main.getBoundingClientRect();
+    say('=== 正文定位（文本量>=300 中 DOM 最深的那个）===');
+    say('元素     : ' + path(main));
+    say('深度     : ' + mainDepth);
+    say('宽度     : ' + main.offsetWidth + '   ← 明显小于 393 就说明正文被挤窄了');
+    say('left     : ' + Math.round(mr.left / zoom));
+    say('top      : ' + Math.round(mr.top / zoom));
+    say('文本量   : ' + mainTxt);
+    var anc = [], walk = main;
+    while (walk && walk !== document.body) { anc.unshift(path(walk)); walk = walk.parentElement; }
+    say('路径     : body > ' + anc.join(' > '));
+    say('');
+
+    // ── 2. 从正文向上爬祖先链，每层列出所有兄弟的几何 ──
+    // 这是核心：一眼看出两栏在哪一层、主列和侧栏是不是直接兄弟
+    say('=== 祖先链反查（从正文往上 7 层）===');
+    say('每层列出父容器及其全部直接子元素的 宽/left/top/文本量');
+    say('');
+
+    var cur = main;
+    for (var lv = 0; lv < 7 && cur && cur.parentElement; lv++) {
+      var pa = cur.parentElement;
+      if (pa === document.documentElement || pa === document.body) {
+        say('  [第' + (lv + 1) + '层] 已到 <' + pa.tagName.toLowerCase() + '>，停止');
+        break;
       }
-    }
-    say('── 侧栏候选（按类名命中 ' + hits.length + ' 个）──');
-    if (!hits.length) {
-      say('  （无。说明页面里没有带 SideColumn/SideBar/aside 类名的元素，');
-      say('    或者它们已经被隐藏/太窄。这时只能靠结构启发式识别。）');
-    }
-    for (var h = 0; h < Math.min(hits.length, 10); h++) {
-      var x = hits[h];
-      say('  [' + x.sel + '] <' + x.tag + '> .' + x.cls);
-      say('      w=' + x.w + ' left=' + x.left + ' top=' + x.top + ' txt=' + x.txt);
+      var pcs = getComputedStyle(pa);
+      var pr = pa.getBoundingClientRect();
+      say('  ┌─ 第' + (lv + 1) + '层 父 ' + path(pa));
+      say('  │     w=' + pa.offsetWidth +
+          ' left=' + Math.round(pr.left / zoom) +
+          ' disp=' + pcs.display +
+          ' gtc=\'' + pcs.gridTemplateColumns + '\'' +
+          ' wrap=' + pcs.flexWrap +
+          ' kids=' + pa.children.length);
+
+      for (var k = 0; k < pa.children.length && k < 10; k++) {
+        var ch = pa.children[k];
+        var ccs;
+        try { ccs = getComputedStyle(ch); } catch (e) { continue; }
+        if (ccs.display === 'none' || ccs.visibility === 'hidden') {
+          say('  │   ┊ <' + ch.tagName.toLowerCase() + '> (隐藏)');
+          continue;
+        }
+        var cr = ch.getBoundingClientRect();
+        var isMain = (ch === cur);
+        say('  │   ' + (isMain ? '▶' : '┊') + ' <' + ch.tagName.toLowerCase() + '> .' +
+            cls(ch).slice(0, 32));
+        say('  │       w=' + ch.offsetWidth +
+            ' left=' + Math.round(cr.left / zoom) +
+            ' top=' + Math.round(cr.top / zoom) +
+            ' txt=' + (ch.innerText || '').trim().length +
+            ' disp=' + ccs.display +
+            ' pos=' + ccs.position);
+      }
+      say('  └─');
+      cur = pa;
     }
     say('');
 
-    // ── 2. 结构启发式扫描：复刻主脚本每一步，记录拒绝原因 ──
-    var stat = { 容器太窄: 0, 子元素数不符: 0, 同行块不足2: 0, 分组后不足2: 0,
-                 右侧不够宽: 0, 主列文本不多于侧栏: 0, 主列内容太少: 0, 命中: 0 };
+    // ── 3. 右侧邻居专项：和正文同层、位置更靠右、有实际内容 ──
+    say('=== 右侧邻居（可能是侧栏的元素）===');
+    say('条件：与正文同一父容器、left 明显更靠右、宽度 >= 80、非 fixed/absolute');
+    var mt = mr.top / zoom;
+    var ml = mr.left / zoom;
+    var found = 0;
+    var probe = main.parentElement;
+    for (var d = 0; d < 4 && probe && probe !== document.body; d++) {
+      for (var c = 0; c < probe.children.length; c++) {
+        var sib = probe.children[c];
+        if (sib === main || main.contains(sib)) continue;
+        var scs;
+        try { scs = getComputedStyle(sib); } catch (e) { continue; }
+        if (scs.display === 'none' || scs.visibility === 'hidden') continue;
+        if (scs.position === 'fixed' || scs.position === 'absolute') continue;
+        var sr = sib.getBoundingClientRect();
+        var sl = sr.left / zoom, st = sr.top / zoom;
+        if (sib.offsetWidth < 80) continue;
+        if (sl <= ml + 10) continue;                 // 不在正文右侧
+        if (Math.abs(st - mt) > 300) continue;       // 和正文不在同一区域
+        found++;
+        say('  [层+' + d + '] ' + path(sib));
+        say('       w=' + sib.offsetWidth + ' left=' + Math.round(sl) +
+            ' top=' + Math.round(st) + ' txt=' + (sib.innerText || '').trim().length +
+            ' disp=' + scs.display);
+      }
+      probe = probe.parentElement;
+    }
+    if (!found) {
+      say('  （无。说明侧栏和正文不在同一父容器下，或者侧栏是 fixed/absolute 定位，');
+      say('    或者页面根本不是两栏结构 —— 那用户看到的"右侧栏"可能是别的东西。）');
+    }
+    say('');
+
+    // ── 4. 全局扫描统计（修掉 v1 漏计「容器太窄」的 bug，并对比放宽效果）──
+    say('=== 全局扫描统计（生产配置 kids<=8）===');
+    stat_dump(8);
+    say('');
+    say('=== 对照组：放宽 kids<=20（验证放宽是否有效）===');
+    stat_dump(20);
+  }
+
+  function stat_dump(maxKids) {
+    var st = { 容器太窄: 0, 子元素数不符: 0, 同行块不足2: 0, 分组后不足2: 0,
+               右侧不够宽: 0, 主列文本不多于侧栏: 0, 主列内容太少: 0, 命中: 0 };
+    var near = [];
     var all = document.body.querySelectorAll('*');
-    var n = Math.min(all.length, 4500);
+    var n = Math.min(all.length, 6000);
+    var zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
 
     for (var a = 0; a < n; a++) {
       var box = all[a];
       var bw = box.offsetWidth;
-      if (bw < BASE * 0.6) continue;              // 只看够宽的容器
-
+      if (bw < 393 * 0.6) { st.容器太窄++; continue; }
       var kids = box.children;
-      if (kids.length < 2 || kids.length > 8) { stat.子元素数不符++; continue; }
+      if (kids.length < 2 || kids.length > maxKids) { st.子元素数不符++; continue; }
 
       var row = [];
       for (var k = 0; k < kids.length; k++) {
@@ -101,16 +207,14 @@
         if (!kcs || kcs.display === 'none' || kcs.visibility === 'hidden') continue;
         if (kcs.display === 'inline' || kcs.display === 'inline-block') continue;
         if (kcs.position === 'fixed' || kcs.position === 'absolute') continue;
-        var kw = kid.offsetWidth;
-        if (kw < 60) continue;
+        if (kid.offsetWidth < 60) continue;
         var kr = kid.getBoundingClientRect();
-        row.push({ el: kid, w: kw, left: kr.left / zoom, top: kr.top / zoom,
-                   txt: (kid.innerText || '').length, cls: String(kid.className || '').slice(0, 34),
-                   tag: kid.tagName.toLowerCase() });
+        row.push({ el: kid, w: kid.offsetWidth, left: kr.left / zoom,
+                   top: kr.top / zoom, txt: (kid.innerText || '').length,
+                   cls: cls(kid).slice(0, 32), tag: kid.tagName.toLowerCase() });
       }
-      if (row.length < 2) { stat.同行块不足2++; continue; }
+      if (row.length < 2) { st.同行块不足2++; continue; }
 
-      // 按 top 相近分组，取元素最多的那组
       var best = [], grp;
       for (var p = 0; p < row.length; p++) {
         grp = [row[p]];
@@ -120,84 +224,43 @@
         }
         if (grp.length > best.length) best = grp;
       }
-      if (best.length < 2) { stat.分组后不足2++; continue; }
+      if (best.length < 2) { st.分组后不足2++; continue; }
 
       best.sort(function (m1, m2) { return m1.left - m2.left; });
-      var main = best[0], side = best[best.length - 1];
-      if (main.el === side.el) continue;
+      var mn = best[0], sd = best[best.length - 1];
+      if (mn.el === sd.el) continue;
 
-      var boxCls = String(box.className || '').slice(0, 34);
-      var snapshot = {
-        box: '<' + box.tagName.toLowerCase() + '> .' + boxCls,
-        boxW: bw, boxDisp: getComputedStyle(box).display,
-        gtc: getComputedStyle(box).gridTemplateColumns,
-        main: main, side: side
-      };
-      // 记录"差一点命中"的，带上卡在哪一关
       var reason = null;
-      if (side.w < bw * 0.2) reason = '右侧不够宽';
-      else if (main.txt < side.txt) reason = '主列文本不多于侧栏';
-      else if (main.txt < 200) reason = '主列内容太少';
+      if (sd.w < bw * 0.2) reason = '右侧不够宽';
+      else if (mn.txt < sd.txt) reason = '主列文本不多于侧栏';
+      else if (mn.txt < 200) reason = '主列内容太少';
 
-      if (reason) { stat[reason]++; snapshot.卡在 = reason; NEAR.push(snapshot); }
-      else { stat.命中++; snapshot.卡在 = '(通过)'; NEAR.push(snapshot); }
+      if (reason) st[reason]++; else st.命中++;
+      near.push({ reason: reason || '(通过)', box: path(box), boxW: bw,
+                  boxDisp: getComputedStyle(box).display,
+                  gtc: getComputedStyle(box).gridTemplateColumns,
+                  mn: mn, sd: sd });
     }
 
-    say('── 结构启发式扫描统计 ──');
-    for (var key in stat) say('  ' + key + ' : ' + stat[key]);
-    say('  （扫描元素数 ' + n + '）');
-    say('');
+    for (var key in st) say('  ' + key + ' : ' + st[key]);
 
-    // 差一点命中的：按"主列文本量"倒序，最有可能就是真身
-    NEAR.sort(function (m1, m2) { return m2.main.txt - m1.main.txt; });
-    say('── 最接近命中的候选（前 5）──');
-    if (!NEAR.length) {
-      say('  （一个都没有 → 容器层就卡住了：两栏的父容器子元素数不在 2~8，');
-      say('    或者同行块级子元素不足 2。请看下一条「够宽容器」清单。）');
-    }
-    for (var c = 0; c < Math.min(NEAR.length, 5); c++) {
-      var t = NEAR[c];
-      say('  #' + (c + 1) + ' 卡在：' + t.卡在);
-      say('      容器 ' + t.box + '  w=' + t.boxW + ' disp=' + t.boxDisp +
-          ' gtc=\'' + t.gtc + '\'');
-      say('      主列 <' + t.main.tag + '> .' + t.main.cls);
-      say('          w=' + t.main.w + ' left=' + Math.round(t.main.left) +
-          ' top=' + Math.round(t.main.top) + ' txt=' + t.main.txt);
-      say('      侧栏 <' + t.side.tag + '> .' + t.side.cls);
-      say('          w=' + t.side.w + ' left=' + Math.round(t.side.left) +
-          ' top=' + Math.round(t.side.top) + ' txt=' + t.side.txt);
-    }
-    say('');
-
-    // ── 3. 兜底清单：所有够宽的容器，看它们的直接子元素长什么样 ──
-    say('── 够宽容器的直接子元素（前 8 个容器，看两栏到底藏在哪一层）──');
-    var shown = 0;
-    for (var d = 0; d < n && shown < 8; d++) {
-      var cb = all[d];
-      if (cb.offsetWidth < BASE * 0.6) continue;
-      if (cb.children.length < 2) continue;
-      if (cb.querySelector('*') && cb.offsetHeight > 6000) continue;   // 跳过超高的整页容器
-      shown++;
-      var ccls = String(cb.className || '').slice(0, 34);
-      say('  ▸ <' + cb.tagName.toLowerCase() + '> .' + ccls +
-          '  w=' + cb.offsetWidth + ' disp=' + getComputedStyle(cb).display +
-          ' gtc=\'' + getComputedStyle(cb).gridTemplateColumns + '\'');
-      for (var e2 = 0; e2 < cb.children.length && e2 < 6; e2++) {
-        var ch = cb.children[e2], ccs = getComputedStyle(ch);
-        if (ccs.display === 'none') continue;
-        var cr = ch.getBoundingClientRect();
-        say('      └ <' + ch.tagName.toLowerCase() + '> .' +
-            String(ch.className || '').slice(0, 30) +
-            ' w=' + ch.offsetWidth +
-            ' left=' + Math.round(cr.left / zoom) +
-            ' top=' + Math.round(cr.top / zoom) +
-            ' txt=' + (ch.innerText || '').length +
-            ' disp=' + ccs.display);
+    near.sort(function (x, y) { return y.mn.txt - x.mn.txt; });
+    if (near.length) {
+      say('  -- 最接近命中的候选（前 3）--');
+      for (var c = 0; c < Math.min(near.length, 3); c++) {
+        var t = near[c];
+        say('    #' + (c + 1) + ' 卡在：' + t.reason);
+        say('        容器 ' + t.box + ' w=' + t.boxW + ' disp=' + t.boxDisp +
+            ' gtc=\'' + t.gtc + '\'');
+        say('        主列 <' + t.mn.tag + '> .' + t.mn.cls +
+            ' w=' + t.mn.w + ' left=' + Math.round(t.mn.left) + ' txt=' + t.mn.txt);
+        say('        侧栏 <' + t.sd.tag + '> .' + t.sd.cls +
+            ' w=' + t.sd.w + ' left=' + Math.round(t.sd.left) + ' txt=' + t.sd.txt);
       }
     }
   }
 
-  // ── 渲染浮层 ──
+  // ── 渲染 ──
   function render() {
     var box = document.createElement('div');
     box.id = 'zf-diag-panel';
@@ -205,29 +268,26 @@
       'overflow:auto;z-index:2147483647;background:#fff;color:#111;' +
       'font:11px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px 56px;' +
       'box-shadow:0 2px 12px rgba(0,0,0,.35);white-space:pre-wrap;word-break:break-all;';
-
     var pre = document.createElement('div');
     pre.textContent = LINES.join('\n');
     box.appendChild(pre);
 
-    // 按钮条
     var bar = document.createElement('div');
     bar.style.cssText = 'position:fixed;left:0;bottom:0;width:100%;z-index:2147483648;' +
       'background:#066ac9;padding:10px;display:flex;gap:8px;box-sizing:border-box;';
-
-    var btnCopy = document.createElement('button');
-    btnCopy.textContent = '复制诊断信息';
-    var btnClose = document.createElement('button');
-    btnClose.textContent = '关闭';
+    var bCopy = document.createElement('button');
+    bCopy.textContent = '复制诊断信息';
+    var bClose = document.createElement('button');
+    bClose.textContent = '关闭';
     var css = 'flex:1;padding:11px;font-size:14px;font-weight:600;border:0;border-radius:6px;';
-    btnCopy.style.cssText = css + 'background:#fff;color:#066ac9;';
-    btnClose.style.cssText = css + 'background:rgba(255,255,255,.25);color:#fff;';
+    bCopy.style.cssText = css + 'background:#fff;color:#066ac9;';
+    bClose.style.cssText = css + 'background:rgba(255,255,255,.25);color:#fff;';
 
     var ta = document.createElement('textarea');
     ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
     document.body.appendChild(ta);
 
-    btnCopy.onclick = function () {
+    bCopy.onclick = function () {
       ta.value = LINES.join('\n');
       ta.select();
       ta.setSelectionRange(0, ta.value.length);
@@ -235,37 +295,27 @@
       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
       if (!ok && navigator.clipboard) {
         navigator.clipboard.writeText(ta.value).then(function () {
-          btnCopy.textContent = '已复制 ✓';
-        }, function () {
-          btnCopy.textContent = '复制失败，请手动长按选中';
-        });
+          bCopy.textContent = '已复制 ✓';
+        }, function () { bCopy.textContent = '复制失败，请手动长按选中'; });
         return;
       }
-      btnCopy.textContent = ok ? '已复制 ✓' : '复制失败，请手动长按选中';
+      bCopy.textContent = ok ? '已复制 ✓' : '复制失败，请手动长按选中';
     };
-    btnClose.onclick = function () {
-      box.remove(); bar.remove(); ta.remove();
-    };
+    bClose.onclick = function () { box.remove(); bar.remove(); ta.remove(); };
 
-    bar.appendChild(btnCopy);
-    bar.appendChild(btnClose);
+    bar.appendChild(bCopy);
+    bar.appendChild(bClose);
     document.body.appendChild(box);
     document.body.appendChild(bar);
   }
 
   function boot() {
-    try {
-      LINES = []; NEAR = [];
-      scan();
-    } catch (e) {
-      say('!! 扫描出错: ' + (e && e.message ? e.message : e));
-    }
+    try { LINES = []; scan(); }
+    catch (e) { say('!! 扫描出错: ' + (e && e.message ? e.message : e)); }
     try { render(); } catch (e2) { console.error('[诊断] 渲染失败', e2); }
   }
 
   if (document.readyState === 'complete') setTimeout(boot, 1200);
   else window.addEventListener('load', function () { setTimeout(boot, 1200); });
-
-  // 也挂个接口，方便有控制台时直接取
   window.__zhihuDiag = function () { boot(); return LINES.join('\n'); };
 })();

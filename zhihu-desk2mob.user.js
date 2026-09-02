@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.5.0
+// @version      0.5.1
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.5.0';
+  var VER = '0.5.1';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -983,6 +983,7 @@
 
       // 有没有「内容多却被压得窄」的 item？
       var victim = false;
+      var victimEl = null;
       for (var k = 0; k < kids.length && k < 12; k++) {
         var kid = kids[k], kcs;
         try { kcs = getComputedStyle(kid); } catch (e2) { continue; }
@@ -991,9 +992,40 @@
         if ((kid.innerText || '').trim().length < 200) continue;   // 不是内容块
         if (kid.offsetWidth >= boxW * 0.3) continue;               // 没被压塌
         victim = true;
+        victimEl = kid;
         break;
       }
       if (!victim) continue;
+
+      /* ── 先看这行是不是「主列 + 右侧栏」的两栏结构（v0.5.1 新增）──
+         真实专栏页：fixWidths 压缩容器后，正文被固定宽度的右栏挤成窄条，
+         走到这里时容器里就是「一宽一窄两个块」。窄的是被挤的主列还是侧栏？
+         看文本量：文本多的是正文（被挤了），文本少的是侧栏。这种情况下
+         不做 wrap + 撑满（否则侧栏会被撑到正文底部），直接把侧栏藏掉。
+         ⚠ 只处理「恰好两个可见块」的行：3 个以上的多列 flex 行不是两栏，
+         乱藏会把行里正常的辅助块删掉（flexrow 测试页 7-item 行就栽过）。 */
+      var visCount = 0, other = null;
+      for (var k2 = 0; k2 < kids.length && k2 < 12; k2++) {
+        var oc0;
+        try { oc0 = getComputedStyle(kids[k2]); } catch (e4) { continue; }
+        if (!oc0 || oc0.display === 'none' || oc0.visibility === 'hidden') continue;
+        if (oc0.position === 'fixed' || oc0.position === 'absolute') continue;
+        visCount++;
+        if (kids[k2] !== victimEl && !other && kids[k2].offsetWidth >= 60) other = kids[k2];
+      }
+      if (visCount === 2 && other) {
+        var vTxt = (victimEl.innerText || '').trim().length;
+        var oTxt = (other.innerText || '').trim().length;
+        // victim 是文本多的那个 → 它是被挤的正文，另一个就是侧栏
+        if (vTxt > oTxt * 2 && vTxt >= 200 && other.offsetWidth >= 100) {
+          other.style.setProperty('display', 'none', 'important');
+          other.setAttribute('data-zrail', '1');
+          log('崩塌行内识别侧栏（文本 ' + oTxt + ' vs 正文 ' + vTxt + '）→ 直接隐藏');
+          done++;
+          if (done >= 6) break;
+          continue;
+        }
+      }
 
       if (isGrid) {
         box.style.setProperty('grid-template-columns', '1fr', 'important');

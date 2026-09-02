@@ -1,0 +1,512 @@
+{
+ "DESKTOP/no_script/19550225": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 1032,
+  "clientWidth": 980,
+  "overflowX": 52,
+  "overflowCount": 13,
+  "worst": [
+   {
+    "tag": "header",
+    "cls": "AppHeader css-iilrph",
+    "w": 1175,
+    "pos": "relative",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "css-lgijre",
+    "w": 1175,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "css-1ndlr1n",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "",
+    "w": 1032,
+    "pos": "static",
+    "depth": 8
+   },
+   {
+    "tag": "div",
+    "cls": "PageHeader css-1s2qlbp",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 9
+   },
+   {
+    "tag": "div",
+    "cls": "QuestionHeader",
+    "w": 1032,
+    "pos": "relative",
+    "depth": 8
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6818
+ },
+ "DESKTOP/no_script/explore": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 1032,
+  "clientWidth": 980,
+  "overflowX": 52,
+  "overflowCount": 35,
+  "worst": [
+   {
+    "tag": "header",
+    "cls": "AppHeader css-iilrph",
+    "w": 1175,
+    "pos": "relative",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "css-lgijre",
+    "w": 1175,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHeader css-1j2h47w",
+    "w": 1046,
+    "pos": "static",
+    "depth": 10
+   },
+   {
+    "tag": "div",
+    "cls": "css-1ndlr1n",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "",
+    "w": 1032,
+    "pos": "static",
+    "depth": 8
+   },
+   {
+    "tag": "div",
+    "cls": "PageHeader css-1s2qlbp",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 9
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "发现 - 知乎",
+  "textLen": 4517
+ },
+ "DESKTOP/v3/19550225": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 1032,
+  "clientWidth": 980,
+  "overflowX": 52,
+  "overflowCount": 13,
+  "worst": [
+   {
+    "tag": "header",
+    "cls": "AppHeader css-iilrph",
+    "w": 1175,
+    "pos": "relative",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "css-lgijre",
+    "w": 1175,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "css-1ndlr1n",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "",
+    "w": 1032,
+    "pos": "static",
+    "depth": 8
+   },
+   {
+    "tag": "div",
+    "cls": "PageHeader css-1s2qlbp",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 9
+   },
+   {
+    "tag": "div",
+    "cls": "QuestionHeader",
+    "w": 1032,
+    "pos": "relative",
+    "depth": 8
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6798
+ },
+ "DESKTOP/v3/explore": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 1032,
+  "clientWidth": 980,
+  "overflowX": 52,
+  "overflowCount": 35,
+  "worst": [
+   {
+    "tag": "header",
+    "cls": "AppHeader css-iilrph",
+    "w": 1175,
+    "pos": "relative",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "css-lgijre",
+    "w": 1175,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHeader css-1j2h47w",
+    "w": 1046,
+    "pos": "static",
+    "depth": 10
+   },
+   {
+    "tag": "div",
+    "cls": "css-1ndlr1n",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "",
+    "w": 1032,
+    "pos": "static",
+    "depth": 8
+   },
+   {
+    "tag": "div",
+    "cls": "PageHeader css-1s2qlbp",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 9
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "发现 - 知乎",
+  "textLen": 4533
+ },
+ "DESKTOP/v4/19550225": {
+  "zoom": 2.4936,
+  "layoutW": 980,
+  "cssW": 393,
+  "scrollWidth": 980,
+  "clientWidth": 980,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 617,
+  "htmlZoomProp": "2.49364",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6230
+ },
+ "DESKTOP/v4/explore": {
+  "zoom": 2.4936,
+  "layoutW": 980,
+  "cssW": 393,
+  "scrollWidth": 980,
+  "clientWidth": 980,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 1028,
+  "htmlZoomProp": "2.49364",
+  "title": "发现 - 知乎",
+  "textLen": 4248
+ },
+ "MOBILE/no_script/19550225": {
+  "zoom": 1,
+  "layoutW": 393,
+  "cssW": 393,
+  "scrollWidth": 393,
+  "clientWidth": 393,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 393,
+  "htmlZoomProp": "1",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6081
+ },
+ "MOBILE/no_script/explore": {
+  "zoom": 1,
+  "layoutW": 393,
+  "cssW": 393,
+  "scrollWidth": 1032,
+  "clientWidth": 393,
+  "overflowX": 639,
+  "overflowCount": 206,
+  "worst": [
+   {
+    "tag": "div",
+    "cls": "ExploreHeader css-1j2h47w",
+    "w": 1046,
+    "pos": "static",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage",
+    "w": 1032,
+    "pos": "static",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection ExploreHomePage-section",
+    "w": 1000,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection-header",
+    "w": 1000,
+    "pos": "static",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection-body",
+    "w": 1000,
+    "pos": "static",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-square",
+    "w": 1000,
+    "pos": "static",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection-moreButton",
+    "w": 1000,
+    "pos": "static",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection ExploreHomePage-section",
+    "w": 1000,
+    "pos": "static",
+    "depth": 5
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "发现 - 知乎",
+  "textLen": 4046
+ },
+ "MOBILE/v3/19550225": {
+  "zoom": 1,
+  "layoutW": 393,
+  "cssW": 393,
+  "scrollWidth": 393,
+  "clientWidth": 393,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 393,
+  "htmlZoomProp": "1",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6077
+ },
+ "MOBILE/v3/explore": {
+  "zoom": 1,
+  "layoutW": 393,
+  "cssW": 393,
+  "scrollWidth": 1032,
+  "clientWidth": 393,
+  "overflowX": 639,
+  "overflowCount": 206,
+  "worst": [
+   {
+    "tag": "div",
+    "cls": "ExploreHeader css-1j2h47w",
+    "w": 1046,
+    "pos": "static",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage",
+    "w": 1032,
+    "pos": "static",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection ExploreHomePage-section",
+    "w": 1000,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection-header",
+    "w": 1000,
+    "pos": "static",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection-body",
+    "w": 1000,
+    "pos": "static",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-square",
+    "w": 1000,
+    "pos": "static",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection-moreButton",
+    "w": 1000,
+    "pos": "static",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection ExploreHomePage-section",
+    "w": 1000,
+    "pos": "static",
+    "depth": 5
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "发现 - 知乎",
+  "textLen": 4047
+ },
+ "MOBILE/v4/19550225": {
+  "zoom": 1,
+  "layoutW": 393,
+  "cssW": 393,
+  "scrollWidth": 393,
+  "clientWidth": 393,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 393,
+  "htmlZoomProp": "1",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6083
+ },
+ "MOBILE/v4/explore": {
+  "zoom": 1,
+  "layoutW": 393,
+  "cssW": 393,
+  "scrollWidth": 393,
+  "clientWidth": 393,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 1028,
+  "htmlZoomProp": "1",
+  "title": "发现 - 知乎",
+  "textLen": 3841
+ }
+}

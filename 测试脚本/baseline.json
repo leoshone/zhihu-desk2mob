@@ -1,0 +1,158 @@
+{
+ "https://www.zhihu.com/question/19550225": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 1032,
+  "clientWidth": 980,
+  "overflowX": 52,
+  "overflowCount": 13,
+  "worst": [
+   {
+    "tag": "header",
+    "cls": "AppHeader css-iilrph",
+    "w": 1175,
+    "pos": "relative",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "css-lgijre",
+    "w": 1175,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "css-1ndlr1n",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "",
+    "w": 1032,
+    "pos": "static",
+    "depth": 8
+   },
+   {
+    "tag": "div",
+    "cls": "PageHeader css-1s2qlbp",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 9
+   },
+   {
+    "tag": "div",
+    "cls": "QuestionHeader",
+    "w": 1032,
+    "pos": "relative",
+    "depth": 8
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "如何正确使用知乎？ - 知乎",
+  "textLen": 6799
+ },
+ "https://www.zhihu.com/explore": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 1032,
+  "clientWidth": 980,
+  "overflowX": 52,
+  "overflowCount": 33,
+  "worst": [
+   {
+    "tag": "header",
+    "cls": "AppHeader css-iilrph",
+    "w": 1175,
+    "pos": "relative",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "css-lgijre",
+    "w": 1175,
+    "pos": "static",
+    "depth": 5
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 6
+   },
+   {
+    "tag": "div",
+    "cls": "css-51utkw",
+    "w": 1055,
+    "pos": "relative",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "css-1ndlr1n",
+    "w": 1032,
+    "pos": "absolute",
+    "depth": 7
+   },
+   {
+    "tag": "div",
+    "cls": "",
+    "w": 1032,
+    "pos": "static",
+    "depth": 8
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage",
+    "w": 1032,
+    "pos": "static",
+    "depth": 4
+   },
+   {
+    "tag": "div",
+    "cls": "ExploreHomePage-ContentSection ExploreHomePage-section",
+    "w": 1000,
+    "pos": "static",
+    "depth": 5
+   }
+  ],
+  "bodyScrollW": 1032,
+  "htmlZoomProp": "1",
+  "title": "发现 - 知乎",
+  "textLen": 4138
+ },
+ "https://www.zhihu.com/signin": {
+  "zoom": 1,
+  "layoutW": 980,
+  "cssW": 980,
+  "scrollWidth": 980,
+  "clientWidth": 980,
+  "overflowX": 0,
+  "overflowCount": 0,
+  "worst": [],
+  "bodyScrollW": 980,
+  "htmlZoomProp": "1",
+  "title": "知乎 - 有问题，就会有答案",
+  "textLen": 456
+ }
+}

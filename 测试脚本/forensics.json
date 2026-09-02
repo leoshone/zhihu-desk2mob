@@ -1,0 +1,50 @@
+{
+ "sel": {
+  ".AppHeader-inner": 0,
+  ".AppHeader": 1,
+  ".SearchBar": 1,
+  ".SearchBar-container": 0,
+  ".Question-main": 0,
+  ".Topstory-container": 0,
+  ".Question-mainColumn": 1,
+  ".Topstory-mainColumn": 0,
+  ".Question-sideColumn": 1,
+  ".ColumnSideBar": 0,
+  ".GlobalSideBar": 0,
+  ".Post-NormalMain": 0,
+  ".QuestionHeader-title": 2,
+  ".RichText": 3,
+  ".RichContent": 3,
+  "header.AppHeader nav": 1
+ },
+ "minw": [
+  {
+   "tag": "header",
+   "cls": "AppHeader css-iilrph",
+   "minWidth": 1175,
+   "width": 1175
+  },
+  {
+   "tag": "div",
+   "cls": "QuestionHeader",
+   "minWidth": 1032,
+   "width": 1032
+  },
+  {
+   "tag": "div",
+   "cls": "QuestionHeader-main QuestionHeader-footer-main",
+   "minWidth": 694,
+   "width": 694
+  }
+ ],
+ "vunits": 28,
+ "rules": 7208,
+ "sheets": 84,
+ "domCount": 1110,
+ "emotion": 184,
+ "sample": [
+  "header.AppHeader css-iilrph min-w=1175",
+  "div.QuestionHeader min-w=1032",
+  "div.QuestionHeader-main QuestionHeader-foote min-w=694"
+ ]
+}

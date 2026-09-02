@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><head><meta charset=utf-8><style>
+body{margin:0;font:15px/1.7 system-ui}
+#app{max-width:393px;margin:0 auto}
+.card{padding:16px;border-bottom:1px solid #eee}
+</style></head><body><div id=app></div>
+<script>
+setTimeout(function(){
+  // 一次性插入整个页面内容（React render 的方式：一个 root 子树）
+  document.getElementById('app').innerHTML =
+    '<div class=page><div class=card><b>甲</b><br>昨天看到知乎热榜上这个问题，说说我的看法。</div>' +
+    '<div class=card><b>乙</b><br>今天天气不错，出门走了走。</div></div>';
+}, 1200);
+</script></body></html>

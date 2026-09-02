@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.6.0
+// @version      0.6.1
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.6.0';
+  var VER = '0.6.1';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1251,7 +1251,7 @@
   //        「相关推荐」章节、评论区里的「推荐」字样不能杀；
   //     ② 特征词要求短文本（<400 字）：侧栏卡片文本短，正文长。
   // ═══════════════════════════════════════════════════════════════
-  var RAIL_KEYWORDS = /关于作者|推荐阅读|大家都在搜|热门推荐|相关推荐|知乎热榜|CircleCard|作者专栏/;
+  var RAIL_KEYWORDS = /关于作者|推荐阅读|大家都在搜|CircleCard|作者专栏/;
   function insideRichContent(el) {
     for (var p = el; p && p !== document.body; p = p.parentElement) {
       var c = p.className;
@@ -1266,23 +1266,26 @@
     if (!CONFIG.hideSidebar || CONFIG.sideColumn !== 'hide') return;
     if (el.nodeType !== 1 || el.hasAttribute('data-zrail')) return;
     if (insideRichContent(el)) return;
+    /* ⚠ 白屏事故（v0.6.0）：
+       节点插入瞬间尚未布局，offsetWidth 全是 0，向上爬「宽 ≥200 祖先」
+       会爬穿卡片直到整页容器 —— 关键词命中的是一张提到「知乎热榜」的
+       普通卡片，结果把整页 display:none = 白屏。
+       对策①：未布局（offsetWidth===0）的节点一律不判定，等下一轮
+       MutationObserver 再看 —— 布局完成后卡片自己就是 ≥200px 的边界。 */
+    if (el.offsetWidth === 0) return;
     var txt = '';
     try { txt = (el.innerText || '').trim(); } catch (e) { return; }
     if (!txt || txt.length >= 400) return;          // 长文本是正文，不是侧栏卡片
     if (!RAIL_KEYWORDS.test(txt)) return;
-    // 找「该隐藏谁」：命中特征词的可能是卡片内部节点，向上爬到
-    // 「宽度 ≥ 200px 的最近块级祖先」再藏 —— 藏内部节点藏不干净
-    var target = el;
-    while (target && target !== document.body) {
-      var cs;
-      try { cs = getComputedStyle(target); } catch (e2) { break; }
-      if (cs && cs.display !== 'none' && target.offsetWidth >= 200 &&
-          cs.position !== 'fixed' && cs.position !== 'absolute') break;
-      target = target.parentElement;
-    }
-    if (!target || target === document.body) return;
-    target.style.setProperty('display', 'none', 'important');
-    target.setAttribute('data-zrail', '1');
+    /* 对策②：命中节点本身宽度 ≥200 才有资格当侧栏卡片；不向上爬。
+       v0.6.0 的爬升逻辑在布局未完成时会穿透一切容器，是白屏根源。
+       保守换安全：只藏「自己就是宽卡片且文本命中特征词」的节点。 */
+    if (el.offsetWidth < 200) return;
+    // 对策③：确认它不是「包含其他内容块的大容器」——侧栏卡片里
+    // 只有关键词和少量文字，不会同时装有图片/按钮等富内容
+    if (el.querySelectorAll('img,video,button,form').length > 2) return;
+    el.style.setProperty('display', 'none', 'important');
+    el.setAttribute('data-zrail', '1');
     log('早期猎手：拦截侧栏（含「' + (txt.match(RAIL_KEYWORDS) || ['?'])[0] + '」）');
   }
   var earlyMoInstalled = false;

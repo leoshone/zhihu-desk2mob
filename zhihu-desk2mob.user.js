@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
-// @namespace    https://github.com/user/zhihu-mobile
+// @namespace    https://github.com/leoshone/zhihu-desk2mob
 // @version      0.1.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
-// @author       You
+// @author       leoshone
 // @match        https://*.zhihu.com/*
 // @match        https://zhihu.com/*
 // @icon         https://www.zhihu.com/favicon.ico
+// @updateURL    https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.user.js
+// @downloadURL  https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.user.js
 // @grant        none
 // @run-at       document-start
 // @noframes

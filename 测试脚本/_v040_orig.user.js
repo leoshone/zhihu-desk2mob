@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.4.1
+// @version      0.4.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.4.1';
+  var VER = '0.4.0';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -222,27 +222,23 @@
         '.AppBanner,.MobileAppBanner,[class*="DownloadApp"],[class*="MobileAppHeader"],',
         '[class*="QRCode"],[class*="QrCode"],[class*="BackToTop"],[class*="Adblock"],',
         '.Toast,.Toast-wrapper,.CornerButtons,.QuestionButtonGroup{display:none!important}',
-        /* 侧栏本身：按 sideColumn 模式处理
-           ── 为什么没有 [class*="Recommend"] / [class*="Related"]（0.4.0 回归事故）──
-           首页信息流每一条帖子的类名都是 TopstoryItem TopstoryItem-isRecommend，
-           子串匹配把整列帖子全部 display:none，首页直接白屏（复刻页 A/B 实锤：
-           v0.3.3 可见 5/5，v0.4.0 可见 0/5）。类名子串匹配只能认「完整语义词」，
-           像 Recommend/Related 这种既出现在侧栏名又出现在内容名里的词，
-           一律交给 hideRightRail() 的位置判断去处理，不进 CSS。 */
+        /* 侧栏本身：按 sideColumn 模式处理 */
         CONFIG.sideColumn === 'hide'
           ? [
             '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
             '.GlobalSideBar,.Profile-sideColumn,.ColumnPageSidebar,.Post-Row-Content-right,',
             '.AuthorCard,[class*="AuthorCard"],[class*="HotList"],',
             'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
-            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"]{display:none!important}'
+            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"],',
+            '[class*="Recommend"],[class*="Related"]{display:none!important}'
           ].join('')
           : [
             '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
             '.GlobalSideBar,.Profile-sideColumn,.ColumnPageSidebar,.Post-Row-Content-right,',
             '.AuthorCard,[class*="AuthorCard"],[class*="HotList"],',
             'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
-            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"]{',
+            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"],',
+            '[class*="Recommend"],[class*="Related"]{',
               'width:100%!important;max-width:100%!important;min-width:0!important;',
               'flex:1 1 100%!important;margin-top:16px!important;box-sizing:border-box!important}'
           ].join(''),

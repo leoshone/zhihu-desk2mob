@@ -1,0 +1,76 @@
+{
+  "v0.3.3": {
+    "itemsTotal": 5,
+    "itemsVisible": 5,
+    "detail": [
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 158
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      }
+    ],
+    "feedDisplay": "block",
+    "mainDisplay": "block",
+    "mainW": 393,
+    "bodyTxt": 613,
+    "overflowX": 0,
+    "shot": "D:\\AiSpaces\\Code\\zhihu-desk2mob\\测试截图\\home_ab_v033.png"
+  },
+  "v0.4.0": {
+    "itemsTotal": 5,
+    "itemsVisible": 5,
+    "detail": [
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 158
+      },
+      {
+        "cls": "TopstoryItem TopstoryItem-isRecommend Card ContentItem",
+        "display": "block",
+        "h": 211
+      }
+    ],
+    "feedDisplay": "block",
+    "mainDisplay": "block",
+    "mainW": 393,
+    "bodyTxt": 538,
+    "overflowX": 0,
+    "shot": "D:\\AiSpaces\\Code\\zhihu-desk2mob\\测试截图\\home_ab_v040.png"
+  }
+}

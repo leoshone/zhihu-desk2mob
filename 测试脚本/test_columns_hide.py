@@ -2,8 +2,8 @@
 from lib import *
 from playwright.sync_api import sync_playwright
 
-V4 = "/workspace/zhihu-mobile/zhihu-desk2mob.user.js"
-URL = "file:///workspace/zhihu-mobile/测试脚本/testpage_zhuanlan.html"
+V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
+URL = "file:///D:/AiSpaces/Code/zhihu-desk2mob/测试脚本/testpage_zhuanlan.html"
 
 MEASURE = r"""
 () => {
@@ -58,7 +58,7 @@ def show(tag, m):
 
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--no-sandbox"])
-    for label, script in (("无脚本", None), ("装脚本（hide 模式）", "/tmp/v4_hide.js")):
+    for label, script in (("无脚本", None), ("装脚本（hide 模式）", "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js")):
         ctx = b.new_context(**DESKTOP_MODE)
         if script:
             ctx.add_init_script(path=script)
@@ -70,6 +70,6 @@ with sync_playwright() as p:
         show(label, pg.evaluate(MEASURE))
         if errs:
             print("  pageerror:", errs[:2])
-        pg.screenshot(path=f"/tmp/cols_{'with' if script else 'no'}.png")
+        pg.screenshot(path=f"D:/AiSpaces/Code/zhihu-desk2mob/测试截图/cols_{'with' if script else 'no'}.png")
         ctx.close()
     b.close()

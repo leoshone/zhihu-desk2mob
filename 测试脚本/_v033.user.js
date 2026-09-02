@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.4.1
+// @version      0.3.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.4.1';
+  var VER = '0.3.0';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -48,16 +48,12 @@
     debug:        true,   // 右上角状态角标（点一下可临时关闭适配，再点恢复）
     fitHeader:    true,   // 顶栏自适应裁剪（超过宽度的导航项自动收起）
     hideSidebar:  true,   // 隐藏右侧栏、悬浮按钮、App 下载条
-    sideColumn:   'hide',   // 右侧栏处理：'hide' 直接去掉（默认）/ 'bottom' 移到底部 / 'keep' 不动
-    hideRightRail:true,   // 按位置兜底去掉右侧栏（现代知乎用哈希类名，类名选择器盖不全）
+    sideColumn:   'bottom', // 右侧栏处理：'bottom' 移到底部 / 'hide' 直接隐藏 / 'keep' 不动
     fixFlexRows:  true,   // 修「多列 flex 把正文压成一条」：容器换行，内容块各占一行
-    modalBackClose:true,  // 弹层（展开回复等）：按手机返回键关掉弹层而不是退出页面
     fixVUnits:    true,   // 修正 vh/vw 在 zoom 下的失真
     bodyFont:     16,     // 正文字号（px）；设 0 表示不改
     maxScan:      4500,   // 单次宽度修复最多扫描的元素数
-    sidePadding:  12,     // 页面左右留白（px）
-    maxColumnDepth: 8     // 两栏布局容器的最大 DOM 深度：页面骨架很浅，卡片内部很深，
-                          // 超过这个深度的一律不当两栏处理（发现页的卡片就栽在这上面）
+    sidePadding:  12      // 页面左右留白（px）
   };
 
   var S = {};   // 运行时状态
@@ -222,27 +218,23 @@
         '.AppBanner,.MobileAppBanner,[class*="DownloadApp"],[class*="MobileAppHeader"],',
         '[class*="QRCode"],[class*="QrCode"],[class*="BackToTop"],[class*="Adblock"],',
         '.Toast,.Toast-wrapper,.CornerButtons,.QuestionButtonGroup{display:none!important}',
-        /* 侧栏本身：按 sideColumn 模式处理
-           ── 为什么没有 [class*="Recommend"] / [class*="Related"]（0.4.0 回归事故）──
-           首页信息流每一条帖子的类名都是 TopstoryItem TopstoryItem-isRecommend，
-           子串匹配把整列帖子全部 display:none，首页直接白屏（复刻页 A/B 实锤：
-           v0.3.3 可见 5/5，v0.4.0 可见 0/5）。类名子串匹配只能认「完整语义词」，
-           像 Recommend/Related 这种既出现在侧栏名又出现在内容名里的词，
-           一律交给 hideRightRail() 的位置判断去处理，不进 CSS。 */
+        /* 侧栏本身：按 sideColumn 模式处理 */
         CONFIG.sideColumn === 'hide'
           ? [
             '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
             '.GlobalSideBar,.Profile-sideColumn,.ColumnPageSidebar,.Post-Row-Content-right,',
             '.AuthorCard,[class*="AuthorCard"],[class*="HotList"],',
             'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
-            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"]{display:none!important}'
+            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"],',
+            '[class*="Recommend"],[class*="Related"]{display:none!important}'
           ].join('')
           : [
             '.Question-sideColumn,.Topstory-sideColumn,.ColumnSideBar,.Post-SideColumn,',
             '.GlobalSideBar,.Profile-sideColumn,.ColumnPageSidebar,.Post-Row-Content-right,',
             '.AuthorCard,[class*="AuthorCard"],[class*="HotList"],',
             'aside,[class*="SideColumn"],[class*="SideBar"],[class*="Sidebar"],',
-            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"]{',
+            '[class*="Post-Side"],[class*="Article-Side"],[class*="ColumnPage-Side"],',
+            '[class*="Recommend"],[class*="Related"]{',
               'width:100%!important;max-width:100%!important;min-width:0!important;',
               'flex:1 1 100%!important;margin-top:16px!important;box-sizing:border-box!important}'
           ].join(''),
@@ -499,12 +491,6 @@
       if (bw < base * 0.6) continue;          // 只看够宽的容器
       var kids = box.children;
       if (kids.length < 2 || kids.length > 8) continue;
-      // 深度上限：页面的两栏骨架永远在浅层，卡片、列表项内部的元素深度都在
-      // 10 以上。没有这条约束，发现页卡片里的「内容 + 标签行」会被当成
-      // 两栏，标签行（回答281 赞同35 评论）被当成侧栏删掉。
-      var dp = 0, pk = box;
-      while (pk && pk !== document.body) { dp++; pk = pk.parentElement; }
-      if (dp > CONFIG.maxColumnDepth) continue;
 
       // 收集块级、可见、有宽度的子元素
       var row = [];
@@ -541,14 +527,10 @@
 
       // 侧栏得占够比例才处理（小挂件不是侧栏）
       if (side.w < bw * 0.2) continue;
-      // 反过来也成立：占了大半个容器的那不是侧栏，是主内容
-      if (side.w > bw * 0.55) continue;
-      // 侧栏通常顶到容器右边缘；卡片里那种紧跟在文字后面的小标签不是
-      if (side.left + side.w < bw * 0.7) continue;
       // 主列文本量应多于侧栏，避免把辅助栏误判成主列
       if (main.txt < side.txt) continue;
       // 主列至少得有点内容
-      if (main.txt < 300) continue;
+      if (main.txt < 200) continue;
 
       // 主列撑满
       main.el.style.setProperty('flex', '1 1 auto', 'important');
@@ -681,274 +663,6 @@
   //
   //     必须放在 fixWidths 之后 —— 崩塌是它造成的，得先发生才能检测到。
   // ═══════════════════════════════════════════════════════════════
-  // ═══════════════════════════════════════════════════════════════
-  // 5.7 按位置去掉右侧栏（类名兜底）
-  //
-  //     类名选择器盖不全：现代知乎大量用 emotion 哈希类名，真机专栏页
-  //     实测「侧栏候选（按类名）命中 0 个」——一个 SideColumn 都没有。
-  //     所以再补一层按位置的判断：从正文出发，把「在正文右边、和正文
-  //     垂直重叠、有实质内容、但比正文短」的兄弟元素去掉。
-  //
-  //     四条判据一起用，误伤风险很低：顶栏图标太窄、评论区在正文下方
-  //     不重叠、比正文长的只能是真的主内容。
-  // ═══════════════════════════════════════════════════════════════
-  function findMainContent() {
-    var sels = ['article.Post-Main', '.Post-Main', '.Post-NormalMain',
-                '.Question-main', '.Question-mainColumn', '.Topstory-mainColumn',
-                '.Post-content', '.RichText', 'article', 'main'];
-    for (var i = 0; i < sels.length; i++) {
-      var els;
-      try { els = document.querySelectorAll(sels[i]); } catch (e) { continue; }
-      for (var j = 0; j < els.length; j++) {
-        var el = els[j], cs;
-        try { cs = getComputedStyle(el); } catch (e2) { continue; }
-        if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
-        // 关键：父元素被隐藏时，子元素的 computed display 仍是原值（'block'），
-        // 上面的判断漏得掉。而 innerText 对不渲染的元素又会退化成 textContent，
-        // 于是「文本够长」也照样成立 —— 两个条件一起失效，就会选中一个
-        // 根本不在渲染树里的隐藏节点，它的坐标全是 0，后续所有位置判断全部落空。
-        // getClientRects() 是唯一可靠的「真在渲染」判据。
-        if (!el.getClientRects().length) continue;
-        if (el.offsetWidth < 40) continue;
-        if ((el.innerText || '').trim().length < 300) continue;
-        return el;
-      }
-    }
-    return null;
-  }
-
-  function hideRightRail() {
-    if (!CONFIG.hideRightRail || CONFIG.sideColumn !== 'hide' || !document.body) return 0;
-    var main = findMainContent();
-    if (!main) return 0;
-
-    var mr = main.getBoundingClientRect();
-    var mRight = (mr.left + mr.width) / S.Z;
-    var mTop = mr.top / S.Z;
-    var mBot = mTop + main.offsetHeight;
-    var mTxt = (main.innerText || '').trim().length;
-    var hidden = 0;
-
-    var probe = main;
-    for (var d = 0; d < 5 && probe; d++) {
-      var pa = probe.parentElement;
-      if (!pa || pa === document.body || pa === document.documentElement) break;
-      for (var k = 0; k < pa.children.length && k < 12; k++) {
-        var sib = pa.children[k];
-        if (sib === probe || sib.contains(main)) continue;
-        var cs;
-        try { cs = getComputedStyle(sib); } catch (e) { continue; }
-        if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
-        if (cs.position === 'fixed' || cs.position === 'absolute') continue;
-        var w = sib.offsetWidth;
-        if (w < 100) continue;                                    // 小挂件不是侧栏
-        if (sib.hasAttribute('data-zskip')) continue;
-
-        var r = sib.getBoundingClientRect();
-        var left = r.left / S.Z;
-        if (left < mRight - 10) continue;                          // 不在正文右侧
-        var top = r.top / S.Z;
-        if (top > mBot || top + sib.offsetHeight < mTop) continue; // 垂直不重叠
-        var txt = (sib.innerText || '').trim().length;
-        if (txt >= mTxt) continue;                                 // 比正文长，不可能是侧栏
-
-        sib.style.setProperty('display', 'none', 'important');
-        sib.setAttribute('data-zrail', '1');      // 打标记，方便诊断时区分是谁干的
-        log('右侧栏@' + d + '层 <' + sib.tagName.toLowerCase() + '> .' +
-            String(sib.className || '').slice(0, 30) +
-            ' | 宽=' + w + ' left=' + Math.round(left) + ' 正文右边界=' + Math.round(mRight) +
-            ' | txt=' + txt + '(正文 ' + mTxt + ')');
-        hidden++;
-        if (hidden >= 8) break;
-      }
-      if (hidden >= 8) break;
-      probe = pa;
-    }
-    if (hidden) log('按位置去掉右侧栏 ' + hidden + ' 处');
-    return hidden;
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // 5.8 弹层：返回键关闭
-  //
-  //     知乎的「展开其他 N 条回复」会弹出一个层，这个层通常没有可用的
-  //     关闭方式，按手机返回键又会直接退出整个页面。
-  //
-  //     做法：监听 popstate —— 如果此时有弹层开着，先关掉它，再用
-  //     pushState 把历史顶回去，页面就不会真的后退。没弹层时不干预，
-  //     返回键行为完全正常。
-  //
-  //     检测弹层不依赖类名（同样是哈希类名的问题）：fixed/absolute +
-  //     覆盖大部分屏幕 + 可见 + z-index 最高。脚本自己的角标尺寸太小，
-  //     会被过滤掉。
-  // ═══════════════════════════════════════════════════════════════
-  function findOpenModal() {
-    var vw = document.documentElement.clientWidth;
-    var vh = document.documentElement.clientHeight;
-    if (!vw || !vh) return null;
-    var all = document.body.querySelectorAll('*');
-    var n = Math.min(all.length, CONFIG.maxScan);
-    var best = null, bestZ = -1;
-
-    for (var i = 0; i < n; i++) {
-      var el = all[i];
-      if (el.id === 'zhihu-mobile-badge' || el.id === 'zf-modal-close') continue;
-      var cs;
-      try { cs = getComputedStyle(el); } catch (e) { continue; }
-      if (!cs) continue;
-      if (cs.position !== 'fixed' && cs.position !== 'absolute') continue;
-      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-      if (parseFloat(cs.opacity) < 0.15) continue;
-      if (el.hasAttribute('data-zskip')) continue;
-      var r = el.getBoundingClientRect();
-      // 覆盖大部分屏幕才算弹层（角标、回到顶部这类小东西不算）
-      if (r.width < vw * 0.55 || r.height < vh * 0.35) continue;
-      var z = parseInt(cs.zIndex, 10);
-      if (isNaN(z)) z = 0;
-      if (z > bestZ) { bestZ = z; best = el; }
-    }
-    return best;
-  }
-
-  function closeTopModal() {
-    var m = findOpenModal();
-    if (!m) return false;
-
-    // ① 优先点弹层自己的关闭按钮 —— 最符合预期，能触发知乎的清理逻辑
-    var btnSels = ['.Modal-closeButton', '[class*="Modal-close"]', '[class*="modal-close"]',
-                   '[class*="ModalClose"]', '[class*="CloseButton"]', '[class*="closeButton"]',
-                   '[class*="Drawer-close"]', 'button[aria-label="关闭"]',
-                   '[aria-label="关闭"]', '[class*="close-icon"]'];
-    for (var i = 0; i < btnSels.length; i++) {
-      var btns;
-      try { btns = m.querySelectorAll(btnSels[i]); } catch (e) { continue; }
-      for (var j = 0; j < btns.length; j++) {
-        var b = btns[j], bcs;
-        try { bcs = getComputedStyle(b); } catch (e2) { continue; }
-        if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
-        var br = b.getBoundingClientRect();
-        if (br.width < 1 || br.height < 1) continue;
-        b.click();
-        log('弹层：点了关闭按钮（' + btnSels[i] + '）');
-        return true;
-      }
-    }
-
-    // ② 退而求其次：ESC。很多弹层会监听它
-    try {
-      m.dispatchEvent(new KeyboardEvent('keydown',
-        { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
-      document.dispatchEvent(new KeyboardEvent('keydown',
-        { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
-    } catch (e3) { /* 忽略 */ }
-    // 等一帧看看关掉没
-    var still = findOpenModal();
-    if (still !== m) { log('弹层：ESC 关闭'); return true; }
-
-    // ③ 兜底：直接移除。粗暴，但至少能让用户回到正文
-    try {
-      m.parentNode && m.parentNode.removeChild(m);
-      log('弹层：兜底移除');
-      return true;
-    } catch (e4) { return false; }
-  }
-
-  var modalBackReady = false;
-  function setupModalBack() {
-    if (!CONFIG.modalBackClose || modalBackReady || !document.body) return;
-    modalBackReady = true;
-
-    var pushed = false;   // 我们压进去的「缓冲历史」还在不在栈顶
-    var silent = false;   // 正在做静默 back（清理缓冲历史），别当成用户按了返回
-
-    // ── 核心思路：弹层一出现就先压一条历史当缓冲 ──
-    //
-    //   用户按返回时，消费掉的是这条缓冲，而缓冲的地址和当前完全一样，
-    //   所以 URL 自始至终没变，页面不会跳走。
-    //
-    //   一开始的做法是「等 popstate 再 pushState 把历史顶回去」，那是错的：
-    //   popstate 触发时 location.href 已经变成后退后的地址了，再 pushState
-    //   只是把新地址重复压栈。后果在真机上很明显 —— 从 A 页点进 B 页开弹层，
-    //   按返回会直接被送回 A 页，弹层虽然关了但人也走了。
-    function onModalOpen() {
-      if (pushed) return;
-      try {
-        history.pushState({ zfModal: 1 }, '', location.href);
-        pushed = true;
-        log('弹层：压入缓冲历史');
-      } catch (e) { /* file:// 或跨域下可能失败，忽略 */ }
-    }
-
-    // 弹层自己关掉时把缓冲历史也退掉，否则用户下次按返回会「没反应」
-    function onModalGone() {
-      if (!pushed) return;
-      pushed = false;
-      try {
-        // 只有栈顶确实是我们压的那条才敢 back，避免误退真实页面
-        if (history.state && history.state.zfModal) {
-          silent = true;
-          history.back();
-        }
-      } catch (e) { silent = false; }
-    }
-
-    window.addEventListener('popstate', function () {
-      if (silent) { silent = false; pushed = false; return; }
-      if (!findOpenModal()) { pushed = false; return; }
-
-      var had = pushed;
-      pushed = false;
-      closeTopModal();
-
-      // had=true：这次返回消耗掉了缓冲历史，URL 没变过，什么都不用做。
-      // had=false：弹层刚出现、还没来得及压缓冲就按了返回（检测有延迟，
-      //            概率很低）。此时只能退而求其次把当前地址顶回去，
-      //            保证至少不会退出页面。
-      if (!had) {
-        try { history.pushState({ zfStay: 1 }, '', location.href); } catch (e) {}
-      }
-    });
-
-    // 快速通道：点击后 30ms 就检查一次。MutationObserver 有抖动，光靠它
-    // 会留下一个「弹层刚打开就按返回」的时间窗。
-    document.addEventListener('click', function () {
-      setTimeout(function () {
-        if (!pushed && findOpenModal()) onModalOpen();
-      }, 30);
-    }, true);
-
-    // 补一个自己的关闭按钮（知乎有些层压根没有能点的关闭入口），
-    // 顺便跟踪弹层的出现与消失，同步历史栈
-    if (window.MutationObserver) {
-      var lastHad = false, lastCheck = 0;
-      new MutationObserver(function () {
-        var now = Date.now();
-        if (now - lastCheck < 200) return;      // findOpenModal 不便宜，节流一下
-        lastCheck = now;
-
-        var m = findOpenModal();
-        var had = !!m;
-        if (had && !lastHad) onModalOpen();
-        else if (!had && lastHad) onModalGone();
-        lastHad = had;
-
-        var btn = document.getElementById('zf-modal-close');
-        if (!m) { if (btn) btn.remove(); return; }
-        if (btn) return;
-
-        btn = document.createElement('button');
-        btn.id = 'zf-modal-close';
-        btn.textContent = '✕ 关闭';
-        btn.style.cssText =
-          'position:fixed;right:10px;top:10px;z-index:2147483646;' +
-          'padding:7px 13px;font-size:14px;font-weight:600;color:#fff;' +
-          'background:rgba(0,0,0,.62);border:0;border-radius:16px;';
-        btn.onclick = function () { closeTopModal(); btn.remove(); };
-        document.body.appendChild(btn);
-      }).observe(document.body, { childList: true, subtree: true });
-    }
-  }
-
   function fixFlexRows() {
     if (!CONFIG.fixFlexRows || !document.body) return 0;
     var base = S.BASE;
@@ -1028,9 +742,7 @@
     b = safe('fixFixedLayers', fixFixedLayers) || 0;
     safe('fitHeader', fitHeader);
     safe('fitColumns', fitColumns);
-    safe('hideRightRail', hideRightRail);
     safe('fixFlexRows', fixFlexRows);
-    safe('setupModalBack', setupModalBack);
     safe('wrapTables', wrapTables);
     var t1 = (performance && performance.now) ? performance.now() : Date.now();
 
@@ -1133,9 +845,7 @@
               if (list[i] === document.body || list[i].querySelectorAll('*').length > 120) { big = true; break; }
               safe('sub', function () { fixWidths(list[i], 2); });
             }
-            // SPA 切页后必须重跑 hideRightRail —— 否则新页面的侧栏要等到刷新才消失。
-            // 顺序和 applyAll 保持一致：先去侧栏，再修崩塌。
-            if (big) { safe('full', function () { markScrollables(); fixWidths(null, 3); fitHeader(); fitColumns(); hideRightRail(); fixFlexRows(); }); }
+            if (big) { safe('full', function () { markScrollables(); fixWidths(null, 3); fitHeader(); fitColumns(); fixFlexRows(); }); }
             safe('fixed', fixFixedLayers);
             safe('tables', wrapTables);
             safe('badge', drawBadge);

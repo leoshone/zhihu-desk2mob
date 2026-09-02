@@ -1,7 +1,7 @@
 """验证 __zhihuFit() 自检入口 + 旋屏 + SPA 导航(点击回答) 后的稳定性"""
 from lib import *
 
-V4 = "/workspace/zhihu-mobile/zhihu-desk2mob.user.js"
+V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--no-sandbox", "--disable-blink-features=AutomationControlled"])
     ctx = b.new_context(locale="zh-CN", **DESKTOP_MODE)

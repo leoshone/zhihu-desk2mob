@@ -12,10 +12,12 @@ from urllib.parse import unquote   # pg.url 里的中文路径是 %E6%… 编码
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHOT = os.path.join(os.path.dirname(HERE), "测试截图")
-V4 = "/workspace/zhihu-mobile/zhihu-desk2mob.user.js"
+V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
 
-URL_MODAL = "file://" + os.path.join(HERE, "testpage_modal.html")
-URL_RAIL  = "file://" + os.path.join(HERE, "testpage_rail.html")
+# file URL 必须用正斜杠：os.path.join 在 Windows 下会产出 "file://D:\...\xx.html"，
+# 与浏览器 pg.url 的 "file:///D:/..." 永远对不上，用例1b/3 会被误判成「页面被退出去了」
+URL_MODAL = "file:///" + os.path.join(HERE, "testpage_modal.html").replace("\\", "/")
+URL_RAIL  = "file:///" + os.path.join(HERE, "testpage_rail.html").replace("\\", "/")
 
 HAS_MODAL = "() => !!document.getElementById('testModal')"
 HAS_ZFBTN = "() => !!document.getElementById('zf-modal-close')"
@@ -61,7 +63,7 @@ def case_modal(p, label, script, url, shot_name):
 
     modal = pg.evaluate(HAS_MODAL)
     cur = unquote(pg.url)
-    same = cur.startswith(base)
+    same = cur.startswith(base.replace(chr(92), "/"))
     hash_kept = cur.endswith("#dummy")
     print(f"  返回后 弹层: {modal}   仍在本页: {same}   hash 保住: {hash_kept}")
     if shot_name:

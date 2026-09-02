@@ -3,7 +3,7 @@ from lib import *
 import json
 with sync_playwright() as p:
     b = p.chromium.launch(args=["--no-sandbox","--disable-blink-features=AutomationControlled"])
-    for label, with_script in [("no_script",None),("with_v4","/workspace/zhihu-mobile/zhihu-desk2mob.user.js")]:
+    for label, with_script in [("no_script",None),("with_v4","D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js")]:
         ctx = b.new_context(locale="zh-CN", **MOBILE_MODE)
         if with_script: ctx.add_init_script(path=with_script)
         pg = ctx.new_page()

@@ -5,7 +5,7 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIAG = "/workspace/zhihu-mobile/zhihu-diag.user.js"
-V4 = "/workspace/zhihu-mobile/zhihu-desk2mob.user.js"
+V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
 URL = "file://" + os.path.join(HERE, "testpage_zhuanlan.html")
 
 with sync_playwright() as p:

@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 import os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-V4 = "/workspace/zhihu-mobile/zhihu-desk2mob.user.js"
+V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
 BASE = "file://" + os.path.join(HERE, "testpage_rail.html")
 
 M = r"""

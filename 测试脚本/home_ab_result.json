@@ -1,5 +1,5 @@
 {
-  "v0.3.3": {
+  "v0.3.0": {
     "itemsTotal": 5,
     "itemsVisible": 5,
     "detail": [
@@ -34,9 +34,9 @@
     "mainW": 393,
     "bodyTxt": 613,
     "overflowX": 0,
-    "shot": "D:\\AiSpaces\\Code\\zhihu-desk2mob\\测试截图\\home_ab_v033.png"
+    "shot": "D:\\AiSpaces\\Code\\zhihu-desk2mob\\测试截图\\home_ab_v030.png"
   },
-  "v0.4.0": {
+  "v0.4.1": {
     "itemsTotal": 5,
     "itemsVisible": 5,
     "detail": [
@@ -71,6 +71,6 @@
     "mainW": 393,
     "bodyTxt": 538,
     "overflowX": 0,
-    "shot": "D:\\AiSpaces\\Code\\zhihu-desk2mob\\测试截图\\home_ab_v040.png"
+    "shot": "D:\\AiSpaces\\Code\\zhihu-desk2mob\\测试截图\\home_ab_v041.png"
   }
 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.4.1
+// @version      0.5.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.4.1';
+  var VER = '0.5.0';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -188,11 +188,14 @@
       '}',
 
       /* ---- 主干容器：干掉 min-width，允许收缩 ---- */
-      'body{min-width:0!important;max-width:100%!important;overflow-x:clip!important;margin:0 auto!important}',
+      'body{min-width:0!important;max-width:100%!important;overflow-x:clip!important;margin:0 auto!important;',
+      'background:#fff!important}',   /* 桌面版 body 是 #f6f6f6 灰底，主列收窄后两侧露灰，
+                                          手机上没有"卡片"概念，整页刷白让可视区最大化 */
       'body,#root,.App,.App-main,.QuestionPage,.Question-main,.Topstory-container,',
       'main,article,section,.ExploreHomePage,.ExploreHomePage-ContentSection{',
         'min-width:0!important;width:100%!important;max-width:100%!important;',
         'box-sizing:border-box!important;margin-left:auto!important;margin-right:auto!important;',
+        'background:transparent!important;',
       '}',
 
       /* ---- 主内容列 ---- */
@@ -285,7 +288,8 @@
       '.Modal,.Drawer,[role="dialog"]{left:0!important;right:0!important;margin:0 auto!important}',
 
       /* ---- 去卡片化：窄屏下阴影和圆角没有意义，还占视觉 ---- */
-      '.Card,.ContentItem,.List-item{box-shadow:none!important;border-radius:0!important}',
+      '.Card,.ContentItem,.List-item{box-shadow:none!important;border-radius:0!important;',
+        'background:#fff!important}',   /* 卡片白底 + 容器刷白 = 灰边彻底消失 */
       '.List-item,.ContentItem{border-bottom:1px solid #f0f0f0!important}',
 
       /* ---- 字号：桌面版 15px 在手机上偏小 ---- */
@@ -293,10 +297,14 @@
         'px!important;line-height:1.75!important}') : '',
       '.QuestionHeader-title{font-size:19px!important;line-height:1.45!important}',
 
-      /* ---- 内边距 ---- */
+      /* ---- 内边距 ----
+         窄屏下多层容器各留 12~20px 会叠出 30px+ 的空耗，把外层压到 6px，
+         只保留最内层内容容器的 12px 舒适边距 */
       '.Question-mainColumn,.Topstory-mainColumn,.Post-NormalMain,.QuestionHeader-content,',
       '.Post-Main,[class*="Post-Main"],.Post-RichTextContainer,.ColumnPage-main,',
       '.ExploreHomePage-ContentSection{padding-left:' + P + 'px!important;padding-right:' + P + 'px!important}',
+      '.Topstory-container,.Topstory-recommend,.Topstory-recommend .List,.Card.List{padding-left:6px!important;padding-right:6px!important}',
+      '.TopstoryItem{padding-left:0!important;padding-right:0!important}',
       'header.AppHeader > div{padding-left:' + P + 'px!important;padding-right:' + P + 'px!important}',
 
       /* ---- 自适应留白 ---- */

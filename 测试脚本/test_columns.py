@@ -2,8 +2,8 @@
 from lib import *
 from playwright.sync_api import sync_playwright
 
-V4 = "/workspace/zhihu-mobile/zhihu-desk2mob.user.js"
-URL = "file:///workspace/zhihu-mobile/测试脚本/testpage_zhuanlan.html"
+V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
+URL = "file:///D:/AiSpaces/Code/zhihu-desk2mob/测试脚本/testpage_zhuanlan.html"
 
 MEASURE = r"""
 () => {

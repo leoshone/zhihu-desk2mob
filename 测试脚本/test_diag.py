@@ -4,7 +4,7 @@ from playwright.sync_api import sync_playwright
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DIAG = "/workspace/zhihu-mobile/zhihu-diag.user.js"
+DIAG = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-diag.user.js"
 V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
 URL = "file://" + os.path.join(HERE, "testpage_zhuanlan.html")
 

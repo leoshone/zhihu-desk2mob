@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.3
+// @version      0.7.4
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.3';
+  var VER = '0.7.4';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1108,8 +1108,21 @@
   }
 
   var modalBackReady = false;
+  var smbRetrying = false;
   function setupModalBack() {
-    if (!CONFIG.modalBackClose || modalBackReady || !document.body) return;
+    if (!CONFIG.modalBackClose) return;
+    if (modalBackReady) return;
+    // 真实站点（知乎等）页面生命周期很乱：applyAll 有时在 document.body 还没就绪
+    // 时被调用（如客户端路由切换、整页重渲染的瞬间），此时若直接 return，等到用户
+    // 真正点开评论弹层时，这一轮 setupModalBack 早就被「跳过」了——缓冲历史永远压不
+    // 进去，系统返回键就直接退出页面。所以 body 没好就定时重试，直到就绪为止。
+    if (!document.body) {
+      if (!smbRetrying) {
+        smbRetrying = true;
+        setTimeout(function () { smbRetrying = false; setupModalBack(); }, 60);
+      }
+      return;
+    }
     modalBackReady = true;
 
     var pushed = false;   // 我们压进去的「缓冲历史」还在不在栈顶
@@ -1167,47 +1180,58 @@
       }
     });
 
-    // 快速通道：点击后 30ms 就检查一次。MutationObserver 有抖动，光靠它
-    // 会留下一个「弹层刚打开就按返回」的时间窗。
+    // 统一检测：找出当前打开的弹层，并按「出现 / 消失」同步缓冲历史与归位。
+    // 同一份逻辑驱动两路触发：
+    //   ① MutationObserver —— DOM 一变立刻查，低延迟；
+    //   ② 持久 setInterval（每 400ms）—— 兜底。
+    // 为什么必须有第 ② 路？真实站点里评论层是 React 异步挂载的，挂载后常常
+    // 不再产生新的 DOM 变动，于是 observer 只触发在面板稳定之前、抓不到它；
+    // 此外页面 JS 上下文偶尔会被重置（定时器被清掉），靠脚本在导航后重新注入
+    // 拉起检测。第 ② 路不依赖单次点击或某次 mutation，只要页面还活着就一直查，
+    // 专门兜住这两类「一次性时机检测必漏」的场景。
+    var lastHad = false;
+    function checkModal() {
+      var m = findOpenModal();
+      var had = !!m;
+      if (had && !lastHad) onModalOpen();
+      else if (!had && lastHad) onModalGone();
+      lastHad = had;
+      // 弹层一出现就归位：桌面版居中且超高的弹层，关闭按钮会被顶出屏幕，
+      // 用户连「点 ✕」这条路都没有，只能指望返回键
+      if (m) normalizeLayer(m);
+
+      var btn = document.getElementById('zf-modal-close');
+      if (!m) { if (btn) btn.remove(); return; }
+      if (btn) return;
+
+      btn = document.createElement('button');
+      btn.id = 'zf-modal-close';
+      btn.textContent = '✕ 关闭';
+      btn.style.cssText =
+        'position:fixed;left:10px;top:10px;z-index:2147483646;' +
+        'padding:7px 13px;font-size:14px;font-weight:600;color:#fff;' +
+        'background:rgba(0,0,0,.62);border:0;border-radius:16px;';
+      btn.onclick = function () { closeTopModal(); btn.remove(); };
+      document.body.appendChild(btn);
+    }
+
+    // 点击后立刻查一两次（用户点开评论的瞬间），降低首次延迟
     document.addEventListener('click', function () {
-      setTimeout(function () {
-        if (!pushed && findOpenModal()) onModalOpen();
-      }, 30);
+      setTimeout(checkModal, 0);
+      setTimeout(checkModal, 150);
     }, true);
 
-    // 补一个自己的关闭按钮（知乎有些层压根没有能点的关闭入口），
-    // 顺便跟踪弹层的出现与消失，同步历史栈
     if (window.MutationObserver) {
-      var lastHad = false, lastCheck = 0;
+      var lastCheck = 0;
       new MutationObserver(function () {
         var now = Date.now();
-        if (now - lastCheck < 200) return;      // findOpenModal 不便宜，节流一下
+        if (now - lastCheck < 150) return;      // findOpenModal 不便宜，节流一下
         lastCheck = now;
-
-        var m = findOpenModal();
-        var had = !!m;
-        if (had && !lastHad) onModalOpen();
-        else if (!had && lastHad) onModalGone();
-        lastHad = had;
-        // 弹层一出现就归位：桌面版居中且超高的弹层，关闭按钮会被顶出屏幕，
-        // 用户连「点 ✕」这条路都没有，只能指望返回键
-        if (m) normalizeLayer(m);
-
-        var btn = document.getElementById('zf-modal-close');
-        if (!m) { if (btn) btn.remove(); return; }
-        if (btn) return;
-
-        btn = document.createElement('button');
-        btn.id = 'zf-modal-close';
-        btn.textContent = '✕ 关闭';
-        btn.style.cssText =
-          'position:fixed;left:10px;top:10px;z-index:2147483646;' +
-          'padding:7px 13px;font-size:14px;font-weight:600;color:#fff;' +
-          'background:rgba(0,0,0,.62);border:0;border-radius:16px;';
-        btn.onclick = function () { closeTopModal(); btn.remove(); };
-        document.body.appendChild(btn);
+        checkModal();
       }).observe(document.body, { childList: true, subtree: true });
     }
+    // 持久兜底：只要页面还活着就一直查，迟挂载 / 上下文重置都能兜住
+    setInterval(checkModal, 400);
   }
 
   function fixFlexRows() {

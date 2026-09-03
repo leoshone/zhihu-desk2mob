@@ -167,7 +167,8 @@ if __name__ == "__main__":
             run(b, "v0.6.1(旧)", t, os.path.join(HERE, "_v061.user.js"), None)
         for t in ("A", "B", "C"):
             run(b, "v0.7.0(新)", t, V4, "评论弹层")
-        run(b, "v0.7.1(新)", "D", V4, "评论弹层", tap=True)  # 形态D：端到端点原生关闭
+        run(b, "v0.7.2(新)", "D", V4, "评论弹层")            # 形态D：系统返回键关评论+留本页
+        run(b, "v0.7.2(新)", "D", V4, "评论弹层", tap=True)  # 形态D：端到端点原生关闭（顺带验证）
         b.close()
     print("\n" + "=" * 50)
     print("结论：" + ("全部通过" if not fails else "未通过 → " + "、".join(fails)))

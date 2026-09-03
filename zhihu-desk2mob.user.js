@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.0
+// @version      0.7.2
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.1';
+  var VER = '0.7.2';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -873,7 +873,7 @@
   // 找到弹层的「关闭按钮」：优先用强信号（aria / text / class），
   // 都找不到再退回几何（最靠上、贴边、尺寸像关闭键的小元素——
   // 这正是桌面版评论层那个被顶出屏幕、还没有任何 close 关键字的 X 图标）。
-  function findCloseButton(m) {
+  function findCloseButton(m, strict) {
     if (!m) return null;
     var vh = document.documentElement.clientHeight || 0;
     var vw = document.documentElement.clientWidth || 0;
@@ -918,6 +918,8 @@
       }
     }
     // 3) 几何兜底：弹层里最靠上（top 最小）、贴边、尺寸像关闭键的小元素
+    //    （strict 模式不走到这——避免拿几何结果去"点"，误触回复之类的按钮）
+    if (strict) return null;
     var cand = null, candTop = 1e9;
     var all;
     try { all = m.querySelectorAll('button,a,svg,[role="button"]'); } catch (e6) { return null; }
@@ -1041,6 +1043,15 @@
           return true;
         }
       }
+    }
+    // 类选择器都没命中时，退回「语义强信号」定位（aria/text 含 关闭/收起 的按钮）。
+    // 真实知乎评论层的 X 没有 close 类名，但弹层里通常有「✕ 关闭」按钮——
+    // 点它能触发知乎自己的关闭逻辑，比 forceHide(display:none) 更稳（React 不一定镇得住 none）。
+    var fb = findCloseButton(m, true);
+    if (fb) {
+      fb.click();
+      log('弹层：点了关闭按钮（语义兜底）');
+      return true;
     }
     return false;
   }

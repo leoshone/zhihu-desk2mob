@@ -40,7 +40,7 @@ with sync_playwright() as p:
 
     pg.screenshot(path=SHOT + "真机-发现页-v070.png")
     print("pageerror:", errs[:3])
-    ok = (info["overflowX"] == 0) and back_ok and ("0.7.0" in (info["badge"] or "")) and not errs
+    ok = (info["overflowX"] == 0) and back_ok and ("v0.7" in (info["badge"] or "")) and not errs
     print("\n结论:", "✅ 通过" if ok else "❌ 未通过")
     b.close()
     sys.exit(0 if ok else 1)

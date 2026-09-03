@@ -29,6 +29,18 @@
   .Comments-container{position:relative;width:100%;height:100%;background:#fff;overflow:auto}
   .Comments-header{position:sticky;top:0;background:#fff;padding:14px 16px;font-weight:600;border-bottom:1px solid #f0f0f0}
   .zh-close-x{position:absolute;right:14px;top:14px;width:26px;height:26px;border:0;background:#f0f0f0}
+  /* 形态D：忠实复刻真实知乎专栏评论层（2026-09-03 真机抓取）
+     本体 fixed 满屏、overflow:auto、本身不越界；但内容层 relative top:-620，
+     把整段内容（含右上角关闭 X）顶到视口外。旧逻辑只查本体 → 提前 return，
+     关闭按钮永远点不到。 */
+  .r-modal-body{position:fixed;top:0;left:0;right:0;bottom:0;z-index:203;overflow-y:auto;background:rgba(0,0,0,.65)}
+  .r-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:0}
+  .r-content{position:relative;top:-620px;background:#fff;min-height:100%}
+  .r-inner{position:relative;top:-545px}
+  .r-scroll{position:relative;top:-545px;overflow-y:auto;padding:0 16px}
+  .r-head{position:relative;top:-517px;display:flex;align-items:center;gap:10px;
+          padding:14px 16px;font-weight:600;border-bottom:1px solid #f0f0f0;background:#fff}
+  .r-x{position:absolute;right:16px;top:14px;width:28px;height:28px;border:0;background:#f0f0f0;color:#333;border-radius:50%}
 </style>
 </head>
 <body>
@@ -47,7 +59,7 @@
 </div>
 
 <script>
-var type = (location.search.match(/type=([A-Ca-c])/) || [])[1] || 'A';
+var type = (location.search.match(/type=([A-Da-d])/) || [])[1] || 'A';
 var open = document.getElementById('openBtn');
 open.onclick = function () {
   if (document.getElementById('layerHost')) return;
@@ -67,6 +79,17 @@ open.onclick = function () {
       '<div class="zb-modal">' +
         '<button class="Modal-closeButton">✕</button>' +
         '<div class="Modal-title">128 条评论</div>' + cmts(8) +
+      '</div>';
+  } else if (type === 'D' || type === 'd') {
+    // 真实知乎评论层：本体 fixed 满屏不越界，内容层 relative top:-620 顶出关闭按钮
+    host.innerHTML =
+      '<div class="r-modal-body">' +
+        '<div class="r-backdrop"></div>' +
+        '<div class="r-content"><div class="r-inner"><div class="r-scroll">' +
+          '<div class="r-head">664 条评论' +
+            '<button class="r-x" aria-label="关闭">✕</button></div>' +
+          cmts(10) +
+        '</div></div></div>' +
       '</div>';
   } else {
     // 知乎哈希类名，且关闭按钮不带任何 close 关键字

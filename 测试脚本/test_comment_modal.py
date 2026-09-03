@@ -62,7 +62,7 @@ STATE = r"""
 """
 
 fails = []
-def run(p, label, typ, script, shot):
+def run(p, label, typ, script, shot, tap=False):
     ctx = p.new_context(**DESKTOP_MODE)
     if script:
         ctx.add_init_script(path=script)
@@ -96,6 +96,47 @@ def run(p, label, typ, script, shot):
         elif nb:
             print(f"  ✓ 弹层关闭按钮在视口内 (top={nb['top']})")
 
+    if tap:
+        # 端到端：直接点原生关闭按钮（修复后应被钉回视口、可点），验证真的能关
+        # 先诊断：关闭按钮中心点最顶层的元素是不是它自己（被遮挡=真机也点不到）
+        hit = pg.evaluate(r"""() => {
+          const b = document.querySelector('.r-x');
+          if (!b) return {found:false};
+          const r = b.getBoundingClientRect();
+          const cx = r.left + r.width/2, cy = r.top + r.height/2;
+          const top = document.elementFromPoint(cx, cy);
+          const cs = getComputedStyle(b);
+          const chain = [];
+          let p = top;
+          for (let i=0; i<5 && p; i++) {
+            chain.push(p.tagName + '.' + (typeof p.className==='string'?p.className:'').slice(0,24)
+                       + '#' + (p.id||'') + '[' + getComputedStyle(p).position + ' z=' + getComputedStyle(p).zIndex + ']');
+            p = p.parentElement;
+          }
+          const desc = top ? (top.tagName + '.' + (typeof top.className==='string'?top.className:'').slice(0,30)) : 'null';
+          return {found:true, cx:Math.round(cx), cy:Math.round(cy), topDesc:desc,
+                  isSelf: top === b || (b.contains(top)),
+                  rxPos: cs.position, rxZ: cs.zIndex, rxPe: cs.pointerEvents,
+                  topChain: chain};
+        }""")
+        print("  命中诊断:", hit)
+        try:
+            pg.click(".r-x", timeout=6000)
+        except Exception as e:
+            print("  tap原生关闭:", str(e)[:60])
+        pg.wait_for_timeout(1200)
+        st3 = pg.evaluate(STATE)
+        same3 = (pg.url == base)
+        gone3 = (not st3["layer"]) or (not st3["layerVisible"])
+        print("  点原生关闭后:", {k: st3[k] for k in ("layer", "layerVisible")}, "| 仍在本页:", same3)
+        if script:
+            if not gone3:
+                print("  ✗ 点原生关闭按钮没关掉弹层"); fails.append(label + "·点关不掉")
+            elif same3 and st3["textLen"] > 200:
+                print("  ✓ 点原生关闭按钮关掉弹层且留在原页")
+        ctx.close()
+        return
+
     try:
         pg.go_back(wait_until="load", timeout=12000)
     except Exception as e:
@@ -122,10 +163,11 @@ def run(p, label, typ, script, shot):
 if __name__ == "__main__":
     with sync_playwright() as p:
         b = p.chromium.launch(args=["--no-sandbox"])
-        for t in ("A", "B", "C"):
+        for t in ("A", "B", "C", "D"):
             run(b, "v0.6.1(旧)", t, os.path.join(HERE, "_v061.user.js"), None)
         for t in ("A", "B", "C"):
             run(b, "v0.7.0(新)", t, V4, "评论弹层")
+        run(b, "v0.7.1(新)", "D", V4, "评论弹层", tap=True)  # 形态D：端到端点原生关闭
         b.close()
     print("\n" + "=" * 50)
     print("结论：" + ("全部通过" if not fails else "未通过 → " + "、".join(fails)))

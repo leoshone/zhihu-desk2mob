@@ -16,3 +16,12 @@ Thumbs.db
 
 # Node
 node_modules/
+
+# 浏览器登录态（抓真机 DOM 用的持久化 profile，含 cookie，绝不入库）
+.zhihu-profile/
+
+# 测试截图中间产物（Playwright 跑回归时生成的 PNG，非源码）
+测试截图/
+
+# 项目记忆 / 工作区私有数据（不入库）
+.workbuddy/

@@ -969,12 +969,21 @@
     if (!m) return false;
     normalizeLayer(m);
 
-    if (clickCloseButton(m) && !findOpenModal()) { log('弹层：关闭按钮生效'); return true; }
+    var ok = false;
+    if (clickCloseButton(m) && !findOpenModal()) { log('弹层：关闭按钮生效'); ok = true; }
+    if (!ok) {
+      fireEsc(m);
+      if (!findOpenModal()) { log('弹层：ESC 关闭'); ok = true; }
+    }
+    if (!ok) ok = forceHideLayers();
 
-    fireEsc(m);
-    if (!findOpenModal()) { log('弹层：ESC 关闭'); return true; }
-
-    return forceHideLayers();
+    // 兜底按钮自己收尾：forceHide 只改 style，不触发 childList 观察器，
+    // 不在这里摘掉的话它会一直挂在屏幕上
+    if (ok) {
+      var zb = document.getElementById('zf-modal-close');
+      if (zb) { try { zb.remove(); } catch (e) {} }
+    }
+    return ok;
   }
 
   var modalBackReady = false;

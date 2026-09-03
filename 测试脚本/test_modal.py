@@ -19,7 +19,11 @@ V4 = "D:/AiSpaces/Code/zhihu-desk2mob/zhihu-desk2mob.user.js"
 URL_MODAL = "file:///" + os.path.join(HERE, "testpage_modal.html").replace("\\", "/")
 URL_RAIL  = "file:///" + os.path.join(HERE, "testpage_rail.html").replace("\\", "/")
 
-HAS_MODAL = "() => !!document.getElementById('testModal')"
+# 必须判「用户还能不能看见」，不能只判元素在不在 DOM：
+# 兜底策略从 removeChild 改成 display:none 后，元素仍在 DOM 但视觉上已经关掉了
+HAS_MODAL = ("() => { const el = document.getElementById('testModal'); if (!el) return false;"
+             " const cs = getComputedStyle(el); const r = el.getBoundingClientRect();"
+             " return cs.display !== 'none' && cs.visibility !== 'hidden' && r.width > 0 && r.height > 0; }")
 HAS_ZFBTN = "() => !!document.getElementById('zf-modal-close')"
 
 fails = []

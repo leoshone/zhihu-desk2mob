@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.6.1
+// @version      0.7.0
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.6.1';
+  var VER = '0.7.0';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -286,6 +286,14 @@
         'max-width:100%!important;min-width:0!important;box-sizing:border-box!important;',
       '}',
       '.Modal,.Drawer,[role="dialog"]{left:0!important;right:0!important;margin:0 auto!important}',
+      /* 弹层顶部对齐 + 限高：桌面版弹层是「top:50% + translate(-50%,-50%)」居中，
+         一旦内容高度超过手机视口，上半截（连同关闭按钮）会被顶到屏幕外 → 关不掉。
+         这里改成贴顶 + 内部滚动，关闭按钮永远露在视口里。 */
+      '.Modal,.Modal-wrapper>*,[role="dialog"],.Drawer,.Drawer-inner{',
+        'top:0!important;transform:none!important;',
+        'max-height:100%!important;overflow-y:auto!important;overflow-x:hidden!important}',
+      '.Modal-closeButton,[class*="Modal-close"],[class*="Drawer-close"]{',
+        'position:fixed!important;right:10px!important;top:10px!important;z-index:2147483000!important}',
 
       /* ---- 去卡片化：窄屏下阴影和圆角没有意义，还占视觉 ---- */
       '.Card,.ContentItem,.List-item{box-shadow:none!important;border-radius:0!important;',
@@ -790,75 +798,183 @@
   //     覆盖大部分屏幕 + 可见 + z-index 最高。脚本自己的角标尺寸太小，
   //     会被过滤掉。
   // ═══════════════════════════════════════════════════════════════
-  function findOpenModal() {
+  // 收集所有「够格当弹层」的元素。minArea 越小越宽松：
+  //   0.55×0.35 = 常规判据；返回键那一刻会用 0.85×0.5 的宽松档再兜一次。
+  function collectLayers(minW, minH) {
     var vw = document.documentElement.clientWidth;
     var vh = document.documentElement.clientHeight;
-    if (!vw || !vh) return null;
+    var out = [];
+    if (!vw || !vh || !document.body) return out;
     var all = document.body.querySelectorAll('*');
     var n = Math.min(all.length, CONFIG.maxScan);
-    var best = null, bestZ = -1;
 
     for (var i = 0; i < n; i++) {
       var el = all[i];
       if (el.id === 'zhihu-mobile-badge' || el.id === 'zf-modal-close') continue;
+      if (el.hasAttribute('data-zskip')) continue;
       var cs;
       try { cs = getComputedStyle(el); } catch (e) { continue; }
       if (!cs) continue;
       if (cs.position !== 'fixed' && cs.position !== 'absolute') continue;
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
       if (parseFloat(cs.opacity) < 0.15) continue;
-      if (el.hasAttribute('data-zskip')) continue;
       var r = el.getBoundingClientRect();
-      // 覆盖大部分屏幕才算弹层（角标、回到顶部这类小东西不算）
-      if (r.width < vw * 0.55 || r.height < vh * 0.35) continue;
+      if (r.width < vw * minW || r.height < vh * minH) continue;
       var z = parseInt(cs.zIndex, 10);
-      if (isNaN(z)) z = 0;
-      if (z > bestZ) { bestZ = z; best = el; }
+      out.push({ el: el, z: isNaN(z) ? 0 : z, w: r.width, h: r.height, top: r.top });
+    }
+    return out;
+  }
+
+  // 给候选层打分：有内容、有交互的才是「弹层本体」，
+  // 纯半透明遮罩（backdrop）通常和内容层同级同 z-index、且插入更早 ——
+  // 老逻辑「取 z-index 最高的」会挑中它，结果点了没反应、移除也白搭。
+  function layerScore(c) {
+    var el = c.el, s = 0;
+    var txt = '';
+    try { txt = (el.innerText || '').trim(); } catch (e) {}
+    if (txt.length > 0) s += 100;
+    if (txt.length > 40) s += 50;
+    // 内容层里通常有按钮/输入框，遮罩里没有
+    try {
+      var inter = el.querySelectorAll('button,a,input,textarea,[role="button"]').length;
+      s += Math.min(inter, 15);
+    } catch (e2) {}
+    return s;
+  }
+
+  function findOpenModal() {
+    var cands = collectLayers(0.55, 0.35);
+    if (!cands.length) return null;
+    var best = null, bestScore = -1, bestZ = -1;
+    for (var i = 0; i < cands.length; i++) {
+      var c = cands[i], sc = layerScore(c);
+      if (sc > bestScore || (sc === bestScore && c.z > bestZ)) {
+        best = c.el; bestScore = sc; bestZ = c.z;
+      }
     }
     return best;
   }
 
+  // 返回键专用：常规判据没命中时的兜底 —— 覆盖 85% 宽 × 50% 高，
+  // 且带可见文字（纯 loading 遮罩、纯背景层不算，避免吞掉正常返回）
+  function findOpenModalLoose() {
+    var m = findOpenModal();
+    if (m) return m;
+    var cands = collectLayers(0.85, 0.5);
+    for (var i = 0; i < cands.length; i++) {
+      var t = '';
+      try { t = (cands[i].el.innerText || '').trim(); } catch (e) {}
+      if (t.length >= 15) return cands[i].el;
+    }
+    return null;
+  }
+
+  // 弹层归位：桌面版弹层居中 + 超高时，上半截（含关闭按钮）会跑到屏幕外，
+  // 用户就「关不掉」了。这里把越界的弹层拉回视口顶部并限高内部滚动。
+  function normalizeLayer(m) {
+    if (!m) return;
+    var vh = document.documentElement.clientHeight;
+    var vw = document.documentElement.clientWidth;
+    if (!vh || !vw) return;
+    var r = m.getBoundingClientRect();
+    var cs;
+    try { cs = getComputedStyle(m); } catch (e) { return; }
+
+    // 只在真的越界时动手，正常弹层不打扰
+    if (r.top >= -2 && r.height <= vh + 4 && r.left >= -2 &&
+        r.width <= vw + 4 && cs.transform === 'none') return;
+
+    var st = m.style;
+    st.setProperty('top', '0px', 'important');
+    st.setProperty('transform', 'none', 'important');
+    st.setProperty('margin', '0 auto', 'important');
+    st.setProperty('max-height', vh + 'px', 'important');
+    st.setProperty('overflow-y', 'auto', 'important');
+    st.setProperty('overflow-x', 'hidden', 'important');
+    if (cs.position === 'absolute') {
+      // absolute 弹层的定位基准未必是视口，改 fixed 才保证贴住屏幕
+      st.setProperty('position', 'fixed', 'important');
+      st.setProperty('left', '0', 'important');
+      st.setProperty('right', '0', 'important');
+    }
+    log('弹层：越界归位（原 top=' + Math.round(r.top) + ' 高=' + Math.round(r.height) + '）');
+  }
+
+  function fireEsc(m) {
+    try {
+      var opt = { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true };
+      (m || document.body).dispatchEvent(new KeyboardEvent('keydown', opt));
+      (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', opt));
+      document.dispatchEvent(new KeyboardEvent('keydown', opt));
+    } catch (e) { /* 忽略 */ }
+  }
+
+  function clickCloseButton(m) {
+    var btnSels = ['.Modal-closeButton', '[class*="Modal-close"]', '[class*="modal-close"]',
+                   '[class*="ModalClose"]', '[class*="CloseButton"]', '[class*="closeButton"]',
+                   '[class*="Drawer-close"]', '[class*="close-icon"]', '[class*="closeIcon"]',
+                   'button[aria-label="关闭"]', '[aria-label="关闭"]', '[aria-label="收起"]',
+                   'button[title="关闭"]'];
+    var pools = [m];
+    // 有些弹层的关闭按钮挂在兄弟节点或 portal 的另一支上，光搜弹层内部会漏
+    if (m && m.parentNode) pools.push(m.parentNode);
+    for (var p = 0; p < pools.length; p++) {
+      var host = pools[p];
+      if (!host || !host.querySelectorAll) continue;
+      for (var i = 0; i < btnSels.length; i++) {
+        var btns;
+        try { btns = host.querySelectorAll(btnSels[i]); } catch (e) { continue; }
+        for (var j = 0; j < btns.length; j++) {
+          var b = btns[j], bcs;
+          try { bcs = getComputedStyle(b); } catch (e2) { continue; }
+          if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
+          var br = b.getBoundingClientRect();
+          if (br.width < 1 || br.height < 1) continue;
+          b.click();
+          log('弹层：点了关闭按钮（' + btnSels[i] + '）');
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // 兜底：把所有够格的浮层直接藏掉，并解开知乎加的滚动锁
+  // （弹层打开时知乎会给 body/html 上 overflow:hidden，不解锁的话关了也滑不动）
+  function forceHideLayers() {
+    var cands = collectLayers(0.5, 0.3);
+    var n = 0;
+    for (var i = 0; i < cands.length; i++) {
+      var el = cands[i].el;
+      try {
+        el.style.setProperty('display', 'none', 'important');
+        el.setAttribute('data-zskip', '1');
+        n++;
+      } catch (e) { /* 忽略 */ }
+    }
+    try {
+      var de = document.documentElement, bd = document.body;
+      if (de) de.style.removeProperty('overflow');
+      if (bd) { bd.style.removeProperty('overflow'); bd.style.removeProperty('position'); }
+    } catch (e2) {}
+    log('弹层：兜底隐藏 ' + n + ' 层');
+    return n > 0;
+  }
+
+  // 每一步做完都必须复核 —— 老版本「点一下就算成功」，
+  // 碰到 React 不响应 click、按钮在视口外等情形就永远关不掉。
   function closeTopModal() {
     var m = findOpenModal();
     if (!m) return false;
+    normalizeLayer(m);
 
-    // ① 优先点弹层自己的关闭按钮 —— 最符合预期，能触发知乎的清理逻辑
-    var btnSels = ['.Modal-closeButton', '[class*="Modal-close"]', '[class*="modal-close"]',
-                   '[class*="ModalClose"]', '[class*="CloseButton"]', '[class*="closeButton"]',
-                   '[class*="Drawer-close"]', 'button[aria-label="关闭"]',
-                   '[aria-label="关闭"]', '[class*="close-icon"]'];
-    for (var i = 0; i < btnSels.length; i++) {
-      var btns;
-      try { btns = m.querySelectorAll(btnSels[i]); } catch (e) { continue; }
-      for (var j = 0; j < btns.length; j++) {
-        var b = btns[j], bcs;
-        try { bcs = getComputedStyle(b); } catch (e2) { continue; }
-        if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
-        var br = b.getBoundingClientRect();
-        if (br.width < 1 || br.height < 1) continue;
-        b.click();
-        log('弹层：点了关闭按钮（' + btnSels[i] + '）');
-        return true;
-      }
-    }
+    if (clickCloseButton(m) && !findOpenModal()) { log('弹层：关闭按钮生效'); return true; }
 
-    // ② 退而求其次：ESC。很多弹层会监听它
-    try {
-      m.dispatchEvent(new KeyboardEvent('keydown',
-        { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
-      document.dispatchEvent(new KeyboardEvent('keydown',
-        { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
-    } catch (e3) { /* 忽略 */ }
-    // 等一帧看看关掉没
-    var still = findOpenModal();
-    if (still !== m) { log('弹层：ESC 关闭'); return true; }
+    fireEsc(m);
+    if (!findOpenModal()) { log('弹层：ESC 关闭'); return true; }
 
-    // ③ 兜底：直接移除。粗暴，但至少能让用户回到正文
-    try {
-      m.parentNode && m.parentNode.removeChild(m);
-      log('弹层：兜底移除');
-      return true;
-    } catch (e4) { return false; }
+    return forceHideLayers();
   }
 
   var modalBackReady = false;
@@ -902,7 +1018,11 @@
 
     window.addEventListener('popstate', function () {
       if (silent) { silent = false; pushed = false; return; }
-      if (!findOpenModal()) { pushed = false; return; }
+      // 常规判据没认出来的评论层，用宽松档再捞一次：
+      // 宁可多关一个层，也不能让用户按了返回却被送离正文页
+      var m = findOpenModalLoose();
+      if (!m) { pushed = false; return; }
+      normalizeLayer(m);
 
       var had = pushed;
       pushed = false;
@@ -939,6 +1059,9 @@
         if (had && !lastHad) onModalOpen();
         else if (!had && lastHad) onModalGone();
         lastHad = had;
+        // 弹层一出现就归位：桌面版居中且超高的弹层，关闭按钮会被顶出屏幕，
+        // 用户连「点 ✕」这条路都没有，只能指望返回键
+        if (m) normalizeLayer(m);
 
         var btn = document.getElementById('zf-modal-close');
         if (!m) { if (btn) btn.remove(); return; }
@@ -948,7 +1071,7 @@
         btn.id = 'zf-modal-close';
         btn.textContent = '✕ 关闭';
         btn.style.cssText =
-          'position:fixed;right:10px;top:10px;z-index:2147483646;' +
+          'position:fixed;left:10px;top:10px;z-index:2147483646;' +
           'padding:7px 13px;font-size:14px;font-weight:600;color:#fff;' +
           'background:rgba(0,0,0,.62);border:0;border-radius:16px;';
         btn.onclick = function () { closeTopModal(); btn.remove(); };

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPA 导航 + 评论弹层(真实节点插入) 复刻</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #f6f6f6; }
+  .page { display: none; padding: 16px; }
+  .page.active { display: block; }
+  h1 { font-size: 20px; }
+  .feed-item { background: #fff; border-radius: 8px; padding: 14px; margin: 10px 0; }
+  a.open-article { color: #175199; font-weight: 600; text-decoration: none; }
+  .article-body { font-size: 16px; line-height: 1.7; }
+  /* 评论弹层：仿真实知乎——本体 fixed 满屏，内层负 top 把内容顶出屏幕。
+     结构与真实一致：本体 fixed 满屏、不越界，内容层 relative top:-620 把关闭键顶出屏幕 */
+  #cm { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,.5); z-index: 203; overflow-y: auto; }
+  #cm-content { position: relative; top: -620px; background: #fff; min-height: 120%; }
+  #cm-inner { position: relative; top: -545px; padding: 16px; }
+  #cm-head { position: relative; top: -517px; padding: 12px 16px; font-weight: 700; }
+  #cm-x { position: absolute; right: 16px; top: 14px; width: 28px; height: 28px;
+          border: none; background: transparent; font-size: 22px; cursor: pointer; }
+  .btn { display: inline-block; margin-top: 12px; padding: 8px 16px; background: #0066ff;
+         color: #fff; border: none; border-radius: 6px; font-size: 15px; }
+</style>
+</head>
+<body>
+  <!-- 首页 -->
+  <section id="home" class="page active">
+    <h1>知乎首页（复刻）</h1>
+    <div class="feed-item">
+      <a href="#article" class="open-article" id="lnkArticle">如何看待手机浏览器看知乎桌面版？</a>
+      <div style="color:#8590a6;font-size:13px;margin-top:6px;">3 个回答 · 12 条评论</div>
+      <button class="btn" id="btnEnter">进入文章（SPA pushState）</button>
+    </div>
+  </section>
+
+  <!-- 文章页（SPA 渲染，不刷新） -->
+  <section id="article" class="page">
+    <h1>如何看待手机浏览器看知乎桌面版？</h1>
+    <div class="article-body">
+      <p>这是正文。正文很长，用户是从首页点进来的，历史栈是 [首页, 文章]。</p>
+      <p>正文第 2 段……</p>
+    </div>
+    <button class="btn" id="btnComment">打开评论（插入真实节点，不压历史）</button>
+  </section>
+
+  <!-- 评论弹层模板：点击时克隆插入 body（真实 childList 突变，模拟知乎） -->
+  <template id="cm-tpl">
+    <div id="cm">
+      <div id="cm-content">
+        <div id="cm-inner">
+          <div id="cm-head">评论区
+            <button id="cm-x" aria-label="关闭">✕</button>
+          </div>
+          <p style="padding:0 16px;">评论 1：这个油猴脚本真不错。</p>
+          <p style="padding:0 16px;">评论 2：手机上看终于不用横着拖了。</p>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    // 初始条目标记成「首页」状态
+    history.replaceState({ page: 'home' }, '', location.pathname);
+    function show(page) {
+      document.getElementById('home').classList.toggle('active', page === 'home');
+      document.getElementById('article').classList.toggle('active', page === 'article');
+    }
+    // SPA 导航：homepage -> article，用 pushState 加一条历史（不刷新文档）
+    document.getElementById('btnEnter').addEventListener('click', function () {
+      history.pushState({ page: 'article' }, '', location.pathname + '#article');
+      show('article');
+    });
+    // 评论：克隆模板插入 body（真实 childList 突变，模拟知乎弹层；不压历史）
+    document.getElementById('btnComment').addEventListener('click', function () {
+      if (document.getElementById('cm')) return;
+      var tpl = document.getElementById('cm-tpl');
+      var node = tpl.content.firstElementChild.cloneNode(true);
+      document.body.appendChild(node);
+      node.querySelector('#cm-x').addEventListener('click', function () {
+        var cm = document.getElementById('cm');
+        if (cm) cm.remove();
+      });
+    });
+    // 处理浏览器前进/后退
+    window.addEventListener('popstate', function (e) {
+      var page = (e.state && e.state.page) || 'home';
+      show(page);
+    });
+  </script>
+</body>
+</html>

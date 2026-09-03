@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.2
+// @version      0.7.3
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.2';
+  var VER = '0.7.3';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -811,7 +811,12 @@
     for (var i = 0; i < n; i++) {
       var el = all[i];
       if (el.id === 'zhihu-mobile-badge' || el.id === 'zf-modal-close') continue;
-      if (el.hasAttribute('data-zskip')) continue;
+      // 注意：这里只跳过「被我们强制隐藏过的层」(data-zhidden)，
+      // 不能跳过 markScrollables 打的 data-zskip —— 否则凡是带 overflow 滚动的
+      // 浮层（评论层常见 overflow-y:auto → 计算值 overflow-x 也变 auto，被误标）
+      // 一旦在加载期被打上标记，之后以 class/属性切换显示的弹层就永远检测不到，
+      // 缓冲历史压不进去，系统返回键会直接退出页面而不是关弹层。
+      if (el.hasAttribute('data-zhidden')) continue;
       var cs;
       try { cs = getComputedStyle(el); } catch (e) { continue; }
       if (!cs) continue;
@@ -1065,7 +1070,7 @@
       var el = cands[i].el;
       try {
         el.style.setProperty('display', 'none', 'important');
-        el.setAttribute('data-zskip', '1');
+        el.setAttribute('data-zhidden', '1');
         n++;
       } catch (e) { /* 忽略 */ }
     }

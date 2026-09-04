@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.8
+// @version      0.7.9
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.8';
+  var VER = '0.7.9';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -875,6 +875,30 @@
     return null;
   }
 
+  // ⚠ v0.7.9 新增：最后一道兜底 findAnyOverlay。
+  //   真机反馈（登录态专栏页 + Kiwi 老内核）：点开评论弹层后连按三次返回
+  //   —— 前两次无反应、第三次整页退回。桌面 Chromium 无法复现（一切正常），
+  //   最自洽的解释是真机上 findOpenModalLoose 对登录态评论弹层漏检
+  //   （文字量判据/几何判据在老内核或 zoom 环境下失效），
+  //   于是 popstate 走了「内联评论」分支：补一条 zfStay + scrollTo(0)，
+  //   弹层根本没被关；第二次返回消费 zfStay（URL 不变）依旧无反应；
+  //   第三次消费真实历史 → 整页退回。三次返回、两条缓冲，完美对应用户描述。
+  //   所以：在文字判据全部落空后，再加一级「纯几何」判据——
+  //   fixed/absolute 且覆盖 ≥60% 宽 × 60% 高的层直接算弹层候选。
+  //   全屏遮罩误报的代价是「返回先关一层」，比「弹层关不掉整页退回」轻得多。
+  function findAnyOverlay() {
+    var m = findOpenModalLoose();
+    if (m) return m;
+    var cands = collectLayers(0.6, 0.6);
+    // 跳过我们自己创建的节点与被兜底隐藏的层（collectLayers 已滤 data-zhidden）
+    var best = null, bestZ = -1;
+    for (var i = 0; i < cands.length; i++) {
+      var z = cands[i].z;
+      if (z > bestZ) { best = cands[i].el; bestZ = z; }
+    }
+    return best;
+  }
+
   // 找到弹层的「关闭按钮」：优先用强信号（aria / text / class），
   // 都找不到再退回几何（最靠上、贴边、尺寸像关闭键的小元素——
   // 这正是桌面版评论层那个被顶出屏幕、还没有任何 close 关键字的 X 图标）。
@@ -1061,6 +1085,56 @@
     return false;
   }
 
+  // 僵尸弹层守卫：被我们藏起来的层，若 React 在下一帧把 display 改回来，
+  // 就再藏一次。有效期 3 秒（够覆盖返回键操作序列），到点自动停手，
+  // 避免把之后合法出现的新弹层也一并藏掉。
+  // 为什么需要它：v0.7.9 的僵尸弹层测试（测试脚本/testpage_zombie_modal.html）
+  // 证明 forceHideLayers 只要成功藏了层就返回 true，但 React 重渲染会
+  // 立刻把它改回来 —— 于是 closeTopModal 返回「成功」，复核被跳过，
+  // 缓冲没补回来，用户下一次返回直接退出页面。守卫让兜底隐藏真正不可逆。
+  var guardUntil = 0;
+  var guarding = [];
+  function guardHidden(el) {
+    if (!window.MutationObserver || !el) return;
+    try {
+      if (el.__zfGuard) { el.__zfGuard.disconnect(); }
+      var tries = 0;
+      var mo = new MutationObserver(function () {
+        // ⚠ 必须有 try 上限：僵尸弹层测试里（页面用 observer 把 display 改回来）
+        //   守卫与页面 observer 会互相触发，实测 3 秒内对撞 4.4 万次，
+        //   真机上直接把页面卡死。上限 8 次后放手，交给 ensureBuffer 兜底。
+        if (tries > 8 || Date.now() > guardUntil) {
+          try { mo.disconnect(); } catch (e) {}
+          return;
+        }
+        var cs;
+        try { cs = getComputedStyle(el); } catch (e) { return; }
+        if (cs && cs.display !== 'none') {
+          el.style.setProperty('display', 'none', 'important');
+          // ⚠ 关键：同时撤掉 data-zhidden。
+          //   这个标记是 v0.7.3 加的，本意是跳过「被我们强制隐藏过的层」，
+          //   但 collectLayers 会永久跳过带它的元素 —— 一旦 React 有能力把
+          //   display 改回来，就说明我们的隐藏已被推翻，此时若还留着标记，
+          //   弹层复活后永远进不了检测视野，ensureBuffer 也永远不会给它
+          //   补缓冲（僵尸弹层测试实测：等 4 秒后 state 仍然是 null）。
+          el.removeAttribute('data-zhidden');
+          tries++;
+          if (tries === 1) log('弹层：僵尸层被 React 恢复，再次隐藏并撤掉隐藏标记');
+        }
+      });
+      mo.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+      el.__zfGuard = mo;
+      guarding.push(mo);
+    } catch (e) { /* 忽略 */ }
+  }
+  function stopGuards() {
+    for (var i = 0; i < guarding.length; i++) {
+      try { guarding[i].disconnect(); } catch (e) {}
+    }
+    guarding = [];
+    guardUntil = 0;
+  }
+
   // 兜底：把所有够格的浮层直接藏掉，并解开知乎加的滚动锁
   // （弹层打开时知乎会给 body/html 上 overflow:hidden，不解锁的话关了也滑不动）
   function forceHideLayers() {
@@ -1071,6 +1145,8 @@
       try {
         el.style.setProperty('display', 'none', 'important');
         el.setAttribute('data-zhidden', '1');
+        guardUntil = Date.now() + 3000;
+        guardHidden(el);
         n++;
       } catch (e) { /* 忽略 */ }
     }
@@ -1128,6 +1204,45 @@
     var pushed = false;   // 我们压进去的「缓冲历史」还在不在栈顶
     var silent = false;   // 正在做静默 back（清理缓冲历史），别当成用户按了返回
 
+    // ── v0.7.9 核心：弹层开着期间，保证栈顶始终有一条缓冲 ──
+    //   旧设计（返回时消费掉缓冲，再判断要不要补）有个无解的时序问题：
+    //   popstate 里同步判定「弹层关掉了吗」根本不可靠 ——
+    //   forceHideLayers 藏掉层后 React 可能在下一帧把它改回来，
+    //   而同步复核看到的永远是「已关闭」，于是缓冲没补上；
+    //   等 3 秒后弹层又冒出来时，栈已经被消费干净，用户下一次返回直接退出页面。
+    //   僵尸弹层测试实测：第1次返回后 state=null（缓冲没补），
+    //   第2次返回就退到 about:blank —— 与真机「前两次无反应、第三次整页退回」同源。
+    //   改成：只要弹层还在（400ms 轮询持续确认），栈顶没缓冲就补一条。
+    //   对 React 恢复天然免疫（弹层还在就继续补），时序也不再有竞态。
+    var bufKeep = 0;      // 本窗口已补过几次（防困死降级）
+    var bufWindow = 0;    // 计数窗口起点
+    var BUF_MAX = 4;      // 一个窗口内最多补 4 次 —— 再关不掉就放手，让用户能退出
+    // 窗口取 30 秒：用户碰到弹层关不掉时，会连续按几次返回试图退出，
+    // 这一整串操作都该算同一个窗口；间隔超过 30 秒说明用户已经转向别的操作，
+    // 重新计数不会造成困死（中间早已放行过）。
+    var BUF_WINDOW_MS = 30000;
+    //
+    // ⚠ 为什么计数必须挂在时间窗口上，而不是「弹层消失就重置」：
+    //   僵尸弹层测试实测，forceHide 把层藏住的那几秒里 findOpenModal 返回 null，
+    //   若此时把计数清零，弹层复活后又从 0 开始补 —— BUF_MAX 永远达不到，
+    //   用户被永久困在页面里（实测连按 6 次返回仍退不出去）。
+    //   挂到 10 秒窗口上：用户连续尝试关弹层的一串操作落在同一窗口内，
+    //   补满 4 次后放手放行；隔一阵再操作则重新开始计数。
+    function ensureBuffer() {
+      var now = Date.now();
+      if (now - bufWindow > BUF_WINDOW_MS) { bufWindow = now; bufKeep = 0; }
+      var st = null;
+      try { st = history.state; } catch (e) {}
+      if (st && (st.zfModal || st.zfStay)) return;   // 栈顶已有缓冲，不用补
+      if (bufKeep >= BUF_MAX) return;                // 到上限：放手，保证用户能退出
+      try {
+        history.pushState({ zfModal: 1 }, '', location.href);
+        bufKeep++;
+        pushed = true;
+        log('弹层：补充缓冲历史（第 ' + bufKeep + '/' + BUF_MAX + ' 次）');
+      } catch (e) { /* file:// 或跨域下可能失败，忽略 */ }
+    }
+
     // ── 核心思路：弹层一出现就先压一条历史当缓冲 ──
     //
     //   用户按返回时，消费掉的是这条缓冲，而缓冲的地址和当前完全一样，
@@ -1138,12 +1253,12 @@
     //   只是把新地址重复压栈。后果在真机上很明显 —— 从 A 页点进 B 页开弹层，
     //   按返回会直接被送回 A 页，弹层虽然关了但人也走了。
     function onModalOpen() {
-      if (pushed) return;
-      try {
-        history.pushState({ zfModal: 1 }, '', location.href);
-        pushed = true;
-        log('弹层：压入缓冲历史');
-      } catch (e) { /* file:// 或跨域下可能失败，忽略 */ }
+      // 弹层刚出现：立刻确保栈顶有缓冲。
+      // ⚠ 压缓冲的全部入口都收敛到 ensureBuffer —— 早先 onModalOpen 自己
+      //   pushState 并顺手重置计数，结果弹层每次被 forceHide 藏住又被 React
+      //   复活（lastHad false→true）都走一遍 onModalOpen，计数被反复清零，
+      //   BUF_MAX 永远达不到，用户被永久困在页面（僵尸弹层测试实测 6 次仍退不出）。
+      ensureBuffer();
     }
 
     // 弹层自己关掉时把缓冲历史也退掉，否则用户下次按返回会「没反应」
@@ -1203,16 +1318,17 @@
     window.addEventListener('popstate', function () {
       if (silent) { silent = false; pushed = false; return; }
 
-      // 先尝试找浮层弹窗（问题页/回答页的 fixed 评论层）
-      var m = findOpenModalLoose();
+      // 先尝试找浮层弹窗（问题页/回答页的 fixed 评论层）。
+      // v0.7.9：退到 findAnyOverlay —— 真机上 findOpenModalLoose 漏检登录态
+      // 评论弹层时，纯几何兜底（≥60%×60% 的 fixed 层）还能抓住它，
+      // 避免走「内联评论」分支白白消耗缓冲、弹层关不掉（真机三次返回 bug）。
+      var m = findAnyOverlay();
       if (m) {
         normalizeLayer(m);
-        var had = pushed;
         pushed = false;
         closeTopModal();
-        if (!had) {
-          try { history.pushState({ zfStay: 1 }, '', location.href); } catch (e) {}
-        }
+        // 补缓冲不在这里做（同步判定关没关掉不可靠），
+        // 交给 checkModal 轮询里的 ensureBuffer()：弹层还在就继续补。
         return;
       }
 
@@ -1248,9 +1364,16 @@
       if (had && !lastHad) onModalOpen();
       else if (!had && lastHad) onModalGone();
       lastHad = had;
-      // 弹层一出现就归位：桌面版居中且超高的弹层，关闭按钮会被顶出屏幕，
-      // 用户连「点 ✕」这条路都没有，只能指望返回键
-      if (m) normalizeLayer(m);
+      if (m) {
+        // 弹层一出现就归位：桌面版居中且超高的弹层，关闭按钮会被顶出屏幕，
+        // 用户连「点 ✕」这条路都没有，只能指望返回键
+        normalizeLayer(m);
+        // 弹层还在 → 保证栈顶有缓冲（弹层关不掉的僵尸场景下持续补，
+        // 一个窗口内最多 BUF_MAX 次，之后放手让用户能正常退出）
+        ensureBuffer();
+      }
+      // 注意：弹层消失时【不要】重置 bufKeep —— 那正是 forceHide 把层
+      // 藏住的时段，重置会让计数永远归零、用户被困死（详见 ensureBuffer 注释）。
 
       var btn = document.getElementById('zf-modal-close');
       if (!m) { if (btn) btn.remove(); return; }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.6
+// @version      0.7.7
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.6';
+  var VER = '0.7.7';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1216,9 +1216,9 @@
         return;
       }
 
-      // 没有浮层 —— 但如果缓冲被消费了，说明是「内联评论区」这类无固定层的场景
-      // （专栏页、文章页的评论就是内联展开的）。此时必须阻止浏览器真后退，
-      // 否则用户会被送离正文页。
+      // 没有浮层 —— 但如果缓冲被消费了，说明是「滚动到内联评论区」这类
+      // 无固定层的场景（专栏页/文章页的评论就是内联的，用户直接往下滚就到）。
+      // 此时必须阻止浏览器真后退，否则用户会被送离正文页。
       if (pushed) {
         pushed = false;
         log('弹层：无浮层但消耗了缓冲（内联评论），阻止后退');
@@ -1292,6 +1292,41 @@
       setTimeout(checkModal, 0);
       setTimeout(checkModal, 150);
     }, true);
+
+    // ── 滚动压缓冲（专栏页/文章页内联评论区的正解）──
+    //   专栏页的评论区没有浮层、也不需要点按钮——它就长在页面流里，
+    //   用户往下滚就"进入"了评论区。此时没有任何 click 可拦截，
+    //   唯一的时机信号就是「滚动深度」。滚过一半正文后压入缓冲，
+    //   返回键消费缓冲时滚回顶部（≈ 回到正文），而不是退出页面。
+    //   ⚠ 边界：
+    //   • SPA 路由切换会重置 scrollY → 监听 popstate 前后不能误判，
+    //     用 zfMark 标记的「是否我们刚压过」来区分；
+    //   • 缓冲消费后立即补一条 zfStay，保证连续两次返回不会漏栈。
+    var scrollArmed = true;   // 滚回顶部后重新武装，一次滚动只压一次
+    window.addEventListener('scroll', function () {
+      if (!scrollArmed) return;
+      var y = window.scrollY || window.pageYOffset || 0;
+      var ih = document.documentElement.scrollHeight || 1;
+      var vh = window.innerHeight || 1;
+      // 滚动超过「文档高度 - 一屏」的一半（≈ 进入页面下半部/评论区）就压缓冲
+      if (y > Math.max((ih - vh) * 0.5, 600)) {
+        if (!pushed) {
+          try {
+            history.pushState({ zfModal: 1 }, '', location.href);
+            pushed = true;
+            log('弹层：滚动过深，压入缓冲历史（内联评论区）');
+          } catch (e) { return; }
+        }
+        scrollArmed = false;   // 只压一次，滚回顶部才重新武装
+      }
+    }, { passive: true });
+    // 滚回顶部（含脚本 scrollTo(0) 的"关评论"动作）→ 重新武装
+    (function watchTop() {
+      setInterval(function () {
+        var y = window.scrollY || window.pageYOffset || 0;
+        if (y < 100 && !scrollArmed) scrollArmed = true;
+      }, 600);
+    })();
 
     if (window.MutationObserver) {
       var lastCheck = 0;

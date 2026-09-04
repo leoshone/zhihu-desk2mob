@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  body{margin:0;font:15px/1.7 system-ui;background:#f6f6f6}
+  .app{max-width:700px;margin:0 auto;background:#fff;min-height:100vh}
+  .article{padding:18px}
+  .actionbar{position:sticky;top:0;background:#fff;border-top:1px solid #eee;
+    padding:10px 18px;display:flex;gap:18px;align-items:center}
+  .cbtn{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:#8590a6;font-size:15px}
+  .cbtn svg{width:20px;height:20px;fill:currentColor}
+  /* 评论区：内联展开（不是 fixed/absolute 浮层）—— 这是专栏页的真实形态 */
+  #comments{margin:18px;padding-top:18px;border-top:1px solid #eee;display:none}
+  #comments.show{display:block}
+  .cmt{border-bottom:1px solid #f0f0f0;padding:12px 0}
+  .cmt .name{color:#175199;font-weight:600}
+  .cmt .meta{color:#999;font-size:13px}
+  .editor{margin:18px;padding:14px;background:#f6f6f6;border-radius:6px}
+  .editor input{width:60%;padding:8px;border:1px solid #ddd;border-radius:4px}
+  .spacer{height:1600px}  /* 让页面可滚动，模拟正文较长 */
+  .tall{height:1400px}
+</style></head>
+<body>
+<div class="app" id="home" style="display:none">
+  <h2>首页</h2><a href="#article" id="enter">进入专栏文章</a>
+</div>
+<div class="app" id="article">
+  <div class="article">
+    <h1>专栏文章标题</h1>
+    <div class="RichText">
+      <p class="tall">正文第一段，很长很长很长，占据好几屏，用来模拟正文阅读。</p>
+      <p class="tall">正文第二段，继续很长很长很长。</p>
+      <p>正文末尾。</p>
+    </div>
+  </div>
+
+  <!-- 评论入口：桌面版专栏页底栏的「写评论 / N 条评论」按钮（svg 图标 + 文字） -->
+  <div class="actionbar">
+    <span class="cbtn" id="commentEntry" role="button">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
+      <span id="cmtCount">写评论</span>
+    </span>
+  </div>
+
+  <!-- 内联评论区：滚动到这、点入口后展开，本身不是浮层 -->
+  <div id="comments">
+    <div class="cmt"><span class="name">张三</span> <span class="meta">2天前</span><div>这篇文章写得很到位。</div></div>
+    <div class="cmt"><span class="name">李四</span> <span class="meta">1天前</span><div>收藏了，慢慢看。</div></div>
+    <div class="cmt"><span class="name">王五</span> <span class="meta">3小时前</span><div>评论内容由作者筛选后展示。</div></div>
+  </div>
+
+  <div class="editor">
+    <input placeholder="理性发言，友善互动"><button id="publish">发布</button>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<script>
+  // 模拟专栏页：点评论入口 → 仅展开内联评论区（不压任何 history，不弹浮层）
+  document.getElementById('commentEntry').addEventListener('click', function () {
+    document.getElementById('comments').classList.add('show');
+    // 真实专栏页会把评论区滚进视口；这里保持页面态不变
+  });
+  document.getElementById('enter').addEventListener('click', function (e) {
+    e.preventDefault();
+    history.pushState({ page: 'article' }, '', location.href.split('#')[0] + '#article');
+    document.getElementById('home').style.display = 'none';
+    document.getElementById('article').style.display = 'block';
+  });
+</script>
+</body></html>

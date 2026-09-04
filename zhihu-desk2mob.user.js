@@ -1338,7 +1338,14 @@
       if (pushed) {
         pushed = false;
         log('弹层：无浮层但消耗了缓冲（内联评论），阻止后退');
-        try { history.pushState({ zfStay: 1 }, '', location.href); } catch (e) {}
+        // ⚠ v0.7.9 修正：这里【绝不能】再 pushState 补一条 zfStay。
+        //   缓冲的 URL 就是当前页 URL，消费它 URL 本来就不会变，
+        //   再补一条只会让用户的下一次返回继续消费这条多余的缓冲 ——
+        //   表现为「第一次返回无反应、第二次还是无反应、第三次才退出页面」，
+        //   正是真机反馈的原话（用例 B 在真实专栏页上实测复现）。
+        //   旧代码注释写的「保证连续两次返回不会漏栈」是个误解：
+        //   需要顶回去的是 pushed==false 却仍检测到弹层的情形（那时浏览器
+        //   真的退了一格），而 pushed==true 说明消费的正是我们的缓冲。
         // 内联评论区的"关闭"语义 ≈ 滚回正文阅读位置
         try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e2) { }
         return;

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.10
+// @version      0.7.11
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.10';
+  var VER = "0.7.11";
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -896,7 +896,28 @@
       var z = cands[i].z;
       if (z > bestZ) { best = cands[i].el; bestZ = z; }
     }
-    return best;
+    if (best) return best;
+
+    // ⚠ v0.7.11 再降一级：覆盖「侧滑抽屉」形态。
+    //   未登录取到的评论弹层是全屏（980×2130 = 100%×100%），但登录态形态
+    //   未知——如果它是从右侧滑出的评论抽屉（比如 40% 宽 × 100% 高），
+    //   三级判据（55%×35% / 85%×50% / 60%×60%）会全部落空，
+    //   返回键走「内联评论」分支只把背景滚回顶部，抽屉纹丝不动——
+    //   用户看到的就是「返回没反应」。
+    //   判据放宽到 ≥35% 宽 × 50% 高，但加两道防误报：
+    //     ① 内部至少 3 个可交互元素（按钮/链接/输入框）—— 弹层有，普通容器少有
+    //     ② z-index ≥ 100 —— 弹层必然在最上层，页面内容层一般不到这个数
+    //   误报的代价是「返回先关一层」，比「弹层关不掉、整页退回」轻得多，
+    //   且 ensureBuffer 的 BUF_MAX 兜底保证用户不会被困死。
+    var drawer = collectLayers(0.35, 0.5);
+    var bd = null, bz = 99;
+    for (var j = 0; j < drawer.length; j++) {
+      var el = drawer[j].el, z = drawer[j].z;
+      var inter = 0;
+      try { inter = el.querySelectorAll('button,a,input,textarea,[role="button"]').length; } catch (e) {}
+      if (inter >= 3 && z > bz) { bd = el; bz = z; }
+    }
+    return bd;
   }
 
   // 找到弹层的「关闭按钮」：优先用强信号（aria / text / class），
@@ -1364,6 +1385,14 @@
     // 此外页面 JS 上下文偶尔会被重置（定时器被清掉），靠脚本在导航后重新注入
     // 拉起检测。第 ② 路不依赖单次点击或某次 mutation，只要页面还活着就一直查，
     // 专门兜住这两类「一次性时机检测必漏」的场景。
+    // 把闭包内状态暴露给 __zfDiag（真机取证用）
+    // pushed / bufKeep / frozenThreshold 都是闭包变量，只能用取值函数暴露
+    window.__zfState = {
+      pushed: function () { return pushed; },
+      bufKeep: function () { return bufKeep; },
+      threshold: function () { return frozenThreshold; }
+    };
+
     var lastHad = false;
     function checkModal() {
       var m = findOpenModal();
@@ -1789,6 +1818,97 @@
       文档宽: (document.scrollingElement || document.documentElement).scrollWidth,
       基准高: Math.round(S.VH)
     };
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // 返回键取证接口（v0.7.11）
+  //
+  // 为什么需要它：桌面 Chromium 只能在【未登录】状态下测真实专栏页，
+  // 而真机用户是【登录态】——登录态评论弹层的 DOM 形态从未被取到过，
+  // 三层几何判据（55%×35% / 85%×50% / 60%×60% / 35%×50%）对它是否命中
+  // 全靠猜。这是目前唯一无法在本机闭环的环节。
+  //
+  // 用法（真机 Kiwi 装了脚本后）：
+  //   1) 打开专栏页，点开评论弹层（保持弹层开着）
+  //   2) 地址栏访问不了控制台就用 Kiwi 的 chrome://inspect，
+  //      或者在知乎页面执行：javascript:window.__zfDiag()   —— 部分浏览器支持
+  //   3) 把返回的 JSON 贴回来
+  // ═══════════════════════════════════════════════════════════════
+  function descLayer(el) {
+    if (!el) return null;
+    var r, cs;
+    try { r = el.getBoundingClientRect(); } catch (e) { return null; }
+    try { cs = getComputedStyle(el); } catch (e2) { cs = null; }
+    var txt = '';
+    try { txt = (el.innerText || '').trim(); } catch (e3) {}
+    var inter = 0;
+    try { inter = el.querySelectorAll('button,a,input,textarea,[role="button"]').length; } catch (e4) {}
+    return {
+      标签: el.tagName.toLowerCase(),
+      类名: (typeof el.className === 'string' ? el.className : '').slice(0, 60),
+      位置: cs ? cs.position : '?',
+      层级: cs ? cs.zIndex : '?',
+      尺寸: Math.round(r.width) + 'x' + Math.round(r.height),
+      占屏: (r.width / (document.documentElement.clientWidth || 1) * 100).toFixed(0) + '%x' +
+            (r.height / (document.documentElement.clientHeight || 1) * 100).toFixed(0) + '%',
+      文字数: txt.length,
+      可交互元素: inter,
+      有关闭按钮: !!findCloseButton(el)
+    };
+  }
+
+  window.__zfDiag = function () {
+    var out = {
+      脚本版本: VER,
+      当前地址: location.href,
+      视口: document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight,
+      滚动位置: Math.round(window.scrollY || 0),
+      历史长度: 0,
+      栈顶状态: null,
+      返回键拦截状态: (function () {
+        var st = window.__zfState;
+        if (!st) return '(setupModalBack 未初始化)';
+        try {
+          return {
+            缓冲已压: st.pushed(),
+            本窗口已补缓冲次数: st.bufKeep(),
+            滚动阈值: st.threshold()
+          };
+        } catch (e) { return '(读取状态失败)'; }
+      })()
+    };
+    try { out.历史长度 = history.length; } catch (e) {}
+    try { out.栈顶状态 = history.state; } catch (e2) {}
+
+    // 三层判据各命中什么
+    out.判据命中 = {
+      findOpenModal: descLayer(findOpenModal()),
+      findOpenModalLoose: descLayer(findOpenModalLoose()),
+      findAnyOverlay: descLayer(findAnyOverlay())
+    };
+
+    // 所有够大的浮层（含被漏掉的），看有没有该抓没抓到的
+    var vw = document.documentElement.clientWidth || 1;
+    var vh = document.documentElement.clientHeight || 1;
+    var big = [];
+    var all = document.body.querySelectorAll('*');
+    var n = Math.min(all.length, CONFIG.maxScan);
+    for (var i = 0; i < n && big.length < 12; i++) {
+      var el = all[i];
+      if (el.id === 'zhihu-mobile-badge' || el.id === 'zf-modal-close') continue;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (e3) { continue; }
+      if (!cs) continue;
+      if (cs.position !== 'fixed' && cs.position !== 'absolute') continue;
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      if (parseFloat(cs.opacity) < 0.15) continue;
+      var r;
+      try { r = el.getBoundingClientRect(); } catch (e4) { continue; }
+      if (r.width < vw * 0.3 || r.height < vh * 0.3) continue;
+      big.push(descLayer(el));
+    }
+    out.大浮层清单 = big;
+    return out;
   };
 
   // ═══════════════════════════════════════════════════════════════

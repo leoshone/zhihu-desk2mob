@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.5
+// @version      0.7.6
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.5';
+  var VER = '0.7.6';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1164,33 +1164,38 @@
     //     • 问题页/回答页 → 点后弹出 fixed 满屏弹层（collectLayers 能检测）
     //     • 专栏页/文章页 → 内联展开或滚动定位（无 fixed 层，永远检测不到）
     //   所以必须在「点击入口」时就主动压缓冲，不等检测结果。
+    //
+    //   ⚠ 判据里禁止用 \b（单词边界）：\b 依赖 ASCII 词字符与非词字符的切换，
+    //   「评论」前后都是中文/数字时 \b 不成立——v0.7.5 的 /\b评论\b/ 是永远
+    //   匹配不到的死代码，专栏页按钮就这样全部漏网。一律用 indexOf / 无边界正则。
     function isCommentTrigger(el) {
       if (!el || el === document) return false;
       var tag = (el.tagName || '').toLowerCase();
-      if (!/^(button|a|div|span|li)$/.test(tag)) return false;
+      if (!/^(button|a|div|span|li|svg|use|path|img)$/.test(tag)) return false;
 
-      // ① 文本命中：「N 条评论」「评论」等短文本
       var txt = '';
       try { txt = (el.textContent || el.innerText || '').trim().replace(/\s+/g, ' '); } catch (e) { }
-      if (/^\d+\s*条?\s*评论$/.test(txt) || txt === '评论') return true;
-      if (txt.length <= 16 && /\b评论\b/.test(txt)) return true;
+      // ① 短文本含「评论」：「评论」「N 条评论」「写评论」「添加评论」……
+      if (txt.length <= 16 && txt.indexOf('评论') >= 0) return true;
 
-      // ② class / id 含 comment
+      // ② class / id 含 comment（无边界，commentList/Comments-container 都算）
       var cls = (el.className || '').toString();
       var id = el.id || '';
-      if (/\bcomment\b/i.test(cls) || /\bcomment\b/i.test(id)) return true;
+      if (/comment/i.test(cls) || /comment/i.test(id)) return true;
 
-      // ③ aria-label 命中
+      // ③ aria-label / title 命中
       var label = '';
-      try { label = (el.getAttribute('aria-label') || ''); } catch (e) { }
+      try { label = (el.getAttribute('aria-label') || el.getAttribute('title') || ''); } catch (e) { }
       if (label && (label.indexOf('评论') >= 0 || /comment/i.test(label))) return true;
 
-      // ④ 父容器是小型评论按钮（图标 + "N条评论" 文字的组合）
-      var p = el.parentElement;
-      if (p && p !== document.body) {
-        var pt = '';
-        try { pt = (p.textContent || p.innerText || '').trim().replace(/\s+/g, ' '); } catch (e) { }
-        if (pt.length <= 20 && /\d*\s*条?\s*评论/.test(pt)) return true;
+      // ④ svg 图标按钮：自身无文本，看父容器短文本（「N 条评论」等）
+      if (tag === 'svg' || tag === 'use' || tag === 'path' || tag === 'img' || txt === '') {
+        var p = el.parentElement;
+        if (p && p !== document.body) {
+          var pt = '';
+          try { pt = (p.textContent || p.innerText || '').trim().replace(/\s+/g, ' '); } catch (e2) { }
+          if (pt.length <= 20 && pt.indexOf('评论') >= 0) return true;
+        }
       }
       return false;
     }
@@ -1265,10 +1270,11 @@
     // 点击后做两件事：
     //   ① 主动拦截：如果点的是「评论」入口，立刻压缓冲历史（不等浮层检测）；
     //   ② 被动检测：照常跑 checkModal 兜住非点击触发的弹层。
+    //   冒泡爬升从 3 层放宽到 6 层：专栏页按钮是 svg/use 图标，点击 target 往往
+    //   是 path，到带语义的按钮容器隔了好几层。
     document.addEventListener('click', function (e) {
       var t = e.target;
-      // 向上冒泡 3 层找评论入口（用户可能点到的是图标而不是外层按钮）
-      for (var d = 0; d < 3 && t && t !== document.body; d++) {
+      for (var d = 0; d < 6 && t && t !== document.body; d++) {
         if (isCommentTrigger(t)) {
           if (!pushed) {
             try {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.4
+// @version      0.7.5
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.4';
+  var VER = '0.7.5';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1159,25 +1159,72 @@
       } catch (e) { silent = false; }
     }
 
+    // ── 判定一个元素是否是「打开评论」的入口 ──
+    //   知乎不同页面评论区的 UI 形态差异极大：
+    //     • 问题页/回答页 → 点后弹出 fixed 满屏弹层（collectLayers 能检测）
+    //     • 专栏页/文章页 → 内联展开或滚动定位（无 fixed 层，永远检测不到）
+    //   所以必须在「点击入口」时就主动压缓冲，不等检测结果。
+    function isCommentTrigger(el) {
+      if (!el || el === document) return false;
+      var tag = (el.tagName || '').toLowerCase();
+      if (!/^(button|a|div|span|li)$/.test(tag)) return false;
+
+      // ① 文本命中：「N 条评论」「评论」等短文本
+      var txt = '';
+      try { txt = (el.textContent || el.innerText || '').trim().replace(/\s+/g, ' '); } catch (e) { }
+      if (/^\d+\s*条?\s*评论$/.test(txt) || txt === '评论') return true;
+      if (txt.length <= 16 && /\b评论\b/.test(txt)) return true;
+
+      // ② class / id 含 comment
+      var cls = (el.className || '').toString();
+      var id = el.id || '';
+      if (/\bcomment\b/i.test(cls) || /\bcomment\b/i.test(id)) return true;
+
+      // ③ aria-label 命中
+      var label = '';
+      try { label = (el.getAttribute('aria-label') || ''); } catch (e) { }
+      if (label && (label.indexOf('评论') >= 0 || /comment/i.test(label))) return true;
+
+      // ④ 父容器是小型评论按钮（图标 + "N条评论" 文字的组合）
+      var p = el.parentElement;
+      if (p && p !== document.body) {
+        var pt = '';
+        try { pt = (p.textContent || p.innerText || '').trim().replace(/\s+/g, ' '); } catch (e) { }
+        if (pt.length <= 20 && /\d*\s*条?\s*评论/.test(pt)) return true;
+      }
+      return false;
+    }
+
     window.addEventListener('popstate', function () {
       if (silent) { silent = false; pushed = false; return; }
-      // 常规判据没认出来的评论层，用宽松档再捞一次：
-      // 宁可多关一个层，也不能让用户按了返回却被送离正文页
+
+      // 先尝试找浮层弹窗（问题页/回答页的 fixed 评论层）
       var m = findOpenModalLoose();
-      if (!m) { pushed = false; return; }
-      normalizeLayer(m);
-
-      var had = pushed;
-      pushed = false;
-      closeTopModal();
-
-      // had=true：这次返回消耗掉了缓冲历史，URL 没变过，什么都不用做。
-      // had=false：弹层刚出现、还没来得及压缓冲就按了返回（检测有延迟，
-      //            概率很低）。此时只能退而求其次把当前地址顶回去，
-      //            保证至少不会退出页面。
-      if (!had) {
-        try { history.pushState({ zfStay: 1 }, '', location.href); } catch (e) {}
+      if (m) {
+        normalizeLayer(m);
+        var had = pushed;
+        pushed = false;
+        closeTopModal();
+        if (!had) {
+          try { history.pushState({ zfStay: 1 }, '', location.href); } catch (e) {}
+        }
+        return;
       }
+
+      // 没有浮层 —— 但如果缓冲被消费了，说明是「内联评论区」这类无固定层的场景
+      // （专栏页、文章页的评论就是内联展开的）。此时必须阻止浏览器真后退，
+      // 否则用户会被送离正文页。
+      if (pushed) {
+        pushed = false;
+        log('弹层：无浮层但消耗了缓冲（内联评论），阻止后退');
+        try { history.pushState({ zfStay: 1 }, '', location.href); } catch (e) {}
+        // 内联评论区的"关闭"语义 ≈ 滚回正文阅读位置
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e2) { }
+        return;
+      }
+
+      // 既无浮层也无缓冲 → 放行，这是正常的浏览器后退
+      pushed = false;
     });
 
     // 统一检测：找出当前打开的弹层，并按「出现 / 消失」同步缓冲历史与归位。
@@ -1215,8 +1262,27 @@
       document.body.appendChild(btn);
     }
 
-    // 点击后立刻查一两次（用户点开评论的瞬间），降低首次延迟
-    document.addEventListener('click', function () {
+    // 点击后做两件事：
+    //   ① 主动拦截：如果点的是「评论」入口，立刻压缓冲历史（不等浮层检测）；
+    //   ② 被动检测：照常跑 checkModal 兜住非点击触发的弹层。
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      // 向上冒泡 3 层找评论入口（用户可能点到的是图标而不是外层按钮）
+      for (var d = 0; d < 3 && t && t !== document.body; d++) {
+        if (isCommentTrigger(t)) {
+          if (!pushed) {
+            try {
+              history.pushState({ zfModal: 1 }, '', location.href);
+              pushed = true;
+              log('弹层：点击评论入口，主动压入缓冲历史');
+            } catch (err) { }
+          }
+          break;
+        }
+        t = t.parentElement || t.parentNode;
+      }
+
+      // 被动检测保留（兜住非点击方式打开的弹层，如键盘/快捷键）
       setTimeout(checkModal, 0);
       setTimeout(checkModal, 150);
     }, true);

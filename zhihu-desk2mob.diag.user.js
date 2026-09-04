@@ -1145,7 +1145,7 @@
           '\nfind=' + (window.__zfDiag.lastFind || '-') +
           '\npushed=' + (window.__zfDiag.pushed ? 1 : 0) +
           ' state=' + JSON.stringify(window.__zfDiag.state) +
-          '\ncands(>=0.3):\n' + (window.__zfDiag.cands || []).join('\n') +
+          '\ncands:\n' + (window.__zfDiag.cands || []).join('\n') +
           '\n---log---\n' + window.__zfDiag.log.join('\n');
       } catch (e) {}
     }
@@ -1231,17 +1231,18 @@
       var m = findOpenModal();
       window.__zfDiag.lastFind = m ? (m.className || m.tagName).toString().slice(0, 24) : 'null';
       window.__zfDiag.state = history.state;
-      // 额外列出所有够大的 fixed/absolute 层（含低于阈值的），便于排查「检测漏了哪种面板」
+      // 额外列出所有 fixed/absolute 层（分三档尺寸 + 含位置），便于排查「检测漏了哪种面板」
+      // 第三档 >=0.05 专门兜住小号底部抽屉式评论层；@top,left 能看出是满屏浮层还是底部抽屉
       try {
-        var t1 = collectLayers(0.3, 0.3).slice(0, 6).map(function (c) {
+        function fmt(c, tag) {
           var r = c.el.getBoundingClientRect();
-          return (c.el.className || c.el.tagName).toString().slice(0, 16) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height);
-        });
-        var t2 = collectLayers(0.1, 0.1).slice(0, 8).map(function (c) {
-          var r = c.el.getBoundingClientRect();
-          return (c.el.className || c.el.tagName).toString().slice(0, 16) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height);
-        });
-        window.__zfDiag.cands = ['[>=0.3]'].concat(t1, ['[>=0.1]'].concat(t2));
+          var cls = (c.el.className || c.el.tagName).toString().replace(/\s+/g, ' ').slice(0, 18);
+          return tag + ' ' + cls + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) + '@' + Math.round(r.top) + ',' + Math.round(r.left);
+        }
+        var a1 = collectLayers(0.3, 0.3).slice(0, 6).map(function (c) { return fmt(c, '>=0.3'); });
+        var a2 = collectLayers(0.1, 0.1).slice(0, 8).map(function (c) { return fmt(c, '>=0.1'); });
+        var a3 = collectLayers(0.05, 0.05).slice(0, 10).map(function (c) { return fmt(c, '>=0.05'); });
+        window.__zfDiag.cands = ['[>=0.3]'].concat(a1, ['[>=0.1]'].concat(a2, ['[>=0.05]'].concat(a3)));
       } catch (e) { window.__zfDiag.cands = ['<err>']; }
       var had = !!m;
       if (had && !lastHad) { zfDiagLog('checkModal: 检测到弹层 ' + window.__zfDiag.lastFind + ' → onModalOpen'); onModalOpen(); }

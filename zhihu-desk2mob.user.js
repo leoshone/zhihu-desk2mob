@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.7
+// @version      0.7.8
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = '0.7.7';
+  var VER = '0.7.8';
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1296,35 +1296,80 @@
     // ── 滚动压缓冲（专栏页/文章页内联评论区的正解）──
     //   专栏页的评论区没有浮层、也不需要点按钮——它就长在页面流里，
     //   用户往下滚就"进入"了评论区。此时没有任何 click 可拦截，
-    //   唯一的时机信号就是「滚动深度」。滚过一半正文后压入缓冲，
+    //   唯一的时机信号就是「滚动深度」。滚过正文区后压入缓冲，
     //   返回键消费缓冲时滚回顶部（≈ 回到正文），而不是退出页面。
-    //   ⚠ 边界：
-    //   • SPA 路由切换会重置 scrollY → 监听 popstate 前后不能误判，
-    //     用 zfMark 标记的「是否我们刚压过」来区分；
+    //
+    //   ⚠ v0.7.8 修复「移动靶」缺陷（真机 FAIL 的根因，桌面 Chromium 复现实锤）：
+    //   旧判据 y > (scrollHeight - innerHeight) * 0.5 里的 scrollHeight 是动态的——
+    //   真实专栏页底部挂着「推荐阅读」无限流，用户越往下滚知乎越追加内容，
+    //   实测 scrollHeight 从 24855 暴涨到 56653。用户明明滚到了评论区
+    //   （y≈14400），按动态文档算占比却只剩 26%，50% 的阈值永远追不上
+    //   → 滚动压缓冲永不触发 → 返回键消费真实历史 → 退回首页。
+    //   复刻测试页是静态文档，滚到底必然过 50%，所以本机测试一直是假阳性。
+    //
+    //   对策（v0.7.8 定稿）：锚定「正文锚点的首次测量值」并冻结。
+    //   v0.7.8 中间版曾每帧重测「正文底边」，但真实专栏页的正文元素
+    //   .Post-RichTextContainer 自身在懒加载中持续增高（推荐卡片插进正文流），
+    //   实测底边跟着 y 同步暴涨（y=1800 时底边 7847 → y=14400 时 15394），
+    //   「y > 底边 − 一屏」同样追不上 —— 移动靶换了靶子还在移动。
+    //   冻结后阈值不再变：用户一旦滚过首测底边 − 一屏，必触发。
+    //   首测时机在滚动开始前（scrollArmed 期间每次都重算，一旦触发即冻结），
+    //   早于懒加载插入，底边值接近真实正文长度；即使首测偏小，
+    //   最坏情况也只是提前压缓冲，副作用仅为「多退一格无感回顶」，可接受。
+    //   找不到正文锚点时退回固定深度（2 屏），同样不受文档增长影响。
+    //   ⚠ 其余边界：
+    //   • SPA 路由切换会重置 scrollY → 用 zfMark 标记的「是否我们刚压过」区分；
     //   • 缓冲消费后立即补一条 zfStay，保证连续两次返回不会漏栈。
     var scrollArmed = true;   // 滚回顶部后重新武装，一次滚动只压一次
+    var frozenThreshold = 0;  // 冻结的滚动阈值：0 = 未测，测到即冻结
+    function articleBottomY() {
+      // 在缩放坐标系里量正文底边：getBoundingClientRect 是 zoom 后的坐标，
+      // 除以 S.Z 折算回基准系，再加 scrollY 得到文档坐标
+      var sels = ['.Post-RichTextContainer', '.RichText', '.Post-Main',
+                  '.Question-mainColumn', '.Topstory-mainColumn', 'article'];
+      for (var i = 0; i < sels.length; i++) {
+        var els;
+        try { els = document.querySelectorAll(sels[i]); } catch (e) { continue; }
+        for (var j = 0; j < els.length; j++) {
+          var el = els[j];
+          if (!el.getClientRects().length) continue;              // 不在渲染树
+          if ((el.innerText || '').trim().length < 300) continue; // 不是正文主体
+          var r = el.getBoundingClientRect();
+          if (r.height < 300) continue;
+          return (r.top / S.Z) + (window.scrollY || window.pageYOffset || 0) + r.height / S.Z;
+        }
+      }
+      return 0;   // 没找到锚点
+    }
+    function scrollThreshold() {
+      if (frozenThreshold) return frozenThreshold;        // 已冻结，不再重测
+      var vh = (window.innerHeight || 1) / S.Z;           // 折算回基准坐标系
+      var ab = articleBottomY();
+      frozenThreshold = ab > 0 ? Math.max(ab - vh, 600)   // 正文底边上一屏（≈评论区入口）
+                               : Math.max(vh * 2, 600);   // 锚不到正文 → 固定 2 屏
+      return frozenThreshold;
+    }
     window.addEventListener('scroll', function () {
       if (!scrollArmed) return;
       var y = window.scrollY || window.pageYOffset || 0;
-      var ih = document.documentElement.scrollHeight || 1;
-      var vh = window.innerHeight || 1;
-      // 滚动超过「文档高度 - 一屏」的一半（≈ 进入页面下半部/评论区）就压缓冲
-      if (y > Math.max((ih - vh) * 0.5, 600)) {
+      var threshold = scrollThreshold();
+      if (y > threshold) {
         if (!pushed) {
           try {
             history.pushState({ zfModal: 1 }, '', location.href);
             pushed = true;
-            log('弹层：滚动过深，压入缓冲历史（内联评论区）');
+            log('弹层：滚动过深，压入缓冲历史（内联评论区，阈值=' + Math.round(threshold) + ' 当前=' + Math.round(y) + '）');
           } catch (e) { return; }
         }
         scrollArmed = false;   // 只压一次，滚回顶部才重新武装
       }
     }, { passive: true });
-    // 滚回顶部（含脚本 scrollTo(0) 的"关评论"动作）→ 重新武装
+    // 滚回顶部（含脚本 scrollTo(0) 的"关评论"动作）→ 重新武装并解冻阈值
+    // （SPA 换页后正文完全不同，旧阈值必须作废）
     (function watchTop() {
       setInterval(function () {
         var y = window.scrollY || window.pageYOffset || 0;
-        if (y < 100 && !scrollArmed) scrollArmed = true;
+        if (y < 100 && !scrollArmed) { scrollArmed = true; frozenThreshold = 0; }
       }, 600);
     })();
 

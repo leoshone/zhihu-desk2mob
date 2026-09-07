@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.11
+// @version      0.7.12
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = "0.7.11";
+  var VER = "0.7.12";
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1407,6 +1407,9 @@
         // 弹层还在 → 保证栈顶有缓冲（弹层关不掉的僵尸场景下持续补，
         // 一个窗口内最多 BUF_MAX 次，之后放手让用户能正常退出）
         ensureBuffer();
+      } else {
+        // 没有弹层：看评论区是否进入视口（v0.7.12 主判据，替代不可靠的滚动阈值）
+        watchCommentArea();
       }
       // 注意：弹层消失时【不要】重置 bufKeep —— 那正是 forceHide 把层
       // 藏住的时段，重置会让计数永远归零、用户被困死（详见 ensureBuffer 注释）。
@@ -1451,6 +1454,37 @@
       setTimeout(checkModal, 0);
       setTimeout(checkModal, 150);
     }, true);
+
+    // ── 评论区进入视口 → 压缓冲（v0.7.12 主判据）──
+    //   真机取证（Kiwi 891x1753 / zoom 2.267 / 文档高 30920）实测：
+    //   滚动阈值算出 61496 —— 比文档总高还大一倍，永远不可达，
+    //   于是「滚到评论区」在真机上一次缓冲都压不进去，
+    //   用户按返回直接消费真实历史退出页面。
+    //   根因：articleBottomY() 依赖 getBoundingClientRect / zoom / scrollY
+    //   三者的绝对像素一致性，而 Kiwi 的 CSS zoom + 视觉视口缩放组合下，
+    //   这几个值根本不在同一坐标系（桌面 Chromium 上恰好一致，所以测不出来）。
+    //   改用 IntersectionObserver：只判断「评论区元素有没有进入视口」这个几何
+    //   事实，完全不碰数值阈值，也不关心坐标系。
+    var cmtObserver = null;
+    var cmtObservedCount = -1;
+    var CMT_SEL = '.Comments-container,[class*="Comments-container"],.CommentList,#CommentList';
+    function watchCommentArea() {
+      if (!window.IntersectionObserver) return;
+      var cands;
+      try { cands = document.querySelectorAll(CMT_SEL); } catch (e) { return; }
+      // 评论区是懒加载的：元素数量变化时才重建观察器，避免每轮都 disconnect
+      if (!cands.length || cands.length === cmtObservedCount) return;
+      cmtObservedCount = cands.length;
+      if (cmtObserver) { try { cmtObserver.disconnect(); } catch (e2) {} }
+      cmtObserver = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) { ensureBuffer(); return; }
+        }
+      }, { rootMargin: '0px 0px -30% 0px' });   // 进入视口下方 70% 区域才算「看到了」
+      for (var j = 0; j < cands.length; j++) {
+        try { cmtObserver.observe(cands[j]); } catch (e3) {}
+      }
+    }
 
     // ── 滚动压缓冲（专栏页/文章页内联评论区的正解）──
     //   专栏页的评论区没有浮层、也不需要点按钮——它就长在页面流里，
@@ -1504,8 +1538,20 @@
       if (frozenThreshold) return frozenThreshold;        // 已冻结，不再重测
       var vh = (window.innerHeight || 1) / S.Z;           // 折算回基准坐标系
       var ab = articleBottomY();
-      frozenThreshold = ab > 0 ? Math.max(ab - vh, 600)   // 正文底边上一屏（≈评论区入口）
-                               : Math.max(vh * 2, 600);   // 锚不到正文 → 固定 2 屏
+      var t = ab > 0 ? Math.max(ab - vh, 600)             // 正文底边上一屏（≈评论区入口）
+                     : Math.max(vh * 2, 600);             // 锚不到正文 → 固定 2 屏
+      // ⚠ v0.7.12 安全阀：真机 Kiwi 上 ab 会算成 61496（文档才 30920 高），
+      //   因为 zoom + 视觉视口缩放下 getBoundingClientRect 与 scrollY 不同坐标系。
+      //   阈值超过文档可滚动高度就意味着永远不可达，直接退回相对比例判据
+      //   （y / 可滚动高度），比例是同坐标系的比值，不受缩放影响。
+      var de = document.documentElement;
+      var scrollable = (de.scrollHeight || 0) - (de.clientHeight || 0);
+      if (scrollable > 0 && t > scrollable * 0.95) {
+        t = Math.max(scrollable * 0.3, 600);
+        log('弹层：滚动阈值异常(' + Math.round(ab) + ' > 文档' + Math.round(scrollable) +
+            ')，改用相对比例判据=' + Math.round(t));
+      }
+      frozenThreshold = t;
       return frozenThreshold;
     }
     window.addEventListener('scroll', function () {

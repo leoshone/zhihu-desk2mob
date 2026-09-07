@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.12
+// @version      0.7.13
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = "0.7.12";
+  var VER = "0.7.13";
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -1353,22 +1353,15 @@
         return;
       }
 
-      // 没有浮层 —— 但如果缓冲被消费了，说明是「滚动到内联评论区」这类
-      // 无固定层的场景（专栏页/文章页的评论就是内联的，用户直接往下滚就到）。
-      // 此时必须阻止浏览器真后退，否则用户会被送离正文页。
+      // 没有浮层但缓冲被消费了 —— v0.7.13 之前这里会「阻止后退 + 滚回顶部」，
+      // 那是为内联评论区做的（滚进评论区 → 返回 → 滚回顶部）。
+      // 需求澄清后（内联不用管）这成了纯粹的返回键劫持，直接删掉：
+      // 缓冲作废、放行，用户按返回就该正常退出页面。
+      // 顺带说明为什么要显式置 pushed=false：这轮缓冲是试探性压的
+      // （点了评论入口但弹窗没出现），留着会污染下一次返回的判断。
       if (pushed) {
         pushed = false;
-        log('弹层：无浮层但消耗了缓冲（内联评论），阻止后退');
-        // ⚠ v0.7.9 修正：这里【绝不能】再 pushState 补一条 zfStay。
-        //   缓冲的 URL 就是当前页 URL，消费它 URL 本来就不会变，
-        //   再补一条只会让用户的下一次返回继续消费这条多余的缓冲 ——
-        //   表现为「第一次返回无反应、第二次还是无反应、第三次才退出页面」，
-        //   正是真机反馈的原话（用例 B 在真实专栏页上实测复现）。
-        //   旧代码注释写的「保证连续两次返回不会漏栈」是个误解：
-        //   需要顶回去的是 pushed==false 却仍检测到弹层的情形（那时浏览器
-        //   真的退了一格），而 pushed==true 说明消费的正是我们的缓冲。
-        // 内联评论区的"关闭"语义 ≈ 滚回正文阅读位置
-        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e2) { }
+        log('弹层：无浮层，缓冲作废，返回键放行（内联评论不干预）');
         return;
       }
 
@@ -1386,11 +1379,11 @@
     // 拉起检测。第 ② 路不依赖单次点击或某次 mutation，只要页面还活着就一直查，
     // 专门兜住这两类「一次性时机检测必漏」的场景。
     // 把闭包内状态暴露给 __zfDiag（真机取证用）
-    // pushed / bufKeep / frozenThreshold 都是闭包变量，只能用取值函数暴露
+    // pushed / bufKeep 都是闭包变量，只能用取值函数暴露
+    // （v0.7.13 删掉了滚动阈值，frozenThreshold 已不存在，别再引用）
     window.__zfState = {
       pushed: function () { return pushed; },
-      bufKeep: function () { return bufKeep; },
-      threshold: function () { return frozenThreshold; }
+      bufKeep: function () { return bufKeep; }
     };
 
     var lastHad = false;
@@ -1404,13 +1397,13 @@
         // 弹层一出现就归位：桌面版居中且超高的弹层，关闭按钮会被顶出屏幕，
         // 用户连「点 ✕」这条路都没有，只能指望返回键
         normalizeLayer(m);
+        cancelProbe();     // 弹窗确实出现了 → 试探缓冲转为正式缓冲，不再撤销
         // 弹层还在 → 保证栈顶有缓冲（弹层关不掉的僵尸场景下持续补，
         // 一个窗口内最多 BUF_MAX 次，之后放手让用户能正常退出）
         ensureBuffer();
-      } else {
-        // 没有弹层：看评论区是否进入视口（v0.7.12 主判据，替代不可靠的滚动阈值）
-        watchCommentArea();
       }
+      // 没有弹层时 v0.7.13 起什么都不做：
+      // 内联评论区按需求不干预，返回键保持浏览器原生行为。
       // 注意：弹层消失时【不要】重置 bufKeep —— 那正是 forceHide 把层
       // 藏住的时段，重置会让计数永远归零、用户被困死（详见 ensureBuffer 注释）。
 
@@ -1434,6 +1427,31 @@
     //   ② 被动检测：照常跑 checkModal 兜住非点击触发的弹层。
     //   冒泡爬升从 3 层放宽到 6 层：专栏页按钮是 svg/use 图标，点击 target 往往
     //   是 path，到带语义的按钮容器隔了好几层。
+    // 点评论入口 → 【试探性】压缓冲。
+    //   为什么要试探：知乎的弹层是 React 异步挂载的，用户点完立刻按返回时
+    //   400ms 轮询可能还没检测到，先压一条兜住这个时间窗。
+    //   ⚠ 为什么必须带撤销（v0.7.13）：点评论入口既可能弹出弹窗（要接管返回键），
+    //   也可能只是展开内联评论区（按需求「内联不用管」）。不撤销的话，
+    //   内联场景下用户按返回会白白消费这条缓冲 —— 正是「返回没反应」的来源。
+    //   所以：压完起 1.5s 倒计时，期间弹窗出现就取消撤销；弹窗一直没出现
+    //   就把缓冲静默退掉，返回键恢复原样。
+    var probeTimer = 0;
+    function cancelProbe() {
+      if (probeTimer) { clearTimeout(probeTimer); probeTimer = 0; }
+    }
+    function dropProbeBuffer() {
+      cancelProbe();
+      if (!pushed) return;
+      pushed = false;
+      try {
+        if (history.state && history.state.zfModal) {
+          silent = true;
+          history.back();      // 静默退掉试探缓冲，URL 不变，用户无感
+          log('弹层：未出现弹窗（内联评论），撤销试探缓冲');
+        }
+      } catch (e) { silent = false; }
+    }
+
     document.addEventListener('click', function (e) {
       var t = e.target;
       for (var d = 0; d < 6 && t && t !== document.body; d++) {
@@ -1442,7 +1460,14 @@
             try {
               history.pushState({ zfModal: 1 }, '', location.href);
               pushed = true;
-              log('弹层：点击评论入口，主动压入缓冲历史');
+              cancelProbe();
+              // 800ms：知乎弹窗是 React 异步挂载，实测桌面/真机都在 500ms 内出现；
+              // 给到 800ms 既兜得住慢渲染，又不会让内联场景的返回键被劫持太久
+              // （撤销前按返回会白消费一次缓冲 = 用户眼里的「没反应」）。
+              // 万一 800ms 后弹窗才出现，checkModal 的 ensureBuffer 会重新压上，
+              // 所以撤早了不会漏，撤晚了才有害。
+              probeTimer = setTimeout(dropProbeBuffer, 800);
+              log('弹层：点击评论入口，试探性压入缓冲历史');
             } catch (err) { }
           }
           break;
@@ -1455,128 +1480,25 @@
       setTimeout(checkModal, 150);
     }, true);
 
-    // ── 评论区进入视口 → 压缓冲（v0.7.12 主判据）──
-    //   真机取证（Kiwi 891x1753 / zoom 2.267 / 文档高 30920）实测：
-    //   滚动阈值算出 61496 —— 比文档总高还大一倍，永远不可达，
-    //   于是「滚到评论区」在真机上一次缓冲都压不进去，
-    //   用户按返回直接消费真实历史退出页面。
-    //   根因：articleBottomY() 依赖 getBoundingClientRect / zoom / scrollY
-    //   三者的绝对像素一致性，而 Kiwi 的 CSS zoom + 视觉视口缩放组合下，
-    //   这几个值根本不在同一坐标系（桌面 Chromium 上恰好一致，所以测不出来）。
-    //   改用 IntersectionObserver：只判断「评论区元素有没有进入视口」这个几何
-    //   事实，完全不碰数值阈值，也不关心坐标系。
-    var cmtObserver = null;
-    var cmtObservedCount = -1;
-    var CMT_SEL = '.Comments-container,[class*="Comments-container"],.CommentList,#CommentList';
-    function watchCommentArea() {
-      if (!window.IntersectionObserver) return;
-      var cands;
-      try { cands = document.querySelectorAll(CMT_SEL); } catch (e) { return; }
-      // 评论区是懒加载的：元素数量变化时才重建观察器，避免每轮都 disconnect
-      if (!cands.length || cands.length === cmtObservedCount) return;
-      cmtObservedCount = cands.length;
-      if (cmtObserver) { try { cmtObserver.disconnect(); } catch (e2) {} }
-      cmtObserver = new IntersectionObserver(function (entries) {
-        for (var i = 0; i < entries.length; i++) {
-          if (entries[i].isIntersecting) { ensureBuffer(); return; }
-        }
-      }, { rootMargin: '0px 0px -30% 0px' });   // 进入视口下方 70% 区域才算「看到了」
-      for (var j = 0; j < cands.length; j++) {
-        try { cmtObserver.observe(cands[j]); } catch (e3) {}
-      }
-    }
-
-    // ── 滚动压缓冲（专栏页/文章页内联评论区的正解）──
-    //   专栏页的评论区没有浮层、也不需要点按钮——它就长在页面流里，
-    //   用户往下滚就"进入"了评论区。此时没有任何 click 可拦截，
-    //   唯一的时机信号就是「滚动深度」。滚过正文区后压入缓冲，
-    //   返回键消费缓冲时滚回顶部（≈ 回到正文），而不是退出页面。
+    // ═══════════════════════════════════════════════════════════════
+    // ⚠ v0.7.13 删除「滚动压缓冲」整块（v0.7.8 引入、v0.7.12 还在修）
     //
-    //   ⚠ v0.7.8 修复「移动靶」缺陷（真机 FAIL 的根因，桌面 Chromium 复现实锤）：
-    //   旧判据 y > (scrollHeight - innerHeight) * 0.5 里的 scrollHeight 是动态的——
-    //   真实专栏页底部挂着「推荐阅读」无限流，用户越往下滚知乎越追加内容，
-    //   实测 scrollHeight 从 24855 暴涨到 56653。用户明明滚到了评论区
-    //   （y≈14400），按动态文档算占比却只剩 26%，50% 的阈值永远追不上
-    //   → 滚动压缓冲永不触发 → 返回键消费真实历史 → 退回首页。
-    //   复刻测试页是静态文档，滚到底必然过 50%，所以本机测试一直是假阳性。
+    //   需求澄清（用户 2026-09-07）：
+    //     「如果评论是弹出来的弹窗，才返回关闭；如果评论是展开的内联，你不用管。」
     //
-    //   对策（v0.7.8 定稿）：锚定「正文锚点的首次测量值」并冻结。
-    //   v0.7.8 中间版曾每帧重测「正文底边」，但真实专栏页的正文元素
-    //   .Post-RichTextContainer 自身在懒加载中持续增高（推荐卡片插进正文流），
-    //   实测底边跟着 y 同步暴涨（y=1800 时底边 7847 → y=14400 时 15394），
-    //   「y > 底边 − 一屏」同样追不上 —— 移动靶换了靶子还在移动。
-    //   冻结后阈值不再变：用户一旦滚过首测底边 − 一屏，必触发。
-    //   首测时机在滚动开始前（scrollArmed 期间每次都重算，一旦触发即冻结），
-    //   早于懒加载插入，底边值接近真实正文长度；即使首测偏小，
-    //   最坏情况也只是提前压缓冲，副作用仅为「多退一格无感回顶」，可接受。
-    //   找不到正文锚点时退回固定深度（2 屏），同样不受文档增长影响。
-    //   ⚠ 其余边界：
-    //   • SPA 路由切换会重置 scrollY → 用 zfMark 标记的「是否我们刚压过」区分；
-    //   • 缓冲消费后立即补一条 zfStay，保证连续两次返回不会漏栈。
-    var scrollArmed = true;   // 滚回顶部后重新武装，一次滚动只压一次
-    var frozenThreshold = 0;  // 冻结的滚动阈值：0 = 未测，测到即冻结
-    function articleBottomY() {
-      // 在缩放坐标系里量正文底边：getBoundingClientRect 是 zoom 后的坐标，
-      // 除以 S.Z 折算回基准系，再加 scrollY 得到文档坐标
-      var sels = ['.Post-RichTextContainer', '.RichText', '.Post-Main',
-                  '.Question-mainColumn', '.Topstory-mainColumn', 'article'];
-      for (var i = 0; i < sels.length; i++) {
-        var els;
-        try { els = document.querySelectorAll(sels[i]); } catch (e) { continue; }
-        for (var j = 0; j < els.length; j++) {
-          var el = els[j];
-          if (!el.getClientRects().length) continue;              // 不在渲染树
-          if ((el.innerText || '').trim().length < 300) continue; // 不是正文主体
-          var r = el.getBoundingClientRect();
-          if (r.height < 300) continue;
-          return (r.top / S.Z) + (window.scrollY || window.pageYOffset || 0) + r.height / S.Z;
-        }
-      }
-      return 0;   // 没找到锚点
-    }
-    function scrollThreshold() {
-      if (frozenThreshold) return frozenThreshold;        // 已冻结，不再重测
-      var vh = (window.innerHeight || 1) / S.Z;           // 折算回基准坐标系
-      var ab = articleBottomY();
-      var t = ab > 0 ? Math.max(ab - vh, 600)             // 正文底边上一屏（≈评论区入口）
-                     : Math.max(vh * 2, 600);             // 锚不到正文 → 固定 2 屏
-      // ⚠ v0.7.12 安全阀：真机 Kiwi 上 ab 会算成 61496（文档才 30920 高），
-      //   因为 zoom + 视觉视口缩放下 getBoundingClientRect 与 scrollY 不同坐标系。
-      //   阈值超过文档可滚动高度就意味着永远不可达，直接退回相对比例判据
-      //   （y / 可滚动高度），比例是同坐标系的比值，不受缩放影响。
-      var de = document.documentElement;
-      var scrollable = (de.scrollHeight || 0) - (de.clientHeight || 0);
-      if (scrollable > 0 && t > scrollable * 0.95) {
-        t = Math.max(scrollable * 0.3, 600);
-        log('弹层：滚动阈值异常(' + Math.round(ab) + ' > 文档' + Math.round(scrollable) +
-            ')，改用相对比例判据=' + Math.round(t));
-      }
-      frozenThreshold = t;
-      return frozenThreshold;
-    }
-    window.addEventListener('scroll', function () {
-      if (!scrollArmed) return;
-      var y = window.scrollY || window.pageYOffset || 0;
-      var threshold = scrollThreshold();
-      if (y > threshold) {
-        if (!pushed) {
-          try {
-            history.pushState({ zfModal: 1 }, '', location.href);
-            pushed = true;
-            log('弹层：滚动过深，压入缓冲历史（内联评论区，阈值=' + Math.round(threshold) + ' 当前=' + Math.round(y) + '）');
-          } catch (e) { return; }
-        }
-        scrollArmed = false;   // 只压一次，滚回顶部才重新武装
-      }
-    }, { passive: true });
-    // 滚回顶部（含脚本 scrollTo(0) 的"关评论"动作）→ 重新武装并解冻阈值
-    // （SPA 换页后正文完全不同，旧阈值必须作废）
-    (function watchTop() {
-      setInterval(function () {
-        var y = window.scrollY || window.pageYOffset || 0;
-        if (y < 100 && !scrollArmed) { scrollArmed = true; frozenThreshold = 0; }
-      }, 600);
-    })();
+    //   而滚动压缓冲从 v0.7.8 起就是**专为内联评论区**设计的
+    //   ——它的整个立意是「用户滚进内联评论区时压缓冲，返回键滚回顶部」。
+    //   需求一澄清，这块机制就从根上多余了，而且它有三个实打实的害处：
+    //     ① 劫持返回键：滚过阈值后按返回变成「滚回顶部」而不是退出页面，
+    //        与「内联不用管」直接冲突；
+    //     ② 判据在真机上不成立：Kiwi 的 CSS zoom + 视觉视口缩放下
+    //        getBoundingClientRect / zoom / scrollY 不同坐标系，
+    //        实测算出阈值 61496 而文档才 30920 高（v0.7.12 取证）；
+    //     ③ 拖累了两版：v0.7.8 修「移动靶」、v0.7.12 修「坐标系」，
+    //        都是在给一个本不该存在的机制打补丁。
+    //   现在的行为更简单也更符合直觉：
+    //     弹窗打开 → 返回键关弹窗；没有弹窗 → 返回键完全不干预。
+    // ═══════════════════════════════════════════════════════════════
 
     if (window.MutationObserver) {
       var lastCheck = 0;
@@ -1918,7 +1840,7 @@
           return {
             缓冲已压: st.pushed(),
             本窗口已补缓冲次数: st.bufKeep(),
-            滚动阈值: st.threshold()
+            策略: '仅弹窗接管返回键（内联评论不干预）'
           };
         } catch (e) { return '(读取状态失败)'; }
       })()

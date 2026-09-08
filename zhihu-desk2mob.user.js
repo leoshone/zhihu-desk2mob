@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版 → 手机宽度适配
 // @namespace    https://github.com/leoshone/zhihu-desk2mob
-// @version      0.7.13
+// @version      0.7.14
 // @description  在 Kiwi 等手机浏览器里把知乎桌面版网页收进手机宽度：修复桌面模式视口缩放、min-width 硬编码、emotion 原子 CSS、vh/vw 单位失真、顶栏溢出。支持旋屏与 SPA 导航。
 // @author       leoshone
 // @match        https://*.zhihu.com/*
@@ -39,7 +39,7 @@
   'use strict';
 
   var TAG = '[知乎适配]';
-  var VER = "0.7.13";
+  var VER = "0.7.14";
 
   // ═══════════════════════════════════════════════════════════════
   // 可调参数
@@ -935,35 +935,59 @@
                '[aria-label="close"]', 'button[title="关闭"]', '[title="关闭"]'];
     var pools = [m];
     if (m.parentNode) pools.push(m.parentNode);
-    // 1) 强信号：选择器
-    for (var p = 0; p < pools.length; p++) {
-      var host = pools[p];
-      if (!host || !host.querySelectorAll) continue;
-      for (var i = 0; i < sel.length; i++) {
-        var els;
-        try { els = host.querySelectorAll(sel[i]); } catch (e) { continue; }
-        for (var j = 0; j < els.length; j++) {
-          var b = els[j], bcs;
-          try { bcs = getComputedStyle(b); } catch (e2) { continue; }
-          if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
-          var br = b.getBoundingClientRect();
-          if (br.width < 1 || br.height < 1) continue;
-          return b;
-        }
+    // ⚠ v0.7.14：语义匹配的候选必须是「弹层内的元素」。
+    //   pools[1] 是弹层的 parentNode（整个 backdrop/portal 容器），
+    //   在它身上做 [class*="close"] 全文匹配会把 backdrop 自己、遮罩兄弟层
+    //   甚至页面其他组件都捞进来 —— 复刻页实测：遮罩上的语义兜底把 overlay
+    //   自己点了，返回键变「点遮罩关闭」，弹层照样关但路径完全不对，
+    //   还会误伤页面上任何带 close 字样的无关元素。
+    function inModal(el) {
+      return el && (m === el || m.contains(el));
+    }
+    // 1) 强信号：选择器（仅弹层内部）
+    for (var i = 0; i < sel.length; i++) {
+      var els;
+      try { els = m.querySelectorAll(sel[i]); } catch (e) { continue; }
+      for (var j = 0; j < els.length; j++) {
+        var b = els[j], bcs;
+        try { bcs = getComputedStyle(b); } catch (e2) { continue; }
+        if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
+        var br = b.getBoundingClientRect();
+        if (br.width < 1 || br.height < 1) continue;
+        return b;
       }
-      // 2) 强信号：textContent / aria-label 命中「✕ / 关闭 / 收起 / close」
-      var btns;
-      try { btns = host.querySelectorAll('button,a,[role="button"],svg'); } catch (e3) { btns = []; }
-      for (var k = 0; k < btns.length; k++) {
-        var el = btns[k], t = '';
-        try { t = (el.getAttribute('aria-label') || el.textContent || '').trim(); } catch (e4) {}
-        if (/^(✕|×|x|关闭|收起|close)$/i.test(t) || t.indexOf('关闭') >= 0 || t.indexOf('收起') >= 0) {
-          var ec;
-          try { ec = getComputedStyle(el); } catch (e5) { continue; }
-          if (ec.display === 'none' || ec.visibility === 'hidden') continue;
-          var er = el.getBoundingClientRect();
-          if (er.width < 1 || er.height < 1) continue;
-          return el;
+    }
+    // 2) 强信号：textContent / aria-label 命中「✕ / 关闭 / 收起 / close」
+    //    （先弹层内部；内部没有再看 parentNode 的【直接子级】，仍限 inModal 或独立按钮）
+    var btns;
+    try { btns = m.querySelectorAll('button,a,[role="button"],svg'); } catch (e3) { btns = []; }
+    for (var k = 0; k < btns.length; k++) {
+      var el = btns[k], t = '';
+      try { t = (el.getAttribute('aria-label') || el.textContent || '').trim(); } catch (e4) {}
+      if (/^(✕|×|x|关闭|收起|close)$/i.test(t) || t.indexOf('关闭') >= 0 || t.indexOf('收起') >= 0) {
+        var ec;
+        try { ec = getComputedStyle(el); } catch (e5) { continue; }
+        if (ec.display === 'none' || ec.visibility === 'hidden') continue;
+        var er = el.getBoundingClientRect();
+        if (er.width < 1 || er.height < 1) continue;
+        return el;
+      }
+    }
+    if (m.parentNode) {
+      var sibBtns;
+      try { sibBtns = m.parentNode.querySelectorAll('button,a,[role="button"],svg'); } catch (e6) { sibBtns = []; }
+      for (var k2 = 0; k2 < sibBtns.length; k2++) {
+        var el2 = sibBtns[k2];
+        if (!inModal(el2)) continue;   // 父级容器上的候选也必须属于弹层
+        var t2 = '';
+        try { t2 = (el2.getAttribute('aria-label') || el2.textContent || '').trim(); } catch (e7) {}
+        if (/^(✕|×|x|关闭|收起|close)$/i.test(t2) || t2.indexOf('关闭') >= 0 || t2.indexOf('收起') >= 0) {
+          var ec2;
+          try { ec2 = getComputedStyle(el2); } catch (e8) { continue; }
+          if (ec2.display === 'none' || ec2.visibility === 'hidden') continue;
+          var er2 = el2.getBoundingClientRect();
+          if (er2.width < 1 || er2.height < 1) continue;
+          return el2;
         }
       }
     }
@@ -972,10 +996,10 @@
     if (strict) return null;
     var cand = null, candTop = 1e9;
     var all;
-    try { all = m.querySelectorAll('button,a,svg,[role="button"]'); } catch (e6) { return null; }
+    try { all = m.querySelectorAll('button,a,svg,[role="button"]'); } catch (e9) { return null; }
     for (var q = 0; q < all.length; q++) {
       var c = all[q], ccs;
-      try { ccs = getComputedStyle(c); } catch (e7) { continue; }
+      try { ccs = getComputedStyle(c); } catch (e10) { continue; }
       if (ccs.display === 'none' || ccs.visibility === 'hidden') continue;
       var cr = c.getBoundingClientRect();
       if (cr.width < 12 || cr.width > 90 || cr.height < 12 || cr.height > 90) continue;
@@ -1067,31 +1091,133 @@
     } catch (e) { /* 忽略 */ }
   }
 
+  // ── v0.7.14：模拟「点击弹层外区域」关闭弹层 ──
+  //   原理：弹窗类组件（Modal/Dialog）几乎都监听 backdrop 的 click/mousedown
+  //   来实现「点外面关闭」。用户按返回时，我们不真的发系统点击（Android 无法
+  //   从 JS 注入触摸事件），而是合成 MouseEvent 直接派发到遮罩元素上——
+  //   React 的 onClick 最终也是监听 click 事件，合成事件一样能触发。
+  //   找「弹层外」的顺序：
+  //     ① 弹层内容元素的父链上第一个「全屏或近全屏」的祖先（= backdrop 本体）
+  //     ② 与弹层同级的兄弟全屏层（知乎的遮罩常是内容层的兄弟节点）
+  //     ③ body 直接子级的全屏层（portal 挂载点）
+  //   点击坐标选视口左上角 (8, 8)——必然落在 backdrop 上、必然不在内容层上。
+  //   ⚠ 与 forceHide 的区别：click 走的是知乎自己的关闭逻辑（React 会同步
+  //   内部状态），不会出现「隐藏后被 React 改回来」的僵尸问题。
+  function clickOutsideModal(m) {
+    if (!m) return false;
+    var vw = document.documentElement.clientWidth || 1;
+    var vh = document.documentElement.clientHeight || 1;
+
+    function isBackdropLike(el) {
+      if (!el || el === document.body || el === document.documentElement) return false;
+      var cs;
+      try { cs = getComputedStyle(el); } catch (e) { return false; }
+      if (!cs) return false;
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      if (cs.position !== 'fixed' && cs.position !== 'absolute') return false;
+      var r;
+      try { r = el.getBoundingClientRect(); } catch (e2) { return false; }
+      return r.width >= vw * 0.9 && r.height >= vh * 0.9;   // 全屏或近全屏
+    }
+
+    var targets = [];
+    // ⓪ m 自身就是 backdrop 的情形（v0.7.14 复刻页实测）：
+    //   findOpenModal 按 layerScore 打分，「文字最多的层」会被选中——
+    //   而知乎式弹层的内容常直接写在遮罩元素里（文字都在 overlay 上），
+    //   此时 m === backdrop，父链/兄弟/body 子级里根本没有别的全屏层。
+    //   处理：直接点 m 自身的边角（必然不在内容子元素上，等于点外面）。
+    //   点击坐标 (left+8, top+8)：内容层即使居中/贴顶，四角通常也是遮罩裸区。
+    if (isBackdropLike(m)) {
+      targets.push(m);
+    } else {
+      // ① 父链上的 backdrop
+      var a = m.parentElement;
+      while (a && a !== document.body) {
+        if (isBackdropLike(a)) { targets.push(a); break; }
+        a = a.parentElement;
+      }
+      // ② 兄弟层
+      if (m.parentElement) {
+        var sibs = m.parentElement.children;
+        for (var i = 0; i < sibs.length; i++) {
+          if (sibs[i] !== m && isBackdropLike(sibs[i])) targets.push(sibs[i]);
+        }
+      }
+      // ③ body 直接子级的全屏层（排除弹层自身链）
+      var kids = document.body.children;
+      for (var j = 0; j < kids.length; j++) {
+        if (kids[j] === m || m.contains(kids[j]) || kids[j].contains(m)) continue;
+        if (kids[j].id === 'zhihu-mobile-badge' || kids[j].id === 'zf-modal-close') continue;
+        if (isBackdropLike(kids[j])) targets.push(kids[j]);
+      }
+    }
+
+    for (var k = 0; k < targets.length; k++) {
+      var t = targets[k];
+      try {
+        // ⚠ 点击坐标必须避开内容子元素，落在遮罩的「裸区」：
+        //   在 t 的子元素里找一个点击后不会命中内容层的点。
+        //   简化处理：从 t 的四角向内探测，用 elementFromPoint 确认落点是 t 自己。
+        var rect = t.getBoundingClientRect();
+        var pts = [
+          [rect.left + 8, rect.top + 8],
+          [rect.right - 8, rect.top + 8],
+          [rect.left + 8, rect.bottom - 8],
+          [rect.right - 8, rect.bottom - 8]
+        ];
+        var hit = null;
+        for (var pi = 0; pi < pts.length; pi++) {
+          var el = document.elementFromPoint(pts[pi][0], pts[pi][1]);
+          if (el && (el === t || (!t.contains(el) && !el.contains(t)))) { hit = pts[pi]; break; }
+          if (el && t.contains(el)) {
+            // 落点在内容子元素上，继续找别的角——但如果是 m 自身且 m 含内容层，
+            // 四角可能都命中内容层；此时退回「派发到 t 但 target 就是 t」：
+            // 合成事件不受命中测试限制，直接对 t dispatch 即可。
+            hit = null;
+            continue;
+          }
+        }
+        var opts = { bubbles: true, cancelable: true, view: window,
+                     clientX: (hit ? hit[0] : rect.left + 8),
+                     clientY: (hit ? hit[1] : rect.top + 8), button: 0 };
+        t.dispatchEvent(new PointerEvent('pointerdown', opts));
+        t.dispatchEvent(new MouseEvent('mousedown', opts));
+        t.dispatchEvent(new MouseEvent('mouseup', opts));
+        t.dispatchEvent(new MouseEvent('click', opts));
+        log('弹层：模拟点击弹层外区域（' +
+            (typeof t.className === 'string' ? t.className.slice(0, 30) : t.tagName) +
+            (t === m ? '，自身即遮罩' : '') + '）');
+        return true;
+      } catch (e) { /* 下一个候选 */ }
+    }
+    return false;
+  }
+
   function clickCloseButton(m) {
     var btnSels = ['.Modal-closeButton', '[class*="Modal-close"]', '[class*="modal-close"]',
                    '[class*="ModalClose"]', '[class*="CloseButton"]', '[class*="closeButton"]',
                    '[class*="Drawer-close"]', '[class*="close-icon"]', '[class*="closeIcon"]',
                    'button[aria-label="关闭"]', '[aria-label="关闭"]', '[aria-label="收起"]',
                    'button[title="关闭"]'];
-    var pools = [m];
-    // 有些弹层的关闭按钮挂在兄弟节点或 portal 的另一支上，光搜弹层内部会漏
-    if (m && m.parentNode) pools.push(m.parentNode);
-    for (var p = 0; p < pools.length; p++) {
-      var host = pools[p];
-      if (!host || !host.querySelectorAll) continue;
-      for (var i = 0; i < btnSels.length; i++) {
-        var btns;
-        try { btns = host.querySelectorAll(btnSels[i]); } catch (e) { continue; }
-        for (var j = 0; j < btns.length; j++) {
-          var b = btns[j], bcs;
-          try { bcs = getComputedStyle(b); } catch (e2) { continue; }
-          if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
-          var br = b.getBoundingClientRect();
-          if (br.width < 1 || br.height < 1) continue;
-          b.click();
-          log('弹层：点了关闭按钮（' + btnSels[i] + '）');
-          return true;
-        }
+    // ⚠ v0.7.14：只在弹层内部找关闭按钮。
+    //   旧版把 m.parentNode 也加进搜索池，[class*="close"] 会把 backdrop 遮罩
+    //   自己、遮罩上的兄弟组件甚至无关元素都点一遍 —— 复刻页实测点击了 overlay
+    //   自身（碰巧能关，但路径错误）；真实页面上则可能误关别的东西。
+    //   「关闭按钮在弹层外」的场景交给 clickOutsideModal（点遮罩本身）处理。
+    var host = m;
+    if (!host || !host.querySelectorAll) return false;
+    for (var i = 0; i < btnSels.length; i++) {
+      var btns;
+      try { btns = host.querySelectorAll(btnSels[i]); } catch (e) { continue; }
+      for (var j = 0; j < btns.length; j++) {
+        var b = btns[j], bcs;
+        try { bcs = getComputedStyle(b); } catch (e2) { continue; }
+        if (bcs.display === 'none' || bcs.visibility === 'hidden') continue;
+        var br = b.getBoundingClientRect();
+        if (br.width < 1 || br.height < 1) continue;
+        b.click();
+        log('弹层：点了关闭按钮（' + btnSels[i] + '）');
+        return true;
       }
     }
     // 类选择器都没命中时，退回「语义强信号」定位（aria/text 含 关闭/收起 的按钮）。
@@ -1192,6 +1318,11 @@
     if (!ok) {
       fireEsc(m);
       if (!findOpenModal()) { log('弹层：ESC 关闭'); ok = true; }
+    }
+    // v0.7.14：模拟点击弹层外区域（走知乎自己的关闭逻辑，不产生僵尸层）
+    if (!ok) {
+      clickOutsideModal(m);
+      if (!findOpenModal()) { log('弹层：点击弹层外生效'); ok = true; }
     }
     if (!ok) ok = forceHideLayers();
 

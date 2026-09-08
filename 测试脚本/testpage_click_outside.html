@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  body{margin:0;font:15px/1.7 system-ui;background:#f6f6f6}
+  .app{max-width:700px;margin:0 auto;background:#fff;min-height:100vh;padding:18px}
+  /* 评论弹层：遮罩(overlay) 自身监听 click 关闭——模拟「点外面关闭」的标准实现。
+     注意：没有关闭按钮（✕）、不监听 ESC —— 专门测「点击弹层外」这一条路。 */
+  #overlay{position:fixed;left:0;top:0;width:100%;height:100%;
+           background:rgba(0,0,0,.45);z-index:1000;display:none}
+  #overlay.show{display:block}
+  #modal{position:absolute;left:50%;top:80px;transform:translateX(-50%);
+         width:640px;max-height:70vh;overflow-y:auto;background:#fff;
+         border-radius:8px;padding:18px;box-sizing:border-box}
+</style></head>
+<body>
+<div class="app">
+  <h1>文章标题</h1>
+  <button id="entry" class="ContentItem-action">128 条评论</button>
+  <div style="height:1200px"></div>
+</div>
+
+<div id="overlay">
+  <div id="modal">
+    <h2>评论区</h2>
+    <div class="cmt">张三：写得很到位</div>
+    <div class="cmt">李四：收藏了</div>
+    <div class="cmt">王五：谢谢分享</div>
+    <div style="height:400px"></div>
+  </div>
+</div>
+
+<script>
+  var overlay = document.getElementById('overlay');
+  document.getElementById('entry').addEventListener('click', function () {
+    overlay.classList.add('show');
+  });
+  // 只有「点到 overlay 自身（非 modal 内容区）」才关闭 —— 标准 backdrop 实现
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) {
+      overlay.classList.remove('show');
+      window.__closedByClickOutside = (window.__closedByClickOutside || 0) + 1;
+    }
+  });
+</script>
+</body></html>

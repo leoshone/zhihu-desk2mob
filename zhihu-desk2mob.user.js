@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.1
+// @version      1.0.2
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -123,6 +123,38 @@
     padding-left: 0 !important; padding-right: 0 !important;
     margin-left: 0 !important; margin-right: 0 !important;
     width: auto !important; max-width: 100% !important;
+  }
+
+  /* ---- stop text being truncated: nothing may exceed the 393px column ----
+     Zhihu's desktop blocks are consistently ~10-20px too wide (sticky action bar,
+     squeezed question title, long unbreakable tokens), and the body's overflow-x:hidden
+     then crops the overflow at the screen edge. Force the box model + clamp everything. */
+  .QuestionHeader, .QuestionHeader *, .App-main *, main * { box-sizing: border-box !important; }
+  .QuestionHeader, .QuestionHeader-main, .QuestionHeader-content, .QuestionHeader-footer,
+  .QuestionHeader-footer-inner, .QuestionHeaderActions,
+  .QuestionAnswer-content, .AnswerCard, .Question-mainColumn, .ListShortcut,
+  .QuestionAnswers-answers, .ContentItem, .RichContent, .RichText, .Comments-container,
+  .CommentItem, .MoreAnswers, .List-item, .Card, .Post-content, .Post-RichText {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  .RichText, .RichContent, .Post-RichText, .CommentContent {
+    overflow-wrap: break-word !important; word-break: break-word !important;
+  }
+  /* question header: stack vertically so the title gets the full column width
+     (Zhihu keeps a side widget beside it, squeezing the title to ~150px) */
+  .QuestionHeader, .QuestionHeader-content, .PageHeader { display: flex !important; flex-direction: column !important; }
+  .QuestionHeader-content, .PageHeader, .QuestionHeader-main, .QuestionHeader-side {
+    width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
+    display: block !important; padding-left: 0 !important; padding-right: 0 !important;
+  }
+  .QuestionHeader-title { white-space: normal !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 auto !important; }
+  /* sticky action bar (赞同/评论/分享): keep it inside the column on BOTH sides */
+  .ContentItem-actions {
+    position: sticky !important; left: 0 !important; right: 0 !important;
+    width: 100% !important; max-width: 100% !important;
+    margin-left: 0 !important; margin-right: 0 !important;
+    box-sizing: border-box !important; padding-left: 10px !important; padding-right: 10px !important;
   }
 
   /* ---- image / media viewer: Zhihu positions it in desktop coords, so it lands off-screen.

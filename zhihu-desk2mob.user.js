@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.0
+// @version      1.0.1
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -115,6 +115,42 @@
     -webkit-line-clamp: unset !important;
     overflow: visible !important;
   }
+
+  /* ---- unify content-block widths: answer column should match the question block ---- */
+  .QuestionPage > div { padding-left: 0 !important; padding-right: 0 !important; }
+  .QuestionAnswer-content, .AnswerCard, .Question-mainColumn, .ListShortcut,
+  .QuestionAnswers-answers, .ContentItem, .Comments-container, .CommentItem {
+    padding-left: 0 !important; padding-right: 0 !important;
+    margin-left: 0 !important; margin-right: 0 !important;
+    width: auto !important; max-width: 100% !important;
+  }
+
+  /* ---- image / media viewer: Zhihu positions it in desktop coords, so it lands off-screen.
+         We detect those layers (see fixViewers) and force them centered on the phone screen. ---- */
+  .z2m-viewer {
+    position: fixed !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
+    margin: auto !important;
+    /* transform:none !important is the key: Zhihu's viewer re-writes style.transform
+       (translateX/Y off-screen in desktop coords) on every animation frame; a stylesheet
+       !important beats that inline non-important value no matter how often it's re-set. */
+    transform: none !important;
+    width: auto !important; height: auto !important;
+    /* px caps, NOT vw/vh: in Kiwi desktop mode 100vw = the 1430px layout viewport,
+       so vw caps are no-ops. --z2m-w is the real 393px column. */
+    max-width: var(--z2m-w) !important;
+    z-index: 2147483646 !important;
+  }
+  .z2m-viewer:not(img) {
+    display: flex !important; align-items: center !important; justify-content: center !important;
+  }
+  .z2m-viewer img, .z2m-viewer .origin_image {
+    max-width: 94% !important; max-height: 92% !important;
+    width: auto !important; height: auto !important; object-fit: contain !important;
+  }
+  .z2m-backdrop {
+    position: fixed !important; inset: 0 !important;
+    width: 100vw !important; height: 100vh !important; z-index: 2147483645 !important;
+  }
   `;
   (document.head || document.documentElement).appendChild(st);
 
@@ -164,16 +200,65 @@
     });
   }
 
+  // ---- center the image/media viewer (Zhihu layers it as position:absolute in desktop coords) ----
+  function tagViewer(el) {
+    el.classList.add('z2m-viewer');
+    const s = el.style; // inline !important beats Zhihu's own inline !important (last-writer-wins)
+    // visible-viewport px caps (vw/vh are useless here: they resolve against the 1430px layout viewport)
+    const vv = window.visualViewport;
+    const visH = Math.max(480, Math.round(vv ? vv.height * vv.scale : 0) ||
+      Math.round(SW * (screen.height || 1560) / (screen.width || SW)));
+    s.setProperty('position', 'fixed', 'important');
+    s.setProperty('left', '0', 'important'); s.setProperty('top', '0', 'important');
+    s.setProperty('right', '0', 'important'); s.setProperty('bottom', '0', 'important');
+    // margin:auto centers a replaced element (img) inside inset:0; harmless (0) for stretched divs
+    s.setProperty('margin', 'auto', 'important'); s.setProperty('transform', 'none', 'important');
+    s.setProperty('max-width', SW + 'px', 'important'); s.setProperty('max-height', visH + 'px', 'important');
+    s.setProperty('width', 'auto', 'important'); s.setProperty('height', 'auto', 'important');
+    s.setProperty('z-index', '2147483646', 'important');
+    if (el.tagName === 'IMG') s.setProperty('object-fit', 'contain', 'important');
+    else { s.setProperty('display', 'flex', 'important'); s.setProperty('align-items', 'center', 'important'); s.setProperty('justify-content', 'center', 'important'); }
+  }
+  // Only layers that actually hold the viewed image (the <img> itself, or a wrapper
+  // containing one). Zhihu also appends empty control bars — forcing those fullscreen
+  // would put a transparent click-eating overlay over the viewer.
+  function looksLikeViewer(el) {
+    if (el.tagName === 'IMG') return true;
+    if (el.querySelector && el.querySelector('img')) return true;
+    return false;
+  }
+  function fixViewers() {
+    const body = document.body; if (!body) return;
+    const br = body.getBoundingClientRect();
+    const refRight = br.right, refCx = br.left + br.width / 2; // visible content bounds (393px column)
+    const kids = [...body.children];
+    for (const el of kids) {
+      if (el.classList.contains('z2m-viewer') || el.classList.contains('z2m-backdrop')) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      if (cs.position !== 'absolute' && cs.position !== 'fixed') continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 120) continue;
+      // element extends past the visible content column -> a desktop-coord positioned viewer layer
+      if (r.right > refRight + 5 || r.left > refCx + 40) {
+        if (looksLikeViewer(el)) tagViewer(el);
+      }
+      else if (cs.position === 'fixed' && r.width >= br.width * 0.8 && r.height >= br.height * 0.8) el.classList.add('z2m-backdrop');
+    }
+  }
+
   let timer = null;
   function tick() {
-    hideSideRails(); capFixed(); capWide();
+    // stray horizontal scroll offset shifts the 393px column left (blocks land at x<0)
+    if (window.scrollX) window.scrollTo(0, window.scrollY);
+    hideSideRails(); capFixed(); capWide(); fixViewers();
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 
   const obs = new MutationObserver(schedule);
   function start() {
     obs.observe(document.body, { childList: true, subtree: true, attributes: false });
-    tick();
+    tick(); fixViewers();
     window.addEventListener('resize', () => {
       document.documentElement.style.setProperty('--z2m-w', Math.max(320, Math.min(screen.width || 393, 500)) + 'px');
     });

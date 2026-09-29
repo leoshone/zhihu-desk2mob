@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.9
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.1.0
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -24,6 +24,9 @@
   // 配置开关
   // ============================================================
   const CFG = {
+    // 反缩放：限制「手工缩小」——捏合缩到小于「恰好铺满」时拉回铺满，
+    // 不允许把页面缩成半屏小字（用户要求）。只挡缩小，放大不受影响。
+    limitZoomOut: true,
     // 评论弹层：点开时压入一条哨兵历史，返回键（手势/按钮）关闭弹层
     commentBack: true,
     // 评论弹层：修正定位（卡片顶部对齐 + 宽度收进屏幕）
@@ -71,11 +74,31 @@
   applyZoom();
   [300, 1000, 2500].forEach(t => setTimeout(applyZoom, t));   // 布局视口落定前多算几次
   window.addEventListener('resize', applyZoom);
-  // 缩放变化也要管，但**只在「屏幕可用宽度」也变了时才重算**：
-  // 用户捏合会同时改 scale 与 vvWidth，而两者乘积（= 屏幕可用宽度）不变 → 不干预，
-  // 用户的缩放得以保留；浏览器自己调整 dpr / 视口时该乘积会变 → 必须重算。
+  // 缩放变化时按三种情形分别处理 —— 真机上那种「时灵时不灵」就是这里没分清：
+  //   ① 捏合**放大**（scale↑、vvWidth↓）：视觉尺寸大于「恰好铺满」→ 不干预，保留放大。
+  //   ② 捏合**缩小**（scale↓、vvWidth↑）：视觉尺寸会小于「恰好铺满」—— 真机实测最小能缩到
+  //      只占屏宽 49%（半屏小字）。用户要求「限制手工缩到很小」，故此处拉回铺满。
+  //      判据：铺满时的视觉尺寸 = curScreenW / SW（把 Z = visW / SW 代进 Z×scale 即得，与 scale 无关）；
+  //      当前视觉尺寸 = zoom × scale。小于它就说明缩过头了。
+  //   ③ 浏览器自己改 dpr / 视口：屏幕可用宽度（vvWidth × scale）会变 → 必须重算。
+  // 注：捏合本来就不改这个乘积，所以老代码只在「乘积变了」时重算 —— 结果是「缩过头」没人管，
+  // 且「有时被重算、有时不」取决于 window.resize 是否恰好触发，表现不稳定。
+  //
+  // 「拉回铺满」必须**延后一拍**再算，不能就地算：浏览器换挡时可能先经过一个中间态 ——
+  // 实测 setPageScaleFactor 会先来一发 `visW = innerWidth`（极小比例）的事件。就地重算会按
+  // 中间态得出过大的 zoom（如 891/393 = 2.268），紧接着真正的那一发到来时
+  // `zoom × scale` 已大于铺满值 → 被当成「用户放大」而不纠正 → **内容比屏幕宽 25%、右侧被裁**。
+  // 延后 200ms 时比例已稳定，按最终几何重算才是对的。
+  let zoomFixTimer = null;
+  function refitSoon() {
+    clearTimeout(zoomFixTimer);
+    zoomFixTimer = setTimeout(applyZoom, 200);
+  }
   if (window.visualViewport) window.visualViewport.addEventListener('resize', () => {
     const vv = window.visualViewport;
+    const fillVisual = curScreenW / SW;                       // 「恰好铺满」时的视觉尺寸
+    const zNow = parseFloat(document.documentElement.style.zoom) || 1;
+    if (CFG.limitZoomOut && curScreenW > 0 && zNow * vv.scale < fillVisual - 0.02) { refitSoon(); return; }
     if (Math.abs(Math.round(vv.width * vv.scale) - curScreenW) <= 2) return;
     applyZoom();
   });
@@ -547,7 +570,7 @@
   // 但**不撤销各 pass 写入的内联样式**（display:none / max-width / flex / 头像尺寸等仍在）。
   // 因此不要拿它当「关掉脚本」的对照基线做 A/B 诊断，详见 ARTIFACTS.md。
   window.__z2mStop = () => {
-    obs.disconnect(); clearTimeout(timer); clearInterval(poll); st.remove();
+    obs.disconnect(); clearTimeout(timer); clearTimeout(zoomFixTimer); clearInterval(poll); st.remove();
     curZ = 1; document.documentElement.style.removeProperty('zoom');
   };
   window.__z2mTick = tick;

@@ -11,16 +11,19 @@
 //   而浏览器在加载期会逐级调整缩放，级差恰好也是 ×0.9097 —— 于是老代码"上一级的 1/scale"
 //   常常正好等于"这一级的铺满值"，看起来时对时不对（这解释了它为何难复现）。
 //
-// 两个断言：
+// 断言：
 //   ① 加载全程「内容 ÷ 可见宽度」≈ 1（= 不会比屏幕大，也就不需要捏合），且视觉尺寸不跳变；
-//   ② 用户捏合后我们的 zoom 不得被脚本改回去。
+//   ② 捏合**缩小**被限制在「恰好铺满」这个下限上（v1.1.0 起，用户要求「限制手工缩到很小」）——
+//      不会被缩成半屏小字（实测旧版最小能缩到只占屏宽 49%）；
+//   ③ 捏合**放大**不被干预，保留放大的用处。
+// 注意 ②③ 与 v1.0.9 的行为相反：v1.0.9 的设计是「用户捏合一律不干预」，v1.1.0 只放开放大方向。
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const cdp = require('./cdp');
 
-const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
+const SCRIPT = path.join(__dirname, '..', 'zhihu-desk2mob.user.js');
 const INJECT_MODE = process.argv[2] !== '--installed';
 
 let pass = 0, fail = 0;
@@ -86,15 +89,32 @@ const S = `JSON.stringify((()=>{
     console.log('   （对照）老公式 1/scale 比「铺满」大 ' + (o !== null ? Math.round((o - 1) * 100) + '%' : '?') +
       ' ← 这就是那个「一点点」');
 
-    // ② 用户捏合不该被脚本抢回去
-    const zBefore = (await cdp.evalJson(api, S, sid)).zoom;
+    // ② 捏合**缩小**必须被限制：内容不得小于「恰好铺满」（判据是屏幕上的实际尺寸不变）
+    const before = await cdp.evalJson(api, S, sid);
     await api.send('Emulation.setPageScaleFactor', { pageScaleFactor: 0.5 }, sid);
     await cdp.sleep(1600);
-    const g = await cdp.evalJson(api, S, sid);
-    ok(Math.abs(g.zoom - zBefore) < 0.01, '用户捏合后我们的 zoom 不动（不跟用户抢）', { before: zBefore, after: g.zoom });
+    const sh = await cdp.evalJson(api, S, sid);
+    ok(Math.abs(sh.fitRatio - 1) <= 0.03,
+      '捏合缩小后内容仍恰好铺满（不会被缩成半屏小字）', { fitRatio: sh.fitRatio, scale: sh.scale });
+    ok(Math.abs(sh.visualSize - before.visualSize) <= 0.03,
+      '捏合缩小不改变屏幕上的实际尺寸（视觉上被限制住）', { before: before.visualSize, after: sh.visualSize });
+
+    // ③ 缩到极限仍停在铺满（夹住的是下限，不是「一律抢回」）
+    await api.send('Emulation.setPageScaleFactor', { pageScaleFactor: 0.35 }, sid);   // 浏览器会夹到 ~0.40
+    await cdp.sleep(1400);
+    const lim = await cdp.evalJson(api, S, sid);
+    ok(Math.abs(lim.visualSize - before.visualSize) <= 0.03,
+      '缩到浏览器下限时仍停在铺满', { visualSize: lim.visualSize, scale: lim.scale });
+
+    // ④ 捏合**放大**不该被干预（否则字就放不大了）
+    await api.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 }, sid);
+    await cdp.sleep(1400);
+    const en = await cdp.evalJson(api, S, sid);
+    ok(en.visualSize > before.visualSize * 1.2,
+      '捏合放大仍然有效（不会被脚本抢回）', { before: before.visualSize, after: en.visualSize });
 
     await api.send('Page.bringToFront', {}, sid);
-    execSync('adb exec-out screencap -p > "D:/AiSpaces/Work/2026-09-29-10-18-12/shots/29-fit.png"', { shell: 'bash' });
+    execSync('adb exec-out screencap -p > "shots/29-fit.png"', { shell: 'bash' });
     console.log('\n截图: shots/29-fit.png');
 
     await api.send('Page.navigate', { url: 'https://www.zhihu.com/' }, sid);   // 收尾还原

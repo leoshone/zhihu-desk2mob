@@ -12,7 +12,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const cdp = require('./cdp');
 
-const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
+const SCRIPT = path.join(__dirname, '..', 'zhihu-desk2mob.user.js');
 const INJECT_MODE = process.argv[2] !== '--installed';
 
 let pass = 0, fail = 0;
@@ -22,13 +22,30 @@ function ok(cond, label, extra) {
 }
 
 // 点进评论输入框 —— 「同时发布到想法」与「发布」按钮都要**聚焦后**才渲染出来
+// 只挑「真的可见」的可编辑区：零尺寸或被 display:none/visibility:hidden 祖先包着的元素
+// **也能被 focus() 成功**，于是测试会以为发布框已就绪、实际量到的是个没打开的框
+// （症状：发布按钮 rect 全 0 导致断言假失败，或让「完整落在屏幕内」那条假通过）。
+// 页面高度一变（例如改了列宽/字号），固定滚动偏移会落到别处、更容易踩到这种残骸。
 const FOCUS = `JSON.stringify((()=>{
-  const eds = [...document.querySelectorAll('[contenteditable="true"]')];
-  if (!eds.length) return { err: 'no contenteditable' };
+  const visible = e => {
+    const r = e.getBoundingClientRect();
+    if (r.width < 20 || r.height < 8) return false;
+    let n = e;
+    while (n && n !== document.body) {
+      const cs = getComputedStyle(n);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      n = n.parentElement;
+    }
+    return true;
+  };
+  const eds = [...document.querySelectorAll('[contenteditable="true"]')].filter(visible);
+  if (!eds.length) return { err: 'no visible contenteditable' };
   const e = eds[eds.length - 1];
   e.scrollIntoView({ block: 'center' });
   e.focus(); e.click();
-  return { focused: document.activeElement === e, count: eds.length };
+  const r = e.getBoundingClientRect();
+  return { focused: document.activeElement === e, count: eds.length,
+           rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] };
 })())`;
 
 // 打开评论弹层（页面级发布框不在时退而用弹层内的，两者行为一致）
@@ -45,24 +62,44 @@ const OPEN_MODAL = `JSON.stringify((()=>{
   const t = norm(c.el.innerText); c.el.click(); return { clicked: t };
 })())`;
 
+// 发布框有没有**真的打开**：以「出现可见的『发布』按钮」为准。
+// 只看 focus 成功是不够的 —— 空发布框的「发布」按钮本就是隐藏的（rect 全 0），
+// 于是测试会以为准备就绪、实际量到 0×0，把前置问题伪装成产品回归。
+const BTN_OK = `JSON.stringify((()=>{
+  const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
+  const b = [...document.querySelectorAll('button')].find(x => norm(x.innerText) === '发布');
+  if (!b) return { ok: false, why: '没有「发布」按钮' };
+  const r = b.getBoundingClientRect();
+  return { ok: r.width > 0 && r.height > 0,
+           why: '按钮 rect=' + [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join(',') };
+})())`;
+
 // 把发布框调出来：先按滚动位置扫描找页面级发布框；
 // 找不到就打开评论弹层用弹层内的 —— 这样测试不再依赖「真机上开着哪个页面/哪个标签」。
+// **两个条件都要满足**：可编辑区可见且被 focus、并且「发布」按钮真的可见。
 async function prepareComposer(run) {
+  const tryFocus = async () => {
+    const f = await run(FOCUS);
+    if (!f.focused) return null;
+    await cdp.sleep(2000); await run(FOCUS); await cdp.sleep(1000);
+    const b = await run(BTN_OK);
+    return b && b.ok ? { how: b.why } : null;
+  };
   for (const off of [0, 600, 1200, 2000, 3000]) {
     await run(`JSON.stringify((()=>{ window.scrollTo(0, ${off}); return 1; })())`);
     await cdp.sleep(1000);
-    const f = await run(FOCUS);
-    if (f.focused) { await cdp.sleep(2000); await run(FOCUS); await cdp.sleep(1000); return { ok: true, how: '滚动 ' + off + ' 处聚焦页面级发布框' }; }
+    const r = await tryFocus();
+    if (r) return { ok: true, how: '滚动 ' + off + ' 处已打开发布框（' + r.how + '）' };
   }
   for (let i = 0; i < 3; i++) {
     await run(OPEN_MODAL);
     await cdp.sleep(2500);
-    const f = await run(FOCUS);
-    if (f.focused) { await cdp.sleep(2000); await run(FOCUS); await cdp.sleep(1000); return { ok: true, how: '打开评论弹层后聚焦' }; }
+    const r = await tryFocus();
+    if (r) return { ok: true, how: '打开评论弹层后已打开发布框（' + r.how + '）' };
     await run(`JSON.stringify((()=>{ window.scrollTo(0, ${400 + i * 700}); return 1; })())`);
     await cdp.sleep(1500);
   }
-  return { ok: false, how: '没找到任何发布框' };
+  return { ok: false, how: '没找到任何「发布」按钮可见的发布框' };
 }
 
 
@@ -162,13 +199,15 @@ const ST = `JSON.stringify((()=>{
     ok(!!after.publishBtn && after.publishBtn.disp !== 'none' && after.publishBtn.rect[3] > 0,
       '「发布」按钮未被误伤，仍可见', after.publishBtn);
     // 「发布」按钮必须完整落在屏幕内（修复前 62px 只露出 42px、右溢 20px）
-    ok(after.publishRightOverflow !== null && after.publishRightOverflow <= 0,
+    // 先要求按钮本身有宽度：否则 rect 全 0 时「右溢」会算出 -屏幕宽，这条会**假通过**。
+    ok(after.publishBtn && after.publishBtn.rect[2] > 0 && after.publishRightOverflow !== null &&
+       after.publishRightOverflow <= 0,
       '「发布」按钮完整落在屏幕内（右溢 ' + after.publishRightOverflow + 'px，可见 ' +
       after.publishVisibleW + '/' + (after.publishBtn && after.publishBtn.rect[2]) + 'px）',
-      { overflow: after.publishRightOverflow, visible: after.publishVisibleW });
+      { overflow: after.publishRightOverflow, visible: after.publishVisibleW, rect: after.publishBtn && after.publishBtn.rect });
 
     await api.send('Page.bringToFront', {}, sid);
-    execSync('adb exec-out screencap -p > "D:/AiSpaces/Work/2026-09-29-10-18-12/shots/15-idea-option-after.png"', { shell: 'bash' });
+    execSync('adb exec-out screencap -p > "shots/15-idea-option-after.png"', { shell: 'bash' });
     console.log('\n截图: shots/15-idea-option-after.png');
     console.log('\n===== 结果: ' + pass + ' passed / ' + fail + ' failed =====');
     process.exitCode = fail ? 1 : 0;

@@ -11,8 +11,8 @@ SKILL.md 只放结论，这里放关键事实与排错细节。本 skill 是**�
 - 环境：安卓真机（小米 fuxi / 2211133C，1080×2400，CSS 宽 393px）+ Kiwi 浏览器 + 暴力猴扩展。
 - 暴力猴扩展 ID：`fcickoepngcnapddnnmjmpekmfmpaa`（装/更新流程依赖它的 `confirm/index.html`
   与 `options/index.html`）。
-- adb：已加入 PATH，装于 `C:\platform-tools`（直接调用 `adb`，无需指定路径）。
-- Node 22 全局 `WebSocket` / `fetch` 可用：`C:/Users/xiongbin/.workbuddy/binaries/node/versions/22.22.2-3/node.exe`。
+- adb：已加入 PATH，直接调用 `adb`（无需指定路径；本机装于 `D:\AiSpaces\AiUse\Tools\platform-tools`，adb 37.0.1）。
+- Node 22 全局 `WebSocket` / `fetch` 可用（本机：`C:/Users/leoshone/.workbuddy/binaries/node/versions/22.22.2-3/node.exe`）。
 - **CDP 能自动装/更新脚本**（无需真人）：browser 级 WS + `Target.createTarget{url:RAW}` 开新标签
   → 暴力猴弹 confirm 页 → 点 `#confirm` → 关掉所开标签。已真机验证（脚本「弹出 confirm → 点击 →
   关闭两个标签 → `verify` 复核已装入」全链路）。

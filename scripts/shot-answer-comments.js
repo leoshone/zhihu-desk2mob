@@ -52,7 +52,7 @@ const STATE = `JSON.stringify((()=>{
     await cdp.sleep(4000);
     console.log('state  ->', JSON.stringify(await cdp.evalJson(api, STATE, sid)));
     await api.send('Page.bringToFront', {}, sid);
-    execSync('adb exec-out screencap -p > "D:/AiSpaces/Work/2026-09-29-10-18-12/shots/12-final-answer-comments.png"', { shell: 'bash' });
+    execSync('adb exec-out screencap -p > "shots/12-final-answer-comments.png"', { shell: 'bash' });
     console.log('screenshot saved');
   } finally { api.close(); }
 })().catch(e => { console.error('ERR', e.message); process.exit(1); });

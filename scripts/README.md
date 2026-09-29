@@ -47,7 +47,7 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 > 设备上没有回答页标签时它会**自动开一个**，不会再静默回退到首页 —— 静默回退会把环境问题
 > 伪装成产品回归。
 
-去掉 `--installed` 则改为「重载页面后注入 `../src/zhihu-desk2mob.user.js`」，
+去掉 `--installed` 则改为「重载页面后注入 `../zhihu-desk2mob.user.js`」，
 适合改动脚本后快速迭代。
 
 测试会自己找目标页面：`test-comment-back` 用回答页；`test-idea-option` 与 `test-avatar`

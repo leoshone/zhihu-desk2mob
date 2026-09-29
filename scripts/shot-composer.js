@@ -8,9 +8,9 @@ const path = require('path');
 const { execSync } = require('child_process');
 const cdp = require('./cdp');
 
-const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
+const SCRIPT = path.join(__dirname, '..', 'zhihu-desk2mob.user.js');
 const mode = process.argv[2] === 'after' ? 'after' : 'before';
-const out = 'D:/AiSpaces/Work/2026-09-29-10-18-12/shots/16-composer-' + mode + '.png';
+const out = 'shots/16-composer-' + mode + '.png';
 
 const FOCUS = `JSON.stringify((()=>{
   const eds = [...document.querySelectorAll('[contenteditable="true"]')];

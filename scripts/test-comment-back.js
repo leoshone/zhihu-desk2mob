@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const cdp = require('./cdp');
 
-const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
+const SCRIPT = path.join(__dirname, '..', 'zhihu-desk2mob.user.js');
 const INJECT_MODE = process.argv[2] !== '--installed';
 const DOMAIN = '/answer/';
 // 设备上若没有回答页标签就自动开这一个（回答页才走弹层；首页是内联展开）

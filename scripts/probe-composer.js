@@ -69,7 +69,7 @@ const JS = `JSON.stringify((()=>{
     console.log('\n结构树:');
     d.tree.forEach(l => console.log(l));
     await api.send('Page.bringToFront', {}, sid);
-    execSync('adb exec-out screencap -p > "D:/AiSpaces/Work/2026-09-29-10-18-12/shots/13-composer-before.png"', { shell: 'bash' });
+    execSync('adb exec-out screencap -p > "shots/13-composer-before.png"', { shell: 'bash' });
     console.log('\n截图: shots/13-composer-before.png');
   } finally { api.close(); }
 })().catch(e => { console.error('ERR', e.message); process.exit(1); });

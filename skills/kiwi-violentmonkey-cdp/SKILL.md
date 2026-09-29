@@ -13,7 +13,7 @@ agent_created: true
 - 经 CDP 远程：注入脚本到当前页、列/截标签、验证脚本是否生效、排查布局。
 
 ## 连接手机
-adb 已在 PATH（装于 `C:\platform-tools`），直接调用：
+adb 已在 PATH，直接调用：
 ```bash
 adb forward tcp:9222 localabstract:chrome_devtools_remote   # 每轮 Bash 都要重建
 curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
@@ -52,6 +52,16 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
 把本地改好的脚本注入前台活标签立即生效，刷新即还原：`scripts/kiwi-cdp.js inject {FILE}`。
 
 ## 坑
+- **后台标签被冻结 → `Target.attachToTarget` 永久挂起**（不是 renderer 挂死）。症状：node 进程整个卡住、
+  **没有任何报错**，`timeout` 到点才被杀；而前台那个标签一切正常。原因是 Kiwi/Chrome 会冻结后台标签，
+  冻结的 target 不响应 attach。`cdp.js` 的 `attach()` 本身没有超时保护，所以别指望它自己报错。
+  **已在 `cdp.js` 的 `attach()` 里统一修掉**（attach 前自动 `Target.activateTarget`），调用方不用管；
+  但若自己绕过 `attach()` 直接用 `api.send('Target.attachToTarget')`，仍需自行先激活。
+  （踩过：两次白等 2 分钟，一度误判成 renderer 挂死；`test-counterzoom --installed` 曾因此 0 采样、7 连败。）
+- **页面上完全没有脚本痕迹 ≠ 脚本没注入**：先看 `#z2m-style` 在不在、`documentElement.style.zoom` 是否为空，
+  再怀疑「脚本自己抛错」。真机踩过：在初始化早期执行的函数里调用了一个依赖后面 `let` 声明的清理函数
+  → 撞暂时性死区（TDZ）、整个 IIFE 抛错，页面表现与「暴力猴没注入」一模一样。
+  改完脚本先确认这两个判据，再谈别的。
 - **browser WS 403**：见上回退方案（`/json/new` + page 级 WS）。
 - **陈旧 confirm 标签**：失败重试会留多个 confirm 标签，轮询先抓到空白的那个 → 装前先 `Target.closeTarget` 清掉。
 - **截图两条坑**：① `Page.captureScreenshot` 对半死 session 会**永久挂起** → 一律包一层超时

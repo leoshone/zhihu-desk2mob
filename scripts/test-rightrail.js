@@ -11,7 +11,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const cdp = require('./cdp');
 
-const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
+const SCRIPT = path.join(__dirname, '..', 'zhihu-desk2mob.user.js');
 const INJECT_MODE = process.argv[2] !== '--installed';
 const TAB_SUBSTR = 'www.zhihu.com';
 
@@ -112,7 +112,7 @@ const ST = `JSON.stringify((()=>{
     ok(s.feedItems >= 1, '首页信息流条目仍在（' + s.feedItems + ' 条）', s.feedItems);
 
     await api.send('Page.bringToFront', {}, sid);
-    const p = 'D:/AiSpaces/Work/2026-09-29-10-18-12/shots/22-home-after.png';
+    const p = 'shots/22-home-after.png';
     execSync('adb exec-out screencap -p > "' + p + '"', { shell: 'bash' });
     console.log('\n截图: ' + p);
     console.log('\n===== 结果: ' + pass + ' passed / ' + fail + ' failed =====');

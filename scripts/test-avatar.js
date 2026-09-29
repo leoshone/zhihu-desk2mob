@@ -14,7 +14,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const cdp = require('./cdp');
 
-const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
+const SCRIPT = path.join(__dirname, '..', 'zhihu-desk2mob.user.js');
 const INJECT_MODE = process.argv[2] !== '--installed';
 const TAB_SUBSTR = 'www.zhihu.com';
 
@@ -161,7 +161,7 @@ async function prepareComposer() {
       ok(ph <= 40, '「发布」按钮未被压成竖排（' + pw + '×' + ph + '）', s.publish.rect);
     }
 
-    const p = 'D:/AiSpaces/Work/2026-09-29-10-18-12/shots/19-avatar-after.png';
+    const p = 'shots/19-avatar-after.png';
     await api.send('Page.bringToFront', {}, sid);
     execSync('adb exec-out screencap -p > "' + p + '"', { shell: 'bash' });
     console.log('\n截图: ' + p);

@@ -141,7 +141,7 @@ const LAYER_JS = `JSON.stringify((()=>{
 (async () => {
   const cmd = process.argv[2] || 'env';
   await withTab(async (api, sid) => {
-    const SHOTS = 'D:/AiSpaces/Work/2026-09-29-10-18-12/shots/';
+    const SHOTS = 'shots/';
     if (cmd === 'env') {
       console.log(JSON.stringify(await cdp.evalJson(api, ENV_JS, sid), null, 2));
     } else if (cmd === 'triggers') {

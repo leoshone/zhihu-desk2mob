@@ -64,6 +64,10 @@ async function findTab(api, substr) {
 
 // attach 并打开 Runtime，返回 sessionId
 async function attach(api, targetId) {
+  // 先激活目标标签：后台标签会被浏览器冻结，冻结的 target 不响应 attachToTarget ——
+  // 症状是整个 node 进程卡死且**不报错**（attach 没有超时保护）。
+  // 之前每个调用方各自踩一次（脚本跑到一半卡住、只能等 timeout），统一在这里处理。
+  try { await api.send('Target.activateTarget', { targetId }); } catch (e) {}
   const sid = (await api.send('Target.attachToTarget', { targetId, flatten: true })).sessionId;
   await api.send('Runtime.enable', {}, sid);
   await api.send('Page.enable', {}, sid).catch(() => {});

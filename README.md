@@ -14,6 +14,16 @@
 
 ## 更新记录
 
+- **1.0.5** —— 发布框头像 + 弹层按钮修复（真机实测）
+  - 发布框头像不再被拉高：脚本自己的通用规则 `img { height: auto !important }` 顶掉了知乎
+    写给头像的固定高度，而头像所在行是 stretch，于是 40×40 被拉成 **40×122**（同一规则还让
+    8 个头像高度塌成 0）。改为把 `.Avatar` 排除出该规则，其余图片保持原样。
+  - 发布框头像缩到与评论列表头像同尺寸（**24×24**；知乎原本给 40px，可用
+    `CFG.matchComposerAvatar` 关掉回到 40）。
+  - 弹层内「发布」按钮不再竖排：脚本的按钮规则只写了 `main button, header button`，
+    而弹层挂在 body 的 portal 里、不在 `main` 内，于是弹层内按钮仍是 `white-space: normal`，
+    被挤到 49px 宽时文字折成两行。补上 `.Modal-content button` 后恢复 62×30 横排。
+  - 详见 [docs/v1.0.5-fix-avatar-and-modal-publish.md](docs/v1.0.5-fix-avatar-and-modal-publish.md)。
 - **1.0.4** —— 评论区发布框修复（真机实测）
   - 去掉发布框里的「同时发布到想法」选项：它在窄列里被压成 0 宽、7 个汉字竖排成一列
     （13×121），把整个发布框从 94px 撑到 185px。选项连同左侧单选框图标一起隐藏。

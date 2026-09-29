@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.4
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；隐藏发布框里会把布局撑高的「同时发布到想法」选项。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.0.5
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -30,6 +30,9 @@
     hideIdeaOption: true,
     // 评论区发布框：让「发布」按钮完整落在屏幕内（该行内容原本比列宽多 79px）
     fitPublishButton: true,
+    // 评论区发布框：把里面的头像缩到与评论列表头像同尺寸（知乎原本给 40px）
+    matchComposerAvatar: true,
+    composerAvatarSize: 24,
   };
 
   // ---- viewport meta ----
@@ -62,7 +65,11 @@
     max-width: var(--z2m-w) !important;
     overflow-x: hidden !important;
   }
-  img, video { max-width: 100% !important; height: auto !important; }
+  /* 正文图片不得撑破窄列。刻意排除 .Avatar：头像在知乎是「固定尺寸的 UI 元素」，
+     给它 height:auto 会顶掉知乎写死的高度，而头像所在行又是 stretch（align-items:normal），
+     结果被拉到整行高（实测发布框头像 40×40 被拉成 40×122，另有几个头像被压成 24×0）。
+     其余图片保持原规则 —— 站点写了宽高比的内容图靠 height:auto 才不会在 max-width 收窄后变形。 */
+  img:not(.Avatar), video { max-width: 100% !important; height: auto !important; }
   pre { max-width: 100% !important; overflow-x: auto !important; }
   table { max-width: 100% !important; }
 
@@ -102,8 +109,11 @@
   /* action bars wrap */
   .ContentItem-actions { flex-wrap: wrap !important; row-gap: 4px !important; }
 
-  /* buttons: never squeeze into vertical text */
-  main button, header button { white-space: nowrap !important; }
+  /* buttons: never squeeze into vertical text
+     注意 .Modal-content 也要带上：弹层挂在 body 的 portal 里、**不在 main 内**，
+     只写 main 会漏掉它 —— 实测弹层内「发布」按钮因此被压成 49×58 的竖排「发/布」。
+     这里只加 nowrap，不加 flex:0 0 auto（后者会让按钮拒绝收缩、把行撑溢出）。 */
+  main button, header button, .Modal-content button { white-space: nowrap !important; }
   main button { flex: 0 0 auto !important; }
 
   /* question header: let stats column wrap below instead of overflowing */
@@ -372,12 +382,15 @@
   // 定位不依赖 emotion hash（会随构建变）：从「发布」按钮往上找第一个「自身溢出且
   // 首个子元素占了大半内容宽」的行 —— 这条规则会跳过按钮直属的那个 7px 宽控件容器。
   let publishShrink = null;                  // 缓存已处理的编辑区；SPA 重建后自动重找
+  function publishButton() {
+    const norm = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, ' ').trim();
+    return [...document.querySelectorAll('button')].find(b => norm(b.innerText) === '发布') || null;
+  }
   function fitPublishButton() {
     if (!CFG.fitPublishButton) return;
     if (publishShrink && publishShrink.isConnected) return;
     publishShrink = null;
-    const norm = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, ' ').trim();
-    const btn = [...document.querySelectorAll('button')].find(b => norm(b.innerText) === '发布');
+    const btn = publishButton();
     if (!btn) return;
     let row = btn.parentElement, found = null;
     while (row && row !== document.body) {
@@ -397,9 +410,36 @@
     publishShrink = target;
   }
 
+  // ---- 发布框头像：缩到与评论列表头像同尺寸 ----
+  // 发布框那个头像只有 `Avatar` 这个通用类，旁边的类名是 emotion hash，CSS 无法表达
+  // 「与发布按钮同一行的那个头像」；所以按结构走：从「发布」按钮往上找第一个内含
+  // img.Avatar 的祖先，那个头像就是发布框的。
+  // 另外：知乎给它是 40px（评论列表头像是 24px）。缩到 24 是按使用者要求「与评论里的
+  // 头像一样大」；这是刻意偏离站点设计，所以留了开关。
+  let composerAvatar = null;
+  function matchComposerAvatar() {
+    if (!CFG.matchComposerAvatar) return;
+    if (composerAvatar && composerAvatar.isConnected) return;
+    composerAvatar = null;
+    const btn = publishButton();
+    if (!btn) return;
+    let row = btn.parentElement, av = null;
+    while (row && row !== document.body) {
+      av = [...row.querySelectorAll('img.Avatar')][0] || null;
+      if (av) break;
+      row = row.parentElement;
+    }
+    if (!av) return;
+    const px = CFG.composerAvatarSize + 'px';
+    av.style.setProperty('width', px, 'important');
+    av.style.setProperty('height', px, 'important');
+    composerAvatar = av;
+  }
+
   let timer = null;
   function tick() {
-    hideSideRails(); capFixed(); capWide(); hideIdeaOption(); fitPublishButton();
+    hideSideRails(); capFixed(); capWide();
+    hideIdeaOption(); fitPublishButton(); matchComposerAvatar();
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 

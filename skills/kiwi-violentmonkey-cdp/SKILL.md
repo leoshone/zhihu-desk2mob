@@ -67,6 +67,15 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
 - **行内元素被挤出容器/屏幕时，用 `clientWidth` vs `scrollWidth` 定位**：某层 `scrollWidth > clientWidth` 说明它放不下内容；再逐个子元素看 `flex` 与 `computed width`，找出「谁拒绝收缩」。常见组合是「A 是 `flex:0 0 auto`（站点给的）+ B 是 `flex:0 0 auto`（脚本加的）」，两者都不让，就把 B 挤出行外甚至推到屏幕外。修法是让其中一方可收缩，而不是硬砍宽度。
 - **虚拟化列表里不要依赖 `scrollIntoView`**：跳转后节点常被回收，导致「视口内候选 = 0」的假失败。改为**按固定偏移逐档 `scrollTo`（如 0/400/700/1000…）+ 每档复查视口内候选，命中即停**，抖动即消失。
 - **`Page.captureScreenshot` 之外，`adb exec-out screencap -p` 更抗造**：也能在 CDP 会话半死时继续取证；细节核对用 Pillow 裁剪放大（装到 managed venv）。
+- **「通杀式」适配规则的两个典型误伤，排查时先怀疑脚本自己**：
+  ① `img { height: auto !important }` 这类无差别规则会**改坏站点固定尺寸的 UI 图片** ——
+  实测把头像从 40×40 拉成 40×122（图片本身被拉伸），还让 8 个头像高度塌成 0；
+  修法是收窄作用范围（`img:not(.Avatar)`），而不是去怪站点。
+  ② 限定在 `main button` 的规则会**漏掉挂在 body portal 里的弹层**（弹层不在 `main` 内）——
+  实测弹层里的「发布」按钮因此仍是 `white-space: normal`，被挤到 49px 宽时文字竖排成两行。
+  写规则时要么收窄到真正需要的元素，要么把所有挂载点（`main` 之外还有 portal）补全。
+- **判断某条规则该不该加 `!important` 时，先想它的作用域**：`height: auto !important` 这种
+  「为了防溢出」的规则，只在内容图上需要；一旦无差别施加，站点自己写的固定尺寸就全被顶掉。
 
 ## 参考
 - `references/cdp-kit.md`：`attach()` / `install()` / `verify()` 实现、暴力猴扩展 ID、排错速查，

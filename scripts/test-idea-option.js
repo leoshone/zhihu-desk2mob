@@ -21,7 +21,7 @@ function ok(cond, label, extra) {
   else { fail++; console.log('  FAIL  ' + label + (extra !== undefined ? '  -> ' + JSON.stringify(extra) : '')); }
 }
 
-// 点进评论输入框，让「同时发布到想法」渲染出来
+// 点进评论输入框 —— 「同时发布到想法」与「发布」按钮都要**聚焦后**才渲染出来
 const FOCUS = `JSON.stringify((()=>{
   const eds = [...document.querySelectorAll('[contenteditable="true"]')];
   if (!eds.length) return { err: 'no contenteditable' };
@@ -30,6 +30,39 @@ const FOCUS = `JSON.stringify((()=>{
   e.focus(); e.click();
   return { focused: document.activeElement === e, count: eds.length };
 })())`;
+
+// 打开评论弹层（页面级发布框不在时退而用弹层内的，两者行为一致）
+const OPEN_MODAL = `JSON.stringify((()=>{
+  const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
+  const vh = window.innerHeight;
+  const c = [...document.querySelectorAll('button')].filter(el => /条评论/.test(norm(el.innerText)))
+    .map(el => ({ el, top: el.getBoundingClientRect().top }))
+    .filter(x => x.top >= 0 && x.top <= vh)
+    .sort((a, b) => Math.abs(a.top - vh / 2) - Math.abs(b.top - vh / 2))[0];
+  if (!c) return { err: 'no in-view comment button' };
+  const t = norm(c.el.innerText); c.el.click(); return { clicked: t };
+})())`;
+
+// 把发布框调出来：先按滚动位置扫描找页面级发布框；
+// 找不到就打开评论弹层用弹层内的 —— 这样测试不再依赖「真机上开着哪个页面/哪个标签」。
+async function prepareComposer(run) {
+  for (const off of [0, 600, 1200, 2000, 3000]) {
+    await run(`JSON.stringify((()=>{ window.scrollTo(0, ${off}); return 1; })())`);
+    await cdp.sleep(1000);
+    const f = await run(FOCUS);
+    if (f.focused) { await cdp.sleep(2000); await run(FOCUS); await cdp.sleep(1000); return { ok: true, how: '滚动 ' + off + ' 处聚焦页面级发布框' }; }
+  }
+  for (let i = 0; i < 3; i++) {
+    await run(OPEN_MODAL);
+    await cdp.sleep(2500);
+    const f = await run(FOCUS);
+    if (f.focused) { await cdp.sleep(2000); await run(FOCUS); await cdp.sleep(1000); return { ok: true, how: '打开评论弹层后聚焦' }; }
+    await run(`JSON.stringify((()=>{ window.scrollTo(0, ${400 + i * 700}); return 1; })())`);
+    await cdp.sleep(1500);
+  }
+  return { ok: false, how: '没找到任何发布框' };
+}
+
 
 const ST = `JSON.stringify((()=>{
   const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
@@ -70,25 +103,31 @@ const ST = `JSON.stringify((()=>{
   console.log('脚本: ' + SCRIPT + '  (' + code.split('\n').length + ' 行)  [' + (INJECT_MODE ? '注入模式' : '已安装版本') + ']');
   const api = await cdp.browserApi();
   try {
-    const src = await cdp.findTab(api, 'zhuanlan.zhihu.com') || await cdp.findTab(api);
-    if (!src) throw new Error('未找到知乎专栏页标签，请先在真机打开一篇专栏文章');
+    const preferred = await cdp.findTab(api, 'zhuanlan.zhihu.com');
+    const src = preferred || await cdp.findTab(api);
+    if (!src) throw new Error('没有可用的知乎标签，请先在真机打开一个专栏文章或回答页');
+    if (!preferred) {
+      console.log('  注意：没找到专栏页标签，改在 ' + (src.url || '').slice(0, 50) +
+        ' 上测 —— 发布框行为一致，但页面级发布框需要滚到评论区才会渲染。');
+    }
     const sid = await cdp.attach(api, src.targetId);
     const run = e => cdp.evalJson(api, e, sid);
 
-    console.log('\n[准备] 重载专栏页' + (INJECT_MODE ? '（稍后注入脚本）' : '（脚本已实装）'));
+    console.log('\n[准备] 重载页面' + (INJECT_MODE ? '（稍后注入脚本）' : '（脚本已实装）'));
     await api.send('Page.navigate', { url: src.url }, sid);
     await cdp.waitReady(api, sid, 30);
     await cdp.sleep(3500);
 
-    console.log('[基线] 点进评论输入框，让选项渲染出来');
-    console.log('  聚焦 -> ' + JSON.stringify(await run(FOCUS)));
-    await cdp.sleep(2500);
+    console.log('[基线] 把发布框调出来，让选项渲染出来');
+    const prep = await prepareComposer(run);
+    console.log('  准备结果 -> ' + JSON.stringify(prep));
     const base = await run(ST);
     const baseH = base.outerRect ? base.outerRect[3] : 0;
     console.log('  基线: 选项存在=' + base.optionExists + ' 选项包裹层=' + JSON.stringify(base.optionBox) +
       ' 文案尺寸=' + JSON.stringify(base.optionLeafRect) + ' 发布框高=' + baseH +
       ' 发布按钮=' + JSON.stringify(base.publishBtn && base.publishBtn.rect) +
       ' 选项在 main 内=' + base.insideMain);
+    ok(prep.ok, '已把发布框调出来（' + (prep.how || '') + '）');
     ok(base.optionExists, '聚焦后「同时发布到想法」选项确实存在');
     ok(!!base.publishBtn && base.publishBtn.disp !== 'none', '基线中「发布」按钮存在');
 

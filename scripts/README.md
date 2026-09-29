@@ -32,11 +32,16 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 ```bash
 node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢出定位修正
 node test-idea-option.js  --installed    # 发布框：隐藏「同时发布到想法」+ 发布按钮完整可见
+node test-avatar.js       --installed    # 发布框：头像不被拉高、与评论列表头像同尺寸
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 ```
 
 去掉 `--installed` 则改为「重载页面后注入 `../src/zhihu-desk2mob.user.js`」，
 适合改动脚本后快速迭代。
+
+测试会自己找目标页面：`test-comment-back` 用回答页；`test-idea-option` 与 `test-avatar`
+优先用专栏页，找不到就退回当前任意知乎标签（发布框行为一致），并且会自己
+「滚到位 → 聚焦输入框 → 必要时打开评论弹层」把发布框调出来 —— 不再依赖真机上开着哪个页面。
 
 ## 设计要点（都是踩坑后定下来的）
 

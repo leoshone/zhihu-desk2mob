@@ -73,6 +73,10 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
 - **hit-test 在 root zoom 下不可信**：页面用 `html{zoom:N}` 反缩放（Kiwi 桌面模式适配常见）时，`position:fixed` 元素即使视觉在屏幕内，`Input.dispatchTouchEvent` 按其 getBoundingClientRect 坐标点也**点不到**（elementsFromPoint 栈里根本没有它）。可点的元素必须放**内容流内**（sticky/in-flow）。`.click()` 不走命中测试，永远有效——把流内元素点击转发给不可点的原生按钮是可靠模式。
 - **CDP mouse 事件在 zoom 页面坐标错位**：`Input.dispatchMouseEvent` 用 CSS 坐标在 `html{zoom:N}` 页面会点偏（同一坐标 JS `.click()` 有效、mouse 事件无效即此症状）。触控验证用 `Input.dispatchTouchEvent`（实测正常）。
 - **PC→手机装本地脚本**：PC 起 `python -m http.server 8899`，`adb reverse tcp:8899 tcp:8899`，手机访问 `http://127.0.0.1:8899/x.user.js` 走 createTarget 安装流程。用完 `adb reverse --remove tcp:8899`。
+  ⚠️ **`http.server` 进程本身也要关**——它不会自己退出，`adb reverse` 撤了它还在后台占着 8899。
+  而且第二次起会因端口被占而报错/空转，于是你会以为「服务已重启」其实一直是旧那个在服务
+  （踩过：同一轮里起了两次，两个都活着，只关了一个，另一个留到会话结束）。
+  收尾时用 `netstat -ano | grep :8899` 确认，再 `taskkill /PID <pid> /F`。
 - **SPA 会把「评论展开」这类状态存进会话**：站点（如知乎）记住「评论是否展开」——刷新后可能
   恢复成内联评论而不是弹层，且同意图点击会走不同路径（按钮文本变成「收起评论」）。
   所以① 测弹层路径前先点「收起评论」归零；② 断言对**两种形态分别成立**，别假设单一路径。

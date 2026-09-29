@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.1.0
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.1.1
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（0.98，靠收窄列宽实现，不改 font-size）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -17,13 +17,24 @@
   if ((window.innerWidth || 0) <= 600) return;
   if (window.__z2mStop) { try { window.__z2mStop(); } catch (e) {} }
 
-  // 窄列宽度。会随屏幕旋转变化，故不是常量 —— resize 时更新（消费者的阈值也跟着变）。
-  let SW = Math.max(320, Math.min(screen.width || 393, 500));
+  // 窄列宽度（CSS px）。**屏幕上的实际大小 = 名义字号 × (屏幕可用宽 ÷ SW)** ——
+  // 列越窄，同一个字号在屏上就越大，而列**仍然恰好铺满屏幕**（zoom = visW / SW 会同比变大，
+  // 列宽 × zoom × scale 恒等于屏幕可用宽）。所以「让正文大一点」= **收窄列宽 + 放大缩放**，
+  // 而不是把 zoom 单独调大（那会让内容宽于屏幕、被 overflow-x 裁掉右边）。
+  // CFG.textScale 就是要的那个「屏上换算因子」：1 = 字号就是名义值（正文 16px）。
+  // 会随屏幕旋转变化，故不是常量 —— resize 时重算（消费它的阈值也跟着变）。
+  const SW_MIN = 240;                                    // 再窄排版就难看了
+  let SW_BASE = Math.max(320, Math.min(screen.width || 393, 500));
+  let SW = SW_BASE;                                      // 初值；进入 applyZoom 后用真实可用宽校准
 
   // ============================================================
   // 配置开关
   // ============================================================
   const CFG = {
+    // 屏上换算因子：正文在屏幕上多大 = 名义字号 × 它。
+    // 1 = 字号就是名义值（正文 16px）；0.98 = 15.7px（用户按真机捏合到的手感定的）。
+    // **靠收窄列宽实现，不改任何 font-size**：列窄了 zoom 就同比变大，列仍恰好铺满屏幕。
+    textScale: 0.98,
     // 反缩放：限制「手工缩小」——捏合缩到小于「恰好铺满」时拉回铺满，
     // 不允许把页面缩成半屏小字（用户要求）。只挡缩小，放大不受影响。
     limitZoomOut: true,
@@ -60,12 +71,24 @@
   //   = vvWidth × scale × dpr = 屏幕宽度（恒定）
   // 所以加载期间布局视口一路变化（实测 980→1077→1184→1301）、我们反复重算 Z，
   // **视觉上都不会有任何变化** —— 不会出现「先放大再缩小」的跳动。
+  // 用「实际可用宽」反推列宽，而不是用 screen.width —— 两者差约 10%（393 vs 357.5），
+  // 以前 SW 取 393 时恒偏小 10%，这正是正文看着比名义字号小一号的原因。
+  // 这样屏上换算因子恒等于 CFG.textScale：
+  //   屏上字号 = 名义 × (列宽 × zoom × scale) / 列宽 = 名义 × 屏幕可用宽 / SW = 名义 × textScale
   let curZ = 1, curScreenW = 0;
   function applyZoom() {
     const vv = window.visualViewport;
     const visW = vv ? vv.width : window.innerWidth;   // 可见范围内的布局 px
     const s = (vv && vv.scale) || 1;
     curScreenW = Math.round(visW * s);                // 屏幕可用 CSS 宽度（用户捏合时不变量）
+    const wantSW = Math.max(SW_MIN, Math.round(curScreenW / CFG.textScale));
+    if (Math.abs(wantSW - SW) >= 1) {
+      SW = wantSW;
+      document.documentElement.style.setProperty('--z2m-w', SW + 'px');
+      // 注意：这里**不能**直接 clearScanMemo() —— 它依赖的 seenFixed 等是后面用 let 声明的，
+      // 而 applyZoom 在初始化早期就会执行 → 撞上 TDZ，整个 IIFE 抛错、脚本彻底不生效
+      // （症状是页面上没有任何脚本痕迹）。改由 tick() 发现 SW 变了再清（见那里）。
+    }
     const Z = Math.min(6, Math.max(0.5, visW / SW));
     if (Math.abs(Z - curZ) < 0.005) return;
     curZ = Z;
@@ -85,10 +108,11 @@
   // 且「有时被重算、有时不」取决于 window.resize 是否恰好触发，表现不稳定。
   //
   // 「拉回铺满」必须**延后一拍**再算，不能就地算：浏览器换挡时可能先经过一个中间态 ——
-  // 实测 setPageScaleFactor 会先来一发 `visW = innerWidth`（极小比例）的事件。就地重算会按
-  // 中间态得出过大的 zoom（如 891/393 = 2.268），紧接着真正的那一发到来时
-  // `zoom × scale` 已大于铺满值 → 被当成「用户放大」而不纠正 → **内容比屏幕宽 25%、右侧被裁**。
-  // 延后 200ms 时比例已稳定，按最终几何重算才是对的。
+  // 实测 setPageScaleFactor 会先来一发 `visW = innerWidth`（最小比例）的事件。就地重算会按
+  // 中间态得出过大的 zoom，紧接着真正的那一发到来时 `zoom × scale` 已大于铺满值
+  // → 被当成「用户放大」而不纠正 → 内容比屏幕宽、右侧被裁（见 docs/v1.1.1-text-scale.md §3）。
+  // 延后 200ms 只缓解、不能根治；根治需要区分「用户主动放大」与「浏览器换挡的中间态」，
+  // 而两者的可观测状态完全相同 —— 试过两种改法（延后 / 再等一拍）都无效，已回退，故保持简单。
   let zoomFixTimer = null;
   function refitSoon() {
     clearTimeout(zoomFixTimer);
@@ -186,6 +210,12 @@
     -webkit-line-clamp: unset !important;
     overflow: visible !important;
   }
+
+  /* ---- 放大后列变窄的副作用：作者行里的名字会被硬切 ----
+     CFG.textScale > 0.91 时列宽比 screen.width 窄，而头像/关注按钮仍是原来的 CSS 尺寸，
+     作者名那一格就变挤。知乎自己给了 overflow:hidden + nowrap 但没有省略号，长名字会被
+     从中间切断、看起来像被右侧「关注」按钮压住。只补一个省略号，不改布局。 */
+  .AuthorInfo { text-overflow: ellipsis !important; }
 
   /* ---- 评论区弹层：只动「溢出」这一种病态情形 ----
      治的是桌面坐标下的两处溢出，不改变正常弹窗（不溢出的弹窗仍由知乎自己居中）：
@@ -537,7 +567,9 @@
   }
 
   let timer = null;
+  let lastTickSW = -1;        // 上一拍的 SW；变了说明阈值全变，记忆作废（applyZoom 会改 SW，见那里的注释）
   function tick() {
+    if (SW !== lastTickSW) { lastTickSW = SW; clearScanMemo(); }
     // 周期性全量重扫：见「扫描记忆化」一节，抵消「看过的元素后续变大就漏掉」的代价
     if (++sweepCount % SWEEP_EVERY === 0) clearScanMemo();
     hideSideRails(); capFixed(); capWide();
@@ -554,10 +586,10 @@
     obs.observe(document.body, { childList: true, subtree: true, attributes: false });
     tick(); syncCommentModal();
     window.addEventListener('resize', () => {
-      // SW 是常量时会过期：横竖屏切换后 capFixed / capWide / fitPublishButton 仍按旧宽度判断。
-      // 同时屏幕尺寸变了，之前「看过就跳过」的结论也不再成立，清空重扫。
-      SW = Math.max(320, Math.min(screen.width || 393, 500));
-      document.documentElement.style.setProperty('--z2m-w', SW + 'px');
+      // 横竖屏切换后 screen.width 会变：重算基准，再让 applyZoom 按新的可用宽校准 SW。
+      // 这里可以安全地直接清扫描记忆（start() 在扫描记忆初始化之后才执行），不必等 tick 发现 SW 变化。
+      SW_BASE = Math.max(320, Math.min(screen.width || 393, 500));
+      applyZoom();
       clearScanMemo();
     });
   }

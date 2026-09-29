@@ -46,10 +46,26 @@ Kiwi 桌面模式把布局视口锁死在远比屏幕宽的值（本机实测 14
 
 ## 安装
 
-1. 浏览器安装 Tampermonkey（Kiwi 可直接装 Chrome 扩展）。
-2. 打开知乎任意页面前，开启该站点的「桌面版网站」开关（否则脚本自动不生效，避免破坏移动版页面）。
-3. Tampermonkey → 添加新脚本 → 粘贴 `zhihu-desk2mob.user.js` 内容 → 保存。
+脚本可直接从本仓库的 raw 地址安装／更新（暴力猴会自动识别为同一个脚本）：
+
+```
+https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.user.js
+```
+
+手工安装：浏览器装 Tampermonkey / 暴力猴（Kiwi 可直接装 Chrome 扩展）→ 新建脚本 →
+粘贴 `zhihu-desk2mob.user.js` 内容并保存。
+
+**务必在打开知乎之前开启该站点的「桌面版网站」开关**，否则脚本按设计不生效（避免破坏移动版页面）。
 
 ## 文件
 
-- `zhihu-desk2mob.user.js` —— 脚本本体
+| 路径 | 说明 |
+| --- | --- |
+| `zhihu-desk2mob.user.js` | 脚本本体（单文件，无构建） |
+| `docs/` | 各版本的修复方案文档：根因分析、实测数据、方案取舍 |
+| `scripts/` | 真机回归测试（见 [scripts/README.md](scripts/README.md)） |
+| `skills/kiwi-violentmonkey-cdp/` | 配套技能：用 CDP 驱动真机 Kiwi + 暴力猴（装／更新脚本、注入、取证） |
+
+`scripts/` 里的测试要驱动真机，依赖技能目录中的 CDP 工具库
+（`skills/kiwi-violentmonkey-cdp/scripts/cdp.js`，本仓库只存一份实现）。
+技能本身可以单独拿走使用，不依赖本脚本。

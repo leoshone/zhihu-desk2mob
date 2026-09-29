@@ -63,7 +63,9 @@ const ST = `JSON.stringify((()=>{
 
 const OPEN_MODAL = `JSON.stringify((()=>{
   const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
-  const vh = window.innerHeight;
+  // 可见高度必须换算成 CSS px：rect 是 CSS px，而 innerHeight 是布局 px（两者差一个 html{zoom}）。
+  // 不换算的话，zoom 大时该判断恒真（等于没过滤）、zoom 小时又会把候选全滤掉。
+  const vh = Math.round((window.visualViewport ? visualViewport.height : window.innerHeight) / (parseFloat(document.documentElement.style.zoom) || 1));
   const c = [...document.querySelectorAll('button')].filter(el => /条评论/.test(norm(el.innerText)))
     .map(el => ({ el, top: el.getBoundingClientRect().top }))
     .filter(x => x.top >= 0 && x.top <= vh)

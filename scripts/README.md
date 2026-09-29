@@ -34,8 +34,18 @@ node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢�
 node test-idea-option.js  --installed    # 发布框：隐藏「同时发布到想法」+ 发布按钮完整可见
 node test-avatar.js       --installed    # 发布框：头像不被拉高、与评论列表头像同尺寸
 node test-rightrail.js    --installed    # 首页右边缘：侧栏/页脚残留已清除（且正文列没被误伤）
+node test-counterzoom.js  --installed    # 反缩放：内容恰好铺满、加载期无视觉跳变、不跟捏合抢
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 ```
+
+> 两条注意：
+> - `test-counterzoom` 只在 `--installed` 下才有判别力（注入发生在加载之后，跑不到加载期的变化）；
+> - 它会临时改写页面比例（CDP `Emulation.setPageScaleFactor`，仅本会话有效），结束会重载页面。
+> 建议放在整套测试的**最后**跑。
+>
+> 另：`test-comment-back` 需要**回答页**才能测弹层（首页的「N 条评论」是内联展开、不开弹层）。
+> 设备上没有回答页标签时它会**自动开一个**，不会再静默回退到首页 —— 静默回退会把环境问题
+> 伪装成产品回归。
 
 去掉 `--installed` 则改为「重载页面后注入 `../src/zhihu-desk2mob.user.js`」，
 适合改动脚本后快速迭代。

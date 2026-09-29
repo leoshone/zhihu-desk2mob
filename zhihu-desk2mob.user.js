@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.7
+// @version      1.0.9
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -42,25 +42,43 @@
   if (!vp) { vp = document.createElement('meta'); vp.name = 'viewport'; (document.head || document.documentElement).appendChild(vp); }
   vp.setAttribute('content', 'width=device-width, initial-scale=1');
 
-  // ---- counter-zoom: Kiwi desktop mode locks layout viewport (~980) & scale (~0.4);
-  // zoom = 1/scale makes content render at natural size filling the screen exactly.
-  let curZ = 1;
+  // ---- counter-zoom ----
+  // 桌面模式把布局视口锁在 ~1430px 再整体缩小，不反缩放则文字小到看不清。
+  // 目标是**让 SW 宽的列恰好铺满可见范围**，而不是取 1/scale。
+  //
+  // 两者差的正是「打开后被放大一点点」那个现象。实测：
+  //   · 屏幕可用 CSS 宽度 = 357.5（1080 ÷ dpr 3.0235）
+  //   · 而 SW 来自 screen.width = 393  →  393 / 357.5 = 1.099
+  // 用 1/scale 得到的是「正好铺满 393 的屏幕」，实际屏幕只有 357.5 →
+  // 内容就大 10%，用户看到的就是「像被双指放大了一点点，得捏合缩回」。
+  //
+  // 换成 vvWidth/SW 还带来一个关键性质：屏幕上的实际尺寸
+  //   = SW × Z × scale × dpr = SW × (vvWidth/SW) × scale × dpr
+  //   = vvWidth × scale × dpr = 屏幕宽度（恒定）
+  // 所以加载期间布局视口一路变化（实测 980→1077→1184→1301）、我们反复重算 Z，
+  // **视觉上都不会有任何变化** —— 不会出现「先放大再缩小」的跳动。
+  let curZ = 1, curScreenW = 0;
   function applyZoom() {
-    const s = (window.visualViewport && visualViewport.scale) || 1;
-    if (s >= 0.9) {
-      // 比例恢复到正常（桌面模式关掉、或用户缩放到 1x）：必须把之前写进去的 zoom 撤掉，
-      // 否则页面会保持 3.8 倍放大 + 桌面宽度排版。早期版本在这里直接 return，留下了这个坑。
-      if (curZ !== 1) { curZ = 1; document.documentElement.style.removeProperty('zoom'); }
-      return;
-    }
-    const Z = Math.min(4, Math.max(1, 1 / s));
-    if (Math.abs(Z - curZ) < 0.02) return;
+    const vv = window.visualViewport;
+    const visW = vv ? vv.width : window.innerWidth;   // 可见范围内的布局 px
+    const s = (vv && vv.scale) || 1;
+    curScreenW = Math.round(visW * s);                // 屏幕可用 CSS 宽度（用户捏合时不变量）
+    const Z = Math.min(6, Math.max(0.5, visW / SW));
+    if (Math.abs(Z - curZ) < 0.005) return;
     curZ = Z;
     document.documentElement.style.setProperty('zoom', String(Z));
   }
   applyZoom();
-  [300, 1000, 2500].forEach(t => setTimeout(applyZoom, t));   // overview zoom settles late
+  [300, 1000, 2500].forEach(t => setTimeout(applyZoom, t));   // 布局视口落定前多算几次
   window.addEventListener('resize', applyZoom);
+  // 缩放变化也要管，但**只在「屏幕可用宽度」也变了时才重算**：
+  // 用户捏合会同时改 scale 与 vvWidth，而两者乘积（= 屏幕可用宽度）不变 → 不干预，
+  // 用户的缩放得以保留；浏览器自己调整 dpr / 视口时该乘积会变 → 必须重算。
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => {
+    const vv = window.visualViewport;
+    if (Math.abs(Math.round(vv.width * vv.scale) - curScreenW) <= 2) return;
+    applyZoom();
+  });
 
   // ---- CSS ----
   const st = document.createElement('style');

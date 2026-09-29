@@ -23,6 +23,8 @@ const cdp = require('./cdp');
 const SCRIPT = path.join(__dirname, '..', 'src', 'zhihu-desk2mob.user.js');
 const INJECT_MODE = process.argv[2] !== '--installed';
 const DOMAIN = '/answer/';
+// 设备上若没有回答页标签就自动开这一个（回答页才走弹层；首页是内联展开）
+const FALLBACK_ANSWER = 'https://www.zhihu.com/question/2087120107130598179/answer/2087228487664920091';
 
 let pass = 0, fail = 0;
 function ok(cond, label, extra) {
@@ -53,11 +55,15 @@ const ST = `JSON.stringify((()=>{
 // 点击「当前在视口内、离中心最近的」N 条评论按钮；rot 用于重试时错开候选
 const CLICK_NEAREST = rot => `JSON.stringify((()=>{
   const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
-  const vh = window.innerHeight;
+  // 可见高度必须换算成 CSS px：rect 是 CSS px，而 innerHeight 是布局 px（两者差一个 html{zoom}）。
+  // 不换算的话，zoom 大时该判断恒真（等于没过滤）、zoom 小时又会把候选全滤掉。
+  const vh = Math.round((window.visualViewport ? visualViewport.height : window.innerHeight) / (parseFloat(document.documentElement.style.zoom) || 1));
   const cands = [...document.querySelectorAll('button')]
     .filter(el => /条评论/.test(norm(el.innerText)))
     .map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top, inView: r.top >= 0 && r.top <= vh }; })
-    .filter(c => c.inView)
+    // 刻意**不**按 inView 过滤：JS .click() 对不在视口内的元素同样有效，
+    // 过滤掉反而会在虚拟化列表换节点的瞬间把候选丢成 0（实测就是这么假失败的）。
+    // 这里只用它排序，优先点视口中心附近的。
     .sort((a, b) => Math.abs(a.top - vh / 2) - Math.abs(b.top - vh / 2));
   const c = cands[${rot} % Math.max(1, cands.length)];
   if (!c) return { err: 'no in-view comment button', total: cands.length };
@@ -69,11 +75,15 @@ const CLICK_NEAREST = rot => `JSON.stringify((()=>{
 // 只点「回答卡片」里的评论按钮（ContentItem-action）——对应大卡弹层（会溢出）
 const CLICK_ANSWER = rot => `JSON.stringify((()=>{
   const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
-  const vh = window.innerHeight;
+  // 可见高度必须换算成 CSS px：rect 是 CSS px，而 innerHeight 是布局 px（两者差一个 html{zoom}）。
+  // 不换算的话，zoom 大时该判断恒真（等于没过滤）、zoom 小时又会把候选全滤掉。
+  const vh = Math.round((window.visualViewport ? visualViewport.height : window.innerHeight) / (parseFloat(document.documentElement.style.zoom) || 1));
   const cands = [...document.querySelectorAll('button')]
     .filter(el => /(^|\\s)ContentItem-action(\\s|$)/.test((el.className||'').toString()) && /条评论/.test(norm(el.innerText)))
     .map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top, inView: r.top >= 0 && r.top <= vh }; })
-    .filter(c => c.inView)
+    // 刻意**不**按 inView 过滤：JS .click() 对不在视口内的元素同样有效，
+    // 过滤掉反而会在虚拟化列表换节点的瞬间把候选丢成 0（实测就是这么假失败的）。
+    // 这里只用它排序，优先点视口中心附近的。
     .sort((a, b) => Math.abs(a.top - vh / 2) - Math.abs(b.top - vh / 2));
   const c = cands[${rot} % Math.max(1, cands.length)];
   if (!c) return { err: 'no in-view answer comment button', total: cands.length };
@@ -101,32 +111,51 @@ const SCROLL_ANSWER_BTN = `JSON.stringify((()=>{
   return { scrolledTo: norm(els[0].innerText), total: els.length };
 })())`;
 
+// 统计「当前在视口内」的评论按钮数量（不限是不是回答卡片）
+const COUNT_INVIEW_ALL = `JSON.stringify((()=>{
+  const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
+  const zoom = parseFloat(document.documentElement.style.zoom) || 1;
+  const vh = Math.round(((window.visualViewport ? visualViewport.height : window.innerHeight)) / zoom);
+  const n = [...document.querySelectorAll('button')]
+    .filter(el => /条评论/.test(norm(el.innerText)))
+    .filter(el => { const t = el.getBoundingClientRect().top; return t >= 0 && t <= vh; }).length;
+  return { inView: n, scrollY: Math.round(window.scrollY) };
+})())`;
+
 // 统计「回答卡片里、当前在视口内」的评论按钮数量
 const COUNT_INVIEW_ANSWER = `JSON.stringify((()=>{
   const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g, ' ').trim();
-  const vh = window.innerHeight;
+  // 可见高度必须换算成 CSS px：rect 是 CSS px，而 innerHeight 是布局 px（两者差一个 html{zoom}）。
+  // 不换算的话，zoom 大时该判断恒真（等于没过滤）、zoom 小时又会把候选全滤掉。
+  const vh = Math.round((window.visualViewport ? visualViewport.height : window.innerHeight) / (parseFloat(document.documentElement.style.zoom) || 1));
   const n = [...document.querySelectorAll('button')]
     .filter(el => /(^|\\s)ContentItem-action(\\s|$)/.test((el.className||'').toString()) && /条评论/.test(norm(el.innerText)))
     .filter(el => { const t = el.getBoundingClientRect().top; return t >= 0 && t <= vh; }).length;
   return { inView: n, scrollY: Math.round(window.scrollY) };
 })())`;
 
+// 虚拟化列表：按固定偏移逐档扫描，先滚到「视口内有评论按钮」的位置再点。
+// 这段原先只有 answer 路径有；普通路径靠的是一个**单位写错、因而恒真**的 inView 判断
+// （rect 是 CSS px、innerHeight 是布局 px），等于没过滤才碰巧能点到。单位修正后
+// 过滤真的生效了，就必须先滚到位 —— 否则全新标签页在滚动到顶时视口内确实一个按钮都没有。
+async function scrollUntilBtnInView(picker) {
+  const COUNT = picker === 'answer' ? COUNT_INVIEW_ANSWER : COUNT_INVIEW_ALL;
+  for (const off of [0, 300, 600, 900, 1300, 1700, 2200, 2800, 3400, 4200, 5000]) {
+    await run(`JSON.stringify((()=>{ window.scrollTo(0, ${off}); return ${off}; })())`);
+    await cdp.sleep(900);
+    const p = await run(COUNT);
+    if (p.inView > 0) return { off, ...p };
+  }
+  return null;
+}
+
 async function openModal(kind) {
   await run(TOP);
   await cdp.sleep(1500);
   const clickExpr = kind === 'answer' ? CLICK_ANSWER : CLICK_NEAREST;
-  if (kind === 'answer') {
-    // 虚拟化列表：scrollIntoView 跳到某处后节点可能被回收，导致「视口内候选=0」。
-    // 改为按固定偏移逐档扫描，命中即停 —— 比依赖某次 scrollIntoView 稳定得多。
-    let hitAt = null;
-    for (const off of [0, 400, 700, 1000, 1400, 1800, 2400, 3000, 3600]) {
-      await run(`JSON.stringify((()=>{ window.scrollTo(0, ${off}); return ${off}; })())`);
-      await cdp.sleep(900);
-      const p = await run(COUNT_INVIEW_ANSWER);
-      if (p.inView > 0) { hitAt = { off, ...p }; break; }
-    }
-    console.log('    滚动扫描 -> ' + JSON.stringify(hitAt || { inView: 0 }));
-  }
+  // 先滚到「视口内有可点按钮」的位置（虚拟化列表必须先滚到位，见上）
+  const hitAt = await scrollUntilBtnInView(kind);
+  console.log('    滚动扫描 -> ' + JSON.stringify(hitAt || { inView: 0 }));
   for (let rot = 0; rot < 8; rot++) {
     const r = await run(clickExpr(rot));
     for (let i = 0; i < 12; i++) {
@@ -152,8 +181,16 @@ async function waitClosed(ms = 3500) {
   try {
     // 关键：在「全新标签页」里测。同一标签页反复跑测试会在会话历史里累积哨兵条目，
     // 使 history.state 基线不可信（曾因此产生大量假失败）。
-    const src = await cdp.findTab(api, DOMAIN) || await cdp.findTab(api);
-    if (!src) throw new Error('未找到知乎回答页标签，请先在真机打开一个回答页');
+    // 而且**必须**是回答页：首页的「N 条评论」是内联展开、不开弹层，
+    // 若静默回退到首页，每一轮都会以「点不到/弹层没开」假失败（今天就这样白排查了一轮）。
+    let src = await cdp.findTab(api, DOMAIN);
+    if (!src) {
+      console.log('  设备上没有回答页标签，自动开一个（' + FALLBACK_ANSWER + '）');
+      const nt = await cdp.openTab(api, FALLBACK_ANSWER);
+      await cdp.sleep(7000);
+      src = { targetId: nt.targetId, url: FALLBACK_ANSWER };
+    }
+    if (!src) throw new Error('未找到知乎回答页标签，且自动打开失败');
     const url = src.url;
     freshTabId = (await api.send('Target.createTarget', { url })).targetId;
     await cdp.sleep(3000);

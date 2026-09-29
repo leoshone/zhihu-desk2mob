@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.3
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.0.4
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；隐藏发布框里会把布局撑高的「同时发布到想法」选项。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -26,6 +26,10 @@
     commentBack: true,
     // 评论弹层：修正定位（卡片顶部对齐 + 宽度收进屏幕）
     fixCommentLayout: true,
+    // 评论区发布框：隐藏「同时发布到想法」选项（radio 图标 + 文案）
+    hideIdeaOption: true,
+    // 评论区发布框：让「发布」按钮完整落在屏幕内（该行内容原本比列宽多 79px）
+    fitPublishButton: true,
   };
 
   // ---- viewport meta ----
@@ -324,9 +328,78 @@
     if (modalEl()) closeCommentModal();
   });
 
+  // ---- hide the "同时发布到想法" option in the comment composer ----
+  // 真机实测：该选项被挤成 0 宽度，7 个汉字竖排成一列（13×155），把整个发布框
+  // 从 122px 撑到 219px。这里连同它左侧的 radio 图标一起隐藏。
+  // 类名是 emotion hash（css-tqtem1），随构建变化，不能作为选择器；改为按文案定位，
+  // 再向上收成「除该文案外不含其它文字」的最大祖先 —— 这样能带上 radio 图标，
+  // 又不会误伤同一行右侧的「发布」按钮（其父层文案里还有「发布」二字）。
+  let ideaBox = null;                       // 缓存已处理节点；SPA 重建后 isConnected 变 false 会自动重找
+  function hideIdeaOption() {
+    if (!CFG.hideIdeaOption) return;
+    if (ideaBox && ideaBox.isConnected) return;
+    ideaBox = null;
+    const Q = '同时发布到想法';
+    const strip = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, '');
+    let snap;
+    try {
+      // 用 XPath 而不是遍历全部元素：原生匹配，代价与命中数成正比
+      snap = document.evaluate("//*[contains(., '" + Q + "')]", document, null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    } catch (e) { return; }
+    let label = null;
+    // 快照按文档顺序（祖先在前），取最后一个「文本恰好等于该文案」的节点 = 最内层
+    for (let i = 0; i < snap.snapshotLength; i++) {
+      const el = snap.snapshotItem(i);
+      if (strip(el.textContent) === Q) label = el;
+    }
+    if (!label) return;
+    let box = label;
+    while (box.parentElement && strip(box.parentElement.textContent).replace(Q, '') === '') {
+      box = box.parentElement;
+    }
+    box.style.setProperty('display', 'none', 'important');
+    ideaBox = box;
+  }
+
+  // ---- 让发布框那一行放得下「发布」按钮 ----
+  // 真机实测：这一行可用宽 225px（clientWidth），内容却需要 304px（scrollWidth）。
+  // 原因是编辑区带知乎自己的 `flex: 0 0 auto`（218px，不收缩），而「发布」按钮又被
+  // 本脚本的 `main button { flex: 0 0 auto }` 钉住也不收缩 —— 两者都不让，按钮就被
+  // 挤出容器 55px 并越过屏幕 20px（62px 只露出 42px）。
+  // 解法：把该行首个子元素（那个不收缩的编辑区）改为可收缩，内容即可收进 225px。
+  // 实测「发布」按钮完整可见（62/62px），且发布框高度不变（94px），工具栏未被压坏。
+  // 定位不依赖 emotion hash（会随构建变）：从「发布」按钮往上找第一个「自身溢出且
+  // 首个子元素占了大半内容宽」的行 —— 这条规则会跳过按钮直属的那个 7px 宽控件容器。
+  let publishShrink = null;                  // 缓存已处理的编辑区；SPA 重建后自动重找
+  function fitPublishButton() {
+    if (!CFG.fitPublishButton) return;
+    if (publishShrink && publishShrink.isConnected) return;
+    publishShrink = null;
+    const norm = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, ' ').trim();
+    const btn = [...document.querySelectorAll('button')].find(b => norm(b.innerText) === '发布');
+    if (!btn) return;
+    let row = btn.parentElement, found = null;
+    while (row && row !== document.body) {
+      const first = row.children[0];
+      const fw = first ? first.getBoundingClientRect().width : 0;
+      // 只处理「窄列」——即手机单列下的情况，避免干扰桌面宽度下的正常布局
+      if (row.clientWidth > 0 && row.clientWidth <= SW &&
+          row.scrollWidth > row.clientWidth + 4 &&
+          row.children.length >= 2 && fw >= 0.6 * row.scrollWidth) { found = row; break; }
+      row = row.parentElement;
+    }
+    if (!found) return;
+    const target = found.children[0];
+    if (!target) return;
+    target.style.setProperty('flex', '1 1 auto', 'important');
+    target.style.setProperty('min-width', '0', 'important');
+    publishShrink = target;
+  }
+
   let timer = null;
   function tick() {
-    hideSideRails(); capFixed(); capWide();
+    hideSideRails(); capFixed(); capWide(); hideIdeaOption(); fitPublishButton();
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 

@@ -14,6 +14,19 @@
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计**不生效**（`innerWidth ≤ 600` 时直接返回） |
 | Node | 18+（用到全局 `WebSocket`） |
 
+## 换机 / 重新开始时的清单
+
+1. `git clone https://github.com/leoshone/zhihu-desk2mob.git` —— 脚本本体、全部文档与测试都在仓库里，`main` 即最新。
+2. 备好 **adb**（在 PATH）与 **Node 18+**；手机开 USB 调试，`adb devices` 能看到设备。
+3. 手机该站点开「桌面版网站」，装好 Kiwi + 暴力猴。
+4. 装脚本：跟着更新用 README 里的 raw main 地址；想固定版本用 Release 附件。
+5. 要跑测试：**在真机上先开好一个专栏页 + 一个回答页标签**（否则测试会退到别的页面、报前置失败
+   —— 见 `scripts/README.md`）。`adb forward tcp:9222 …` 由 `scripts/cdp.js` 加载时自建。
+6. 要发版：`gh auth login`（走设备码网页流程）→ `gh auth setup-git` → 按下面「发布流程」。
+7. **只在本地、不入库**的东西：`.workbuddy/`（本机 agent 记忆与技能联接）、`_tmp/`（一次性探针）、
+   `scripts/shots/`（测试截图）。换机后这些不会跟过来，但**结论都已沉淀进 `docs/`**；
+   常用诊断探针也已收进 `scripts/`（见其 README 的探针表）。
+
 ## 反缩放契约（v1.1.0 起）
 
 - `html{zoom} = visW / SW`（`visW` = `visualViewport.width`），目标是**内容恰好铺满**（`fitRatio = 1`），
@@ -63,8 +76,11 @@
 
 - **`window.__z2mStop()` 是半清理**：只摘样式表、不断内联样式，**不能当「无脚本」基线**。
   判断「某问题是否由某次改动引入」要用**同一轮内的改前/改后对照**。
-- 测试之间的**环境前提**要显式满足（如弹层测试需要回答页；没有时它会自动开一个）。
-  **不要靠静默降级**——那会把环境问题伪装成产品回归。
+- 测试之间的**环境前提**要显式满足，而且**不要指望测试自己补**：缺回答页 / 专栏页时它会退到
+  别的页面并报**前置失败**（如「发布框打不开」），不是自动补开。**不要靠静默降级**——那会把
+  环境问题伪装成产品回归。（本机两次「假失败」都是缺页面造成的，已实测。）
+- **`test-counterzoom` 的 ②③ 会间歇失败**（同一份代码两次运行可能 5/7 或 7/7），
+  原因见「已知未修」第 6 条 —— 看到它失败先重跑一次再判断。
 
 ## 调试顺序（省时间的顺序）
 
@@ -96,10 +112,16 @@
    去掉 rect 全 0 时的假通过），现在它会**如实报**「找不到任何『发布』按钮可见的发布框」。
    要恢复判别力，需要改掉「靠固定偏移扫滚动」的定位方式（页高一变就落空）。
    **与列宽无关**：同页 A/B（只改 `--z2m-w`）里发布按钮在 393 / 358 / 325 下都正常（61×29 可见）。
+6. **`test-counterzoom` 的 ②③ 会间歇失败**（v1.1.0 起，与 v1.1.1 无关）：模拟捏合时浏览器会先
+   经过「最小比例」那一档，脚本按那一档重算出的 zoom 偏大；最后那一发事件又因「捏合不变量」
+   （`visW × scale` 不变）被 return 掉，于是停在「内容比屏幕宽 25%」。
+   试过两种修法（延后 200ms；延后 + 若仍在最小比例就再等一拍）**均无效，已回退**。
+   真机连续捏合不经过那个中间态；即便出现，用户再捏一下就恢复。
+   机理与取舍见 [`v1.1.1-text-scale.md`](v1.1.1-text-scale.md) §3。
 
 ## 待办：弹层定位修正与 zoom 耦合（未完成，优先）
 
-**背景**：`src` 的 `fixCommentModal()` 判断「卡片是否比容器大」，用的是**双方各自的 rect**
+**背景**：`zhihu-desk2mob.user.js` 的 `fixCommentModal()` 判断「卡片是否比容器大」，用的是**双方各自的 rect**
 （CSS px）。但实测：
 
 | | v1.0.7（zoom=1） | v1.0.9（zoom=0.9098） |
@@ -118,6 +140,7 @@
 并确认顶部标题栏（「N 条评论 默认 最新」+ 关闭按钮）不被状态栏或任何元素遮住。
 改完跑 `scripts/test-comment-back.js --installed`（23 条断言）与 `test-modal-layout.js`（受控夹具）。
 
-**排查工具**：`scripts/probe-rightrail.js`（结构对照）、技能里的 `scripts/inspect.js`
-（顶层叠加层 + 关闭入口是否在屏幕内）、`adb exec-out screencap -p` 抓真机屏。
-注意 `Page.captureScreenshot` 在长会话后不可靠。
+**排查工具**：`scripts/probe-rightrail.js`（结构对照）、`scripts/probe-overlay.js` /
+`probe-topalign.js` / `probe-sticky.js`（浮层与吸顶取证）、技能里的
+`skills/kiwi-violentmonkey-cdp/scripts/inspect.js`（顶层叠加层 + 关闭入口是否在屏幕内）、
+`adb exec-out screencap -p` 抓真机屏。注意 `Page.captureScreenshot` 在长会话后不可靠。

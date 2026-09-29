@@ -64,6 +64,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 
 | 文档 | 内容 |
 | --- | --- |
+| `project-conventions.md` | **接手须知**：环境、版本策略、发布约定、验证要求、已知未修 |
 | `v1.0.3-fix-comment-modal.md` | 评论弹层：返回键关闭 + 顶部不可达/右侧裁切的定位修正 |
 | `v1.0.4-fix-comment-composer.md` | 发布框：去掉「同时发布到想法」+ 让「发布」按钮完整可见 |
 | `v1.0.5-fix-avatar-and-modal-publish.md` | 发布框头像被拉高 + 弹层「发布」按钮竖排 |

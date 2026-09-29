@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.8
+// @version      1.0.7
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -44,29 +44,15 @@
 
   // ---- counter-zoom: Kiwi desktop mode locks layout viewport (~980) & scale (~0.4);
   // zoom = 1/scale makes content render at natural size filling the screen exactly.
-  //
-  // 但**不能只算一次**。实测同一个页面连续三次全新加载，终值竟是 3.63922 / 3.31082 / 3.63922
-  // （且 innerWidth 在 1301 与 1430 之间变），说明浏览器/系统的 overview zoom 在加载后仍在变。
-  // 更糟的一种：加载时 scale≈0.275 → 我们反缩放 3.64；随后浏览器把我们之前记录的捏合比例
-  // 恢复成 scale≈1，而**这种变化只触发 visualViewport.resize，不触发 window.resize** ——
-  // 老代码只监听 window.resize，于是永远停在 3.64：整页被放大数倍，用户只能靠双指捏合缩回去。
-  //
-  // 所以规则分三段：
-  //   ① 加载后的稳定窗口（SETTLE_MS）内：跟随 scale 重算（overview zoom 此时还在落定）；
-  //   ② 窗口之后：scale 变化只可能是用户在捏合 —— **不跟随**（跟随会跟用户抢，让他捏不动），
-  //      唯一的例外见 ③；
-  //   ③ 比例回到正常（>= 0.9，桌面反缩放的假设不再成立）：**必须撤掉 zoom**，
-  //      否则就是上面那个「整页被放大」的状态。
-  const SETTLE_MS = 3000;
-  const startedAt = Date.now();
   let curZ = 1;
   function applyZoom() {
     const s = (window.visualViewport && visualViewport.scale) || 1;
     if (s >= 0.9) {
+      // 比例恢复到正常（桌面模式关掉、或用户缩放到 1x）：必须把之前写进去的 zoom 撤掉，
+      // 否则页面会保持 3.8 倍放大 + 桌面宽度排版。早期版本在这里直接 return，留下了这个坑。
       if (curZ !== 1) { curZ = 1; document.documentElement.style.removeProperty('zoom'); }
       return;
     }
-    if (curZ !== 1 && Date.now() - startedAt > SETTLE_MS) return;   // 稳态下不跟用户的捏合
     const Z = Math.min(4, Math.max(1, 1 / s));
     if (Math.abs(Z - curZ) < 0.02) return;
     curZ = Z;
@@ -75,8 +61,6 @@
   applyZoom();
   [300, 1000, 2500].forEach(t => setTimeout(applyZoom, t));   // overview zoom settles late
   window.addEventListener('resize', applyZoom);
-  // 缩放变化（含浏览器恢复已记录的捏合比例）只在 visualViewport 上触发，window 不触发
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', applyZoom);
 
   // ---- CSS ----
   const st = document.createElement('style');

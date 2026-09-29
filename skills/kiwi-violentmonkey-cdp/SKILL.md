@@ -77,6 +77,34 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
 - **判断某条规则该不该加 `!important` 时，先想它的作用域**：`height: auto !important` 这种
   「为了防溢出」的规则，只在内容图上需要；一旦无差别施加，站点自己写的固定尺寸就全被顶掉。
 
+## 发布 Release（把脚本作为附件分发）
+
+改完推送后，用 `gh` 建 Release：更新记录写进 release note，脚本本体作为附件随版本发布。
+
+```bash
+# 1) 抽出版本对应的脚本（用完即弃的临时文件）
+git show <commit>:xxx.user.js > /tmp/xxx.user.js
+
+# 2) 建 Release（tag 落在该版本的提交上）
+gh release create v1.2.3 /tmp/xxx.user.js \
+  --target "$(git rev-parse <commit>)" \
+  --title "v1.2.3 — 一句话概括" \
+  --notes-file notes.md
+```
+
+要点（都踩过）：
+- **`--target` 只认完整 40 位 SHA**（或分支/tag 名）。传短 SHA 会报
+  `HTTP 422 Release.target_commitish is invalid` —— 用 `git rev-parse <短SHA>` 展开即可。
+- **附件名与脚本名保持一致**，这样每个 Release 都有同名资产，下载路径可预测：
+  `https://github.com/<owner>/<repo>/releases/download/<tag>/<name>.user.js`
+- 把 `sha256sum` 的结果写进 note，方便使用者校验下载到的文件。
+- 补历史的 Release 时，tag 要指向**当时那个提交**（`git show <commit>:<file>` 就是那版的脚本），
+  不要一律指向 HEAD，否则附件内容与版本号对不上。
+- **暴力猴的更新检查按「安装时的 URL」走**：从 raw 地址装才会自动更新；从 Release 附件装的
+  不会（附件 URL 绑死某个 tag）。所以文档里要区分「raw 地址 = 跟着更新」「Release 附件 = 固定版本」。
+- 验证资产真的可下载且版本正确：`curl -sL <asset-url> | grep @version`，并与本地抽取的
+  `cmp` 逐字节比对。
+
 ## 参考
 - `references/cdp-kit.md`：`attach()` / `install()` / `verify()` 实现、暴力猴扩展 ID、排错速查，
   以及「真机上某个浮层不可用」的完整取证流程样板。

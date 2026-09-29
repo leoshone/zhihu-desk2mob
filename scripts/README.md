@@ -34,8 +34,12 @@ node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢�
 node test-idea-option.js  --installed    # 发布框：隐藏「同时发布到想法」+ 发布按钮完整可见
 node test-avatar.js       --installed    # 发布框：头像不被拉高、与评论列表头像同尺寸
 node test-rightrail.js    --installed    # 首页右边缘：侧栏/页脚残留已清除（且正文列没被误伤）
+node test-counterzoom.js  --installed    # 反缩放：跟得住加载期变化，且不跟用户捏合抢
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 ```
+
+> `test-counterzoom` 会临时改写页面缩放（走 CDP `Emulation.setPageScaleFactor`，仅本会话有效），
+> 结束会重载页面；建议放在整套测试的**最后**跑。
 
 去掉 `--installed` 则改为「重载页面后注入 `../src/zhihu-desk2mob.user.js`」，
 适合改动脚本后快速迭代。

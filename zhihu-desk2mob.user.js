@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.2
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.0.3
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -17,6 +17,16 @@
   if (window.__z2mStop) { try { window.__z2mStop(); } catch (e) {} }
 
   const SW = Math.max(320, Math.min(screen.width || 393, 500));
+
+  // ============================================================
+  // 配置开关
+  // ============================================================
+  const CFG = {
+    // 评论弹层：点开时压入一条哨兵历史，返回键（手势/按钮）关闭弹层
+    commentBack: true,
+    // 评论弹层：修正定位（卡片顶部对齐 + 宽度收进屏幕）
+    fixCommentLayout: true,
+  };
 
   // ---- viewport meta ----
   let vp = document.querySelector('meta[name="viewport"]');
@@ -116,73 +126,13 @@
     overflow: visible !important;
   }
 
-  /* ---- unify content-block widths: answer column should match the question block ---- */
-  .QuestionPage > div { padding-left: 0 !important; padding-right: 0 !important; }
-  .QuestionAnswer-content, .AnswerCard, .Question-mainColumn, .ListShortcut,
-  .QuestionAnswers-answers, .ContentItem, .Comments-container, .CommentItem {
-    padding-left: 0 !important; padding-right: 0 !important;
-    margin-left: 0 !important; margin-right: 0 !important;
-    width: auto !important; max-width: 100% !important;
-  }
-
-  /* ---- stop text being truncated: nothing may exceed the 393px column ----
-     Zhihu's desktop blocks are consistently ~10-20px too wide (sticky action bar,
-     squeezed question title, long unbreakable tokens), and the body's overflow-x:hidden
-     then crops the overflow at the screen edge. Force the box model + clamp everything. */
-  .QuestionHeader, .QuestionHeader *, .App-main *, main * { box-sizing: border-box !important; }
-  .QuestionHeader, .QuestionHeader-main, .QuestionHeader-content, .QuestionHeader-footer,
-  .QuestionHeader-footer-inner, .QuestionHeaderActions,
-  .QuestionAnswer-content, .AnswerCard, .Question-mainColumn, .ListShortcut,
-  .QuestionAnswers-answers, .ContentItem, .RichContent, .RichText, .Comments-container,
-  .CommentItem, .MoreAnswers, .List-item, .Card, .Post-content, .Post-RichText {
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-  }
-  .RichText, .RichContent, .Post-RichText, .CommentContent {
-    overflow-wrap: break-word !important; word-break: break-word !important;
-  }
-  /* question header: stack vertically so the title gets the full column width
-     (Zhihu keeps a side widget beside it, squeezing the title to ~150px) */
-  .QuestionHeader, .QuestionHeader-content, .PageHeader { display: flex !important; flex-direction: column !important; }
-  .QuestionHeader-content, .PageHeader, .QuestionHeader-main, .QuestionHeader-side {
-    width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
-    display: block !important; padding-left: 0 !important; padding-right: 0 !important;
-  }
-  .QuestionHeader-title { white-space: normal !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; flex: 0 0 auto !important; }
-  /* sticky action bar (赞同/评论/分享): keep it inside the column on BOTH sides */
-  .ContentItem-actions {
-    position: sticky !important; left: 0 !important; right: 0 !important;
-    width: 100% !important; max-width: 100% !important;
-    margin-left: 0 !important; margin-right: 0 !important;
-    box-sizing: border-box !important; padding-left: 10px !important; padding-right: 10px !important;
-  }
-
-  /* ---- image / media viewer: Zhihu positions it in desktop coords, so it lands off-screen.
-         We detect those layers (see fixViewers) and force them centered on the phone screen. ---- */
-  .z2m-viewer {
-    position: fixed !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
-    margin: auto !important;
-    /* transform:none !important is the key: Zhihu's viewer re-writes style.transform
-       (translateX/Y off-screen in desktop coords) on every animation frame; a stylesheet
-       !important beats that inline non-important value no matter how often it's re-set. */
-    transform: none !important;
-    width: auto !important; height: auto !important;
-    /* px caps, NOT vw/vh: in Kiwi desktop mode 100vw = the 1430px layout viewport,
-       so vw caps are no-ops. --z2m-w is the real 393px column. */
-    max-width: var(--z2m-w) !important;
-    z-index: 2147483646 !important;
-  }
-  .z2m-viewer:not(img) {
-    display: flex !important; align-items: center !important; justify-content: center !important;
-  }
-  .z2m-viewer img, .z2m-viewer .origin_image {
-    max-width: 94% !important; max-height: 92% !important;
-    width: auto !important; height: auto !important; object-fit: contain !important;
-  }
-  .z2m-backdrop {
-    position: fixed !important; inset: 0 !important;
-    width: 100vw !important; height: 100vh !important; z-index: 2147483645 !important;
-  }
+  /* ---- 评论区弹层：只动「溢出」这一种病态情形 ----
+     治的是桌面坐标下的两处溢出，不改变正常弹窗（不溢出的弹窗仍由知乎自己居中）：
+       1) 卡片高于容器时，容器的 flex 垂直居中会把卡片顶部推到屏幕外，
+          且溢出部分落在滚动原点之上，向上滚不回来 —— 标题栏/最初几条评论永久不可达；
+       2) 卡片宽于容器时右侧被裁切。
+     这两条都只在「卡片越界」时命中，因此对知乎其它弹窗无副作用。 */
+  .Modal-content { box-sizing: border-box !important; }
   `;
   (document.head || document.documentElement).appendChild(st);
 
@@ -232,71 +182,172 @@
     });
   }
 
-  // ---- center the image/media viewer (Zhihu layers it as position:absolute in desktop coords) ----
-  function tagViewer(el) {
-    el.classList.add('z2m-viewer');
-    const s = el.style; // inline !important beats Zhihu's own inline !important (last-writer-wins)
-    // visible-viewport px caps (vw/vh are useless here: they resolve against the 1430px layout viewport)
-    const vv = window.visualViewport;
-    const visH = Math.max(480, Math.round(vv ? vv.height * vv.scale : 0) ||
-      Math.round(SW * (screen.height || 1560) / (screen.width || SW)));
-    s.setProperty('position', 'fixed', 'important');
-    s.setProperty('left', '0', 'important'); s.setProperty('top', '0', 'important');
-    s.setProperty('right', '0', 'important'); s.setProperty('bottom', '0', 'important');
-    // margin:auto centers a replaced element (img) inside inset:0; harmless (0) for stretched divs
-    s.setProperty('margin', 'auto', 'important'); s.setProperty('transform', 'none', 'important');
-    s.setProperty('max-width', SW + 'px', 'important'); s.setProperty('max-height', visH + 'px', 'important');
-    s.setProperty('width', 'auto', 'important'); s.setProperty('height', 'auto', 'important');
-    s.setProperty('z-index', '2147483646', 'important');
-    if (el.tagName === 'IMG') s.setProperty('object-fit', 'contain', 'important');
-    else { s.setProperty('display', 'flex', 'important'); s.setProperty('align-items', 'center', 'important'); s.setProperty('justify-content', 'center', 'important'); }
+  // ============================================================
+  // 评论区弹层（.Modal-content）：返回键关闭 + 溢出定位修正
+  // ------------------------------------------------------------
+  // 真机（Kiwi 桌面模式 + 1080×2400）实测：
+  //   · 弹层结构：body > … > div(fixed, z=203, flex/column, justify-content:center)
+  //                    > 卡片外壳 > .Modal-content
+  //   · 容器尺寸≈视口（实测 373×734；滚动条/视口变化时会变成 393×773），
+  //     卡片尺寸来自知乎的桌面坐标 CSS：实测 688×1832。
+  //   · 卡片 1832px > 容器 734px，flex 垂直居中 → 卡片上移 549px（= (734-1832)/2），
+  //     标题栏与最初几条评论落在容器滚动原点之上，滚不回来；
+  //   · 卡片 688px > 容器 373px → 右侧约 315px 被裁掉；
+  //   · 「关闭」按钮被知乎放在卡片右外侧（right:-60px），桌面坐标下本就在屏幕外；
+  //   · 打开弹层不压入任何历史记录，而进入回答页时 history.length 常为 1，
+  //     此时按返回会直接离开知乎，而不是关闭弹层。
+  //   · 卡片高度取决于已加载的评论条数，所以垂直溢出并非每次都能复现 ——
+  //     该分支已用受控夹具单测覆盖（scripts/test-modal-layout.js）。
+  // 因此这里：① 打开时压入一条哨兵历史，返回键 popstate 时关闭弹层；
+  //           ② 只在「卡片越界」时把容器改为顶部对齐、把卡片收进屏幕。
+  // ============================================================
+  const MODAL_SEL = '.Modal-content';
+  const CLOSE_SEL = '[aria-label="关闭"]';
+
+  let guardPushed = false;   // 哨兵历史条目是否处于已压入状态
+  let selfPop = false;       // 标记「由脚本主动 history.back()」，用于区分用户返回
+  let modalWasOpen = false;  // 上一拍的弹层开关状态
+
+  function modalEl() { return document.querySelector(MODAL_SEL); }
+
+  // 定位弹层的三层结构：卡片(Modal-content) / 容器(承载它的固定定位遮罩) / 是否需要修正
+  function locateModal() {
+    const mc = modalEl();
+    if (!mc) return null;
+    let layer = mc;
+    while (layer && layer !== document.body) {
+      const cs = getComputedStyle(layer);
+      if (cs.position === 'fixed' && (parseInt(cs.zIndex, 10) || 0) >= 50) break;
+      layer = layer.parentElement;
+    }
+    if (!layer || layer === document.body) layer = null;
+    // 卡片：从 Modal-content 往上，第一层「有限高」的即为卡片外壳
+    let card = mc.parentElement;
+    while (card && card !== layer && card !== document.body) {
+      if (getComputedStyle(card).maxHeight !== 'none') break;
+      card = card.parentElement;
+    }
+    if (!card || card === layer || card === document.body) card = null;
+    return { mc, layer, card };
   }
-  // Only layers that actually hold the viewed image (the <img> itself, or a wrapper
-  // containing one). Zhihu also appends empty control bars — forcing those fullscreen
-  // would put a transparent click-eating overlay over the viewer.
-  function looksLikeViewer(el) {
-    if (el.tagName === 'IMG') return true;
-    if (el.querySelector && el.querySelector('img')) return true;
-    return false;
-  }
-  function fixViewers() {
-    const body = document.body; if (!body) return;
-    const br = body.getBoundingClientRect();
-    const refRight = br.right, refCx = br.left + br.width / 2; // visible content bounds (393px column)
-    const kids = [...body.children];
-    for (const el of kids) {
-      if (el.classList.contains('z2m-viewer') || el.classList.contains('z2m-backdrop')) continue;
-      const cs = getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-      if (cs.position !== 'absolute' && cs.position !== 'fixed') continue;
-      const r = el.getBoundingClientRect();
-      if (r.width < 120) continue;
-      // element extends past the visible content column -> a desktop-coord positioned viewer layer
-      if (r.right > refRight + 5 || r.left > refCx + 40) {
-        if (looksLikeViewer(el)) tagViewer(el);
+
+  // 修正弹层定位：只在「卡片比容器更大」这种越界情形下动手
+  function fixCommentModal() {
+    if (!CFG.fixCommentLayout) return;
+    const found = locateModal();
+    if (!found) return;
+    const { layer, card } = found;
+    if (!layer) return;
+    const lr = layer.getBoundingClientRect();
+    const cr = (card || layer).getBoundingClientRect();
+
+    // ① 卡片高于容器：容器不能再垂直居中，否则顶部溢出且不可滚回
+    if (card && cr.height > lr.height + 1) {
+      if (layer.style.getPropertyValue('justify-content') !== 'flex-start') {
+        layer.style.setProperty('justify-content', 'flex-start', 'important');
       }
-      else if (cs.position === 'fixed' && r.width >= br.width * 0.8 && r.height >= br.height * 0.8) el.classList.add('z2m-backdrop');
+    }
+    // ② 卡片宽于容器：收进容器，消除右侧裁切
+    if (card && cr.width > lr.width + 1) {
+      if (card.style.getPropertyValue('max-width') !== '100%') {
+        card.style.setProperty('max-width', '100%', 'important');
+        card.style.setProperty('width', 'auto', 'important');
+        card.style.setProperty('align-self', 'stretch', 'important');
+      }
     }
   }
 
+  // 压入一条哨兵历史：返回键会先消费它，而不是直接离开知乎
+  function pushGuard() {
+    if (guardPushed) return;
+    try {
+      history.pushState({ z2mComment: 1 }, '', location.href);
+      guardPushed = true;
+    } catch (e) { guardPushed = false; }
+  }
+
+  // 弹层被别的方式关掉（点关闭/收起）时撤掉哨兵，避免用户多按一次返回。
+  // 安全点：只有当哨兵仍是「当前历史条目」时才回退它。若期间用户已经导航
+  // （例如在弹层里点进了某个链接），当前条目已经不是哨兵，此时 history.back()
+  // 会把用户的导航撤销掉，所以必须跳过。
+  function dropGuard() {
+    if (!guardPushed) return;
+    guardPushed = false;
+    const cur = history.state;
+    if (!cur || cur.z2mComment !== 1) return;
+    selfPop = true;
+    try { history.back(); } catch (e) { selfPop = false; }
+  }
+
+  // 关闭弹层：优先点知乎自己的「关闭」按钮（.click() 不受命中测试限制，
+  // 该按钮即使被放在屏幕外也能生效）；否则补一发 Escape。
+  function closeCommentModal() {
+    const found = locateModal();
+    if (!found) return;
+    const scope = found.layer || found.mc;
+    const btn = scope.querySelector(CLOSE_SEL) || document.querySelector(CLOSE_SEL);
+    if (btn) { try { btn.click(); } catch (e) {} }
+    else { sendEscape(); }
+    // 兜底：一拍之后若仍开着，再补一发 Escape
+    setTimeout(() => {
+      if (document.querySelector(MODAL_SEL)) sendEscape();
+    }, 350);
+  }
+
+  function sendEscape() {
+    const t = document.activeElement || document.body;
+    const ev = new KeyboardEvent('keydown', {
+      key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true,
+    });
+    try { t.dispatchEvent(ev); } catch (e) {}
+    try { document.dispatchEvent(ev); } catch (e) {}
+  }
+
+  // 每拍同步弹层状态：处理「打开 → 压哨兵 / 关闭 → 撤哨兵」
+  function syncCommentModal() {
+    const open = !!modalEl();
+    if (open && !modalWasOpen) {
+      modalWasOpen = true;
+      if (CFG.commentBack) pushGuard();
+    } else if (!open && modalWasOpen) {
+      modalWasOpen = false;
+      dropGuard();
+    }
+    if (open) fixCommentModal();
+  }
+
+  // 返回键：消费哨兵 → 关闭弹层，而不是离开问答页
+  window.addEventListener('popstate', () => {
+    if (selfPop) { selfPop = false; return; }
+    if (!guardPushed) return;
+    guardPushed = false;
+    if (modalEl()) closeCommentModal();
+  });
+
   let timer = null;
   function tick() {
-    // stray horizontal scroll offset shifts the 393px column left (blocks land at x<0)
-    if (window.scrollX) window.scrollTo(0, window.scrollY);
-    hideSideRails(); capFixed(); capWide(); fixViewers();
+    hideSideRails(); capFixed(); capWide();
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 
-  const obs = new MutationObserver(schedule);
+  // 弹层开合要快于 tick 的 300ms 去抖：直接挂在 observer 回调里同步，
+  // 避免用户刚点开评论就按返回、哨兵还没压入。
+  const obs = new MutationObserver(() => { syncCommentModal(); schedule(); });
   function start() {
     obs.observe(document.body, { childList: true, subtree: true, attributes: false });
-    tick(); fixViewers();
+    tick(); syncCommentModal();
     window.addEventListener('resize', () => {
       document.documentElement.style.setProperty('--z2m-w', Math.max(320, Math.min(screen.width || 393, 500)) + 'px');
     });
   }
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 
-  window.__z2mStop = () => { obs.disconnect(); clearTimeout(timer); st.remove(); };
+  // 兜底轮询：防止某些「就地切换可见性」的开合漏掉 MutationObserver
+  const poll = setInterval(syncCommentModal, 800);
+
+  window.__z2mStop = () => {
+    obs.disconnect(); clearTimeout(timer); clearInterval(poll); st.remove();
+  };
   window.__z2mTick = tick;
+  window.__z2mSync = syncCommentModal;
 })();

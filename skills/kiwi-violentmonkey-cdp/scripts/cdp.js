@@ -33,8 +33,12 @@ function connectWs(url, timeout = 6000) {
       on: (e, cb) => evh.set(e, cb),
       close: () => { try { ws.close(); } catch (e) {} },
     };
-    ws.onopen = () => res(api);
-    ws.onerror = e => { if (pend.size === 0) rej(new Error('ws onerror ' + (e && e.message))); };
+    // 超时定时器必须连上就清掉：不清的话它会一直挂在事件循环里，
+    // 既让 Node 进程退出被拖住最长 timeout，也会在已 resolve 后再调一次 rej（虽无害但脏）。
+    const timer = setTimeout(() => rej(new Error('ws timeout')), timeout);
+    const done = () => clearTimeout(timer);
+    ws.onopen = () => { done(); res(api); };
+    ws.onerror = e => { if (pend.size === 0) { done(); rej(new Error('ws onerror ' + (e && e.message))); } };
     ws.onmessage = m => {
       let j; try { j = JSON.parse(m.data); } catch (e) { return; }
       if (j.id && pend.has(j.id)) {
@@ -44,7 +48,6 @@ function connectWs(url, timeout = 6000) {
         try { evh.get(j.method)(j.params || {}); } catch (e) {}
       }
     };
-    setTimeout(() => rej(new Error('ws timeout')), timeout);
   });
 }
 

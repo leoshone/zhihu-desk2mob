@@ -1,8 +1,9 @@
 // inspect.js — 用 elementsFromPoint 判定「屏幕上真实的顶层叠加层」，并给出稳定识别特征
-// 用法: node inspect.js [--tab <URL 子串>]   只观察
-//       node inspect.js reload              先重载页面再观察
-//       node inspect.js open                点开站点上的入口后再观察（入口规则见 OPEN_ENTRY）
+// 用法: node inspect.js [--tab <URL 子串>] [--out <png 路径>]   只观察
+//       node inspect.js reload                                先重载页面再观察
+//       node inspect.js open                                  点开站点上的入口后再观察（入口见 OPEN_ENTRY）
 //   --tab 传任意 URL 子串，用于在多标签页里挑目标；不传则取第一个页面标签。
+//   --out 截图路径，默认写到当前工作目录的 inspect-<命令>.png（别写死绝对路径，技能要能搬走用）。
 //
 // 输出：视口与缩放、若干采样点的命中栈与祖先链、页面上各 Modal 类元素的「活性」
 // （自身或祖先是否 display:none）与关闭按钮位置 —— 用来回答
@@ -10,9 +11,11 @@
 'use strict';
 const cdp = require('./cdp');
 
-// `open` 子命令要点的入口 —— 换站点时改这里（默认规则对应知乎的「N 条评论」按钮）
-const OPEN_ENTRY = { textRe: /^\d+ ?条评论$/, clsRe: /(^|\s)ContentItem-action(\s|$)/ };
+// `open` 子命令要点的入口 —— **换站点时改这里**（默认规则对应知乎的「N 条评论」按钮）。
+// 只写正则源串，注入页面时用 new RegExp 重建，避免手工转义。
+const OPEN_ENTRY = { text: '^\\d+ ?条评论$', cls: '(^|\\s)ContentItem-action(\\s|$)' };
 const TAB_SUBSTR = process.argv.includes('--tab') ? (process.argv[process.argv.indexOf('--tab') + 1] || '') : '';
+const OUT_PATH = process.argv.includes('--out') ? (process.argv[process.argv.indexOf('--out') + 1] || '') : '';
 
 const INSPECT_JS = `JSON.stringify((()=>{
   const zoomF = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
@@ -54,7 +57,9 @@ const INSPECT_JS = `JSON.stringify((()=>{
 })())`;
 
 (async () => {
-  const cmd = process.argv[2] || '';
+  // 只有「不以 -- 开头」的 argv[2] 才算子命令；否则 `inspect.js --tab x` 会把 --tab
+  // 当成命令名，截图文件名变成 inspect---tab.png
+  const cmd = (process.argv[2] && !process.argv[2].startsWith('--')) ? process.argv[2] : '';
   const api = await cdp.browserApi();
   try {
     const tab = await cdp.findTab(api, TAB_SUBSTR) || await cdp.findTab(api);
@@ -66,9 +71,12 @@ const INSPECT_JS = `JSON.stringify((()=>{
       console.log('reloaded');
     }
     if (cmd === 'open') {
+      // 入口规则来自上面的 OPEN_ENTRY（原来这里又内联写了一份，改 OPEN_ENTRY 其实不生效）
       const clk = await cdp.evalJson(api, `JSON.stringify((()=>{
         const norm = s => (s||'').replace(/[\\s\\u200b\\u200c\\u200d\\ufeff]+/g,' ').trim();
-        const els = [...document.querySelectorAll('button')].filter(el => /(^|\\s)ContentItem-action(\\s|$)/.test((el.className||'').toString()) && /^\\d+ ?条评论$/.test(norm(el.innerText)));
+        const clsRe = new RegExp(${JSON.stringify(OPEN_ENTRY.cls)});
+        const textRe = new RegExp(${JSON.stringify(OPEN_ENTRY.text)});
+        const els = [...document.querySelectorAll('button')].filter(el => clsRe.test((el.className||'').toString()) && textRe.test(norm(el.innerText)));
         if (!els.length) return { err: 'none' };
         const n = norm(els[0].innerText); els[0].scrollIntoView({block:'center'}); els[0].click(); return { ok: n };
       })())`, sid);
@@ -77,6 +85,8 @@ const INSPECT_JS = `JSON.stringify((()=>{
     }
     const d = await cdp.evalJson(api, INSPECT_JS, sid);
     console.log(JSON.stringify(d, null, 2));
-    await cdp.shot(api, sid, 'D:/AiSpaces/Work/2026-09-29-10-18-12/shots/inspect-' + (cmd || 'plain') + '.png');
+    const out = OUT_PATH || ('inspect-' + (cmd || 'plain') + '.png');
+    const saved = await cdp.shot(api, sid, out);
+    console.log('截图:', saved || '(跳过)');
   } finally { api.close(); }
 })().catch(e => { console.error('ERR', e.message); process.exit(1); });

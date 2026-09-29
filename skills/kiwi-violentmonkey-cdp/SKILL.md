@@ -55,7 +55,7 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
 - **SPA 会话状态污染测试**：站点（如知乎）会把「评论展开」存会话状态——刷新后可能恢复为内联评论而非弹层。测试弹层路径前先点「收起评论」归零，或直接断言两种形态分别处理。
 - **复杂测试脚本别用 heredoc**：bash heredoc 内嵌 JS 模板字符串/反引号/单引号极易炸（`unexpected EOF`）。用 Write 工具写 `.js` 文件再 `node` 执行。同理，`node -e "..."` 内联写含正则/引号的 JS 也会被反斜杠转义搞坏 —— 一律写成文件。
 - **模板字符串里的正则要写 `\\s`**：在 `` `...` `` 里写 `/\s+/`，JS 会把单反斜杠当**无效转义**降级成字面量 `s`（`/\s/` → `/s/`），正则静默失效、筛选结果为空。必须写 `/\\s+/`。
-- **`getBoundingClientRect` 与 CSS px 同坐标系，但 `elementFromPoint` 用「布局坐标」**：根 `zoom` 下实测——固定元素 `left:100px` 的 rect.x 就是 100（同坐标系）；而 `elementFromPoint` 要传 `rect × zoom` 才命中（传 rect 原值会命中别的元素，且 `elementFromPoint` 明确不是「视觉坐标」·实测 `visualViewport` 给出的宽高也是布局像素，与 rect 不可直接比较）。`dialog.js` 里踩过一次：按 visualViewport 面积阈值筛叠加层时单位不统一，导致「找不到弹层」。
+- **`getBoundingClientRect` 与 CSS px 同坐标系，但 `elementFromPoint` 用「布局坐标」**：根 `zoom` 下实测——固定元素 `left:100px` 的 rect.x 就是 100（同坐标系）；而 `elementFromPoint` 要传 `rect × zoom` 才命中（传 rect 原值会命中别的元素，且 `elementFromPoint` 明确不是「视觉坐标」·实测 `visualViewport` 给出的宽高也是布局像素，与 rect 不可直接比较）。**踩过**：按 `visualViewport` 面积阈值筛叠加层时两套单位混用，结果「找不到弹层」。
 - **长会话后 `Page.captureScreenshot` 会持续超时**（换新标签页前一直挂）：改用 `adb exec-out screencap -p > x.png` 抓真机屏幕 —— 更接近用户实际所见，且不受 CDP 会话状态影响。细节核对用 Pillow 裁剪放大（装到 managed venv：`python.exe -m venv .../envs/default && pip install Pillow`）。
 - **别复用同一标签页跑多轮测试**：反复 `pushState` 会在会话历史里留下未消费的条目，`history.state` 基线随即不可信，症状是一堆莫名其妙的假失败。用 `Target.createTarget` 开**新标签页**测，结束再 `Target.closeTarget`。
 - **`history.length` 不能用来判断 pushState 是否生效**：`back()` 不会让 length 减少（前进项仍保留），而新的 `pushState` 会截断前进项（length 可能不变）。权威判据是在 `history.state` 里放自己的标记对象。

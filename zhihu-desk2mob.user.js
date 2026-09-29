@@ -1,14 +1,15 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.5
+// @version      1.0.6
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
 // @grant        none
+// @updateURL    https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.user.js
+// @downloadURL  https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.user.js
 // ==/UserScript==
-// zhihu2mob adaptation payload v1 — becomes the userscript body.
 (function () {
   'use strict';
   // Only adapt when Zhihu served its DESKTOP layout (Kiwi "桌面版网站" ON).
@@ -16,7 +17,8 @@
   if ((window.innerWidth || 0) <= 600) return;
   if (window.__z2mStop) { try { window.__z2mStop(); } catch (e) {} }
 
-  const SW = Math.max(320, Math.min(screen.width || 393, 500));
+  // 窄列宽度。会随屏幕旋转变化，故不是常量 —— resize 时更新（消费者的阈值也跟着变）。
+  let SW = Math.max(320, Math.min(screen.width || 393, 500));
 
   // ============================================================
   // 配置开关
@@ -45,7 +47,12 @@
   let curZ = 1;
   function applyZoom() {
     const s = (window.visualViewport && visualViewport.scale) || 1;
-    if (s >= 0.9) return;                 // already normal (no desktop-mode shrink)
+    if (s >= 0.9) {
+      // 比例恢复到正常（桌面模式关掉、或用户缩放到 1x）：必须把之前写进去的 zoom 撤掉，
+      // 否则页面会保持 3.8 倍放大 + 桌面宽度排版。早期版本在这里直接 return，留下了这个坑。
+      if (curZ !== 1) { curZ = 1; document.documentElement.style.removeProperty('zoom'); }
+      return;
+    }
     const Z = Math.min(4, Math.max(1, 1 / s));
     if (Math.abs(Z - curZ) < 0.02) return;
     curZ = Z;
@@ -82,7 +89,6 @@
     height: auto !important;
   }
   .AppHeader ~ div[style], .AppHeader + div { height: auto !important; }
-  header div { min-width: 0 !important; }
   .AppHeader-inner, .AppHeader-Tabs, .AppHeader-profile, .AppHeader-searchBar {
     max-width: 100% !important; min-width: 0 !important; width: auto !important;
   }
@@ -150,20 +156,46 @@
   `;
   (document.head || document.documentElement).appendChild(st);
 
+  // ============================================================
+  // 扫描记忆化
+  // ------------------------------------------------------------
+  // capFixed 扫 `body *`、hideSideRails 扫 `main div`、capWide 扫 main 里的各块 —— 三者都要
+  // 对每个元素调 getComputedStyle / getBoundingClientRect（强制样式计算）。真机实测单次
+  // tick 因此要 20~44ms：capFixed 7.9~21.2ms、hideSideRails 7.7~11.0ms、capWide 3.2~4.0ms。
+  // 而 tick 由 300ms 去抖驱动，滚动长页面时实测约 2.3 次/秒 —— 即滚动期间每秒 46~100ms
+  // 花在主线程上，且每次都超过一帧。
+  // 记下「这一拍已经看过的元素」，下一拍直接跳过，只有新出现的节点才付代价。
+  // 代价：元素**先在 DOM 里、之后才变大 / 才变成 fixed** 的情形会被漏掉，因此每
+  // SWEEP_EVERY 拍做一次全量重扫，屏幕尺寸变化（resize）时也清空重扫。
+  // ============================================================
+  const SWEEP_EVERY = 10;
+  let sweepCount = 0;
+  let seenFixed = new WeakSet(), seenRailRows = new WeakSet(), seenWide = new WeakSet();
+  function clearScanMemo() {
+    seenFixed = new WeakSet(); seenRailRows = new WeakSet(); seenWide = new WeakSet();
+  }
+
   // ---- hide side rails ----
   function hideSideRails() {
     document.querySelectorAll('.GlobalSideBar, .Question-sideColumn, [class*="SideBar"]').forEach(e => { e.style.display = 'none'; });
     // generic: Zhihu puts content FIRST, rail AFTER. Hide non-first flex children
     // that look like a side rail purely by their own size (w 80-420, tall >=300).
     document.querySelectorAll('main div').forEach(row => {
+      if (seenRailRows.has(row)) return;
+      seenRailRows.add(row);
       const cs = getComputedStyle(row);
       if (!cs.display.includes('flex') || cs.flexDirection.startsWith('column')) return;
+      const rowR = row.getBoundingClientRect();
       const kids = [...row.children].filter(k => k.getBoundingClientRect().height > 0);
       if (kids.length < 2) return;
       kids.forEach((k, i) => {
         if (i === 0) return;
         const r = k.getBoundingClientRect();
-        if (r.width >= 80 && r.width <= 420 && r.height >= 300 && getComputedStyle(k).display !== 'none') {
+        // 除尺寸外再要求它落在该行的**右半边**：侧栏在右、正文在左，
+        // 这样「左右两栏都在 80~420 宽」的版式不会被连正文一起隐藏。
+        if (r.width >= 80 && r.width <= 420 && r.height >= 300 &&
+            r.left >= rowR.left + rowR.width / 2 &&
+            getComputedStyle(k).display !== 'none') {
           k.style.display = 'none';
         }
       });
@@ -173,6 +205,8 @@
   // ---- cap fixed-position strays ----
   function capFixed() {
     document.querySelectorAll('body *').forEach(e => {
+      if (seenFixed.has(e)) return;
+      seenFixed.add(e);
       let cs;
       try { cs = getComputedStyle(e); } catch (err) { return; }
       if (cs.position !== 'fixed' || cs.display === 'none') return;
@@ -190,6 +224,8 @@
   // ---- cap wide in-flow blocks ----
   function capWide() {
     document.querySelectorAll('main div, main section, main article, main ul, main table, main figure').forEach(e => {
+      if (seenWide.has(e)) return;
+      seenWide.add(e);
       if (e.closest('pre')) return;
       const r = e.getBoundingClientRect();
       if (r.width > SW + 2) e.style.maxWidth = '100%';
@@ -339,8 +375,8 @@
   });
 
   // ---- hide the "同时发布到想法" option in the comment composer ----
-  // 真机实测：该选项被挤成 0 宽度，7 个汉字竖排成一列（13×155），把整个发布框
-  // 从 122px 撑到 219px。这里连同它左侧的 radio 图标一起隐藏。
+  // 真机实测：该选项包裹层被挤成 0 宽，7 个汉字竖排成一列（文案 13×121~155，随页面状态），
+  // 把发布框从 94px 撑到 185px（另一次实测到 219px）。这里连同它左侧的 radio 图标一起隐藏。
   // 类名是 emotion hash（css-tqtem1），随构建变化，不能作为选择器；改为按文案定位，
   // 再向上收成「除该文案外不含其它文字」的最大祖先 —— 这样能带上 radio 图标，
   // 又不会误伤同一行右侧的「发布」按钮（其父层文案里还有「发布」二字）。
@@ -349,11 +385,15 @@
     if (!CFG.hideIdeaOption) return;
     if (ideaBox && ideaBox.isConnected) return;
     ideaBox = null;
+    // 廉价前置判断：该选项只可能出现在发布框里，而发布框必然带一个可编辑区。
+    // 没有可编辑区就直接跳过 —— 否则这条 XPath 会在**每一个**没有发布框的页面上
+    // 每拍全量重跑一次（实测单次 3~7ms，白花）。
+    if (!document.querySelector('[contenteditable="true"]')) return;
     const Q = '同时发布到想法';
     const strip = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, '');
     let snap;
     try {
-      // 用 XPath 而不是遍历全部元素：原生匹配，代价与命中数成正比
+      // 用 XPath 而不是遍历全部元素：原生匹配，命中数少时显著更快
       snap = document.evaluate("//*[contains(., '" + Q + "')]", document, null,
         XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
     } catch (e) { return; }
@@ -379,67 +419,83 @@
   // 挤出容器 55px 并越过屏幕 20px（62px 只露出 42px）。
   // 解法：把该行首个子元素（那个不收缩的编辑区）改为可收缩，内容即可收进 225px。
   // 实测「发布」按钮完整可见（62/62px），且发布框高度不变（94px），工具栏未被压坏。
-  // 定位不依赖 emotion hash（会随构建变）：从「发布」按钮往上找第一个「自身溢出且
-  // 首个子元素占了大半内容宽」的行 —— 这条规则会跳过按钮直属的那个 7px 宽控件容器。
-  let publishShrink = null;                  // 缓存已处理的编辑区；SPA 重建后自动重找
-  function publishButton() {
-    const norm = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, ' ').trim();
-    return [...document.querySelectorAll('button')].find(b => norm(b.innerText) === '发布') || null;
+  // 定位不依赖 emotion hash（会随构建变）。
+  //
+  // **上界**：先找到一个「发布框的根」—— 从「发布」按钮向上、第一个含可编辑区的祖先；
+  // 之后所有查找都限定在它（或其父层）之内，绝不一路向上到 body。早期版本没有这个上界，
+  // 一旦发布框那一行没有目标元素，循环就会继续向上并命中页面里无关的头像/容器。
+  const normText = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, ' ').trim();
+  function publishButtons() {
+    return [...document.querySelectorAll('button')].filter(b => normText(b.innerText) === '发布');
   }
-  function fitPublishButton() {
-    if (!CFG.fitPublishButton) return;
-    if (publishShrink && publishShrink.isConnected) return;
-    publishShrink = null;
-    const btn = publishButton();
-    if (!btn) return;
-    let row = btn.parentElement, found = null;
-    while (row && row !== document.body) {
-      const first = row.children[0];
-      const fw = first ? first.getBoundingClientRect().width : 0;
-      // 只处理「窄列」——即手机单列下的情况，避免干扰桌面宽度下的正常布局
-      if (row.clientWidth > 0 && row.clientWidth <= SW &&
-          row.scrollWidth > row.clientWidth + 4 &&
-          row.children.length >= 2 && fw >= 0.6 * row.scrollWidth) { found = row; break; }
-      row = row.parentElement;
+  function composerRoot(btn) {
+    let n = btn.parentElement;
+    while (n && n !== document.body) {
+      if (n.querySelector('[contenteditable="true"]')) return n;
+      n = n.parentElement;
     }
-    if (!found) return;
-    const target = found.children[0];
-    if (!target) return;
-    target.style.setProperty('flex', '1 1 auto', 'important');
-    target.style.setProperty('min-width', '0', 'important');
-    publishShrink = target;
+    return null;   // 找不到发布框根就什么都不做（宁可不动，也不要乱动）
+  }
+
+  const shrinkDone = new WeakSet();   // 已处理过的编辑区；WeakSet 自动回收被替换掉的节点
+  function fitPublishButton(btns) {
+    if (!CFG.fitPublishButton) return;
+    for (const btn of btns) {
+      const root = composerRoot(btn);
+      if (!root) continue;
+      // 在发布框根之内找「放不下内容」的那一行：自身溢出，且首个子元素占了大半内容宽
+      // —— 这条规则会跳过按钮直属的那个 7px 宽控件容器。
+      let row = btn.parentElement, found = null;
+      while (row && row !== root) {
+        const first = row.children[0];
+        const fw = first ? first.getBoundingClientRect().width : 0;
+        // 只处理「窄列」——即手机单列下的情况，避免干扰桌面宽度下的正常布局
+        if (row.clientWidth > 0 && row.clientWidth <= SW &&
+            row.scrollWidth > row.clientWidth + 4 &&
+            row.children.length >= 2 && fw >= 0.6 * row.scrollWidth) { found = row; break; }
+        row = row.parentElement;
+      }
+      if (!found) continue;
+      const target = found.children[0];
+      if (!target || shrinkDone.has(target)) continue;
+      target.style.setProperty('flex', '1 1 auto', 'important');
+      target.style.setProperty('min-width', '0', 'important');
+      shrinkDone.add(target);
+    }
   }
 
   // ---- 发布框头像：缩到与评论列表头像同尺寸 ----
   // 发布框那个头像只有 `Avatar` 这个通用类，旁边的类名是 emotion hash，CSS 无法表达
-  // 「与发布按钮同一行的那个头像」；所以按结构走：从「发布」按钮往上找第一个内含
-  // img.Avatar 的祖先，那个头像就是发布框的。
+  // 「与发布按钮同一行的那个头像」；所以按结构走。
+  // 收得比 fitPublishButton 更紧：头像与发布框本体同级，因此只在「发布框根的父层」里找，
+  // 且要求它是该层的**直接子元素**（实测结构如此）。找不到就不动 —— 宁可漏，不要误伤
+  // 页面别处的头像；测试里有一条断言会盯着这个头像是否真的被改到 24×24。
   // 另外：知乎给它是 40px（评论列表头像是 24px）。缩到 24 是按使用者要求「与评论里的
   // 头像一样大」；这是刻意偏离站点设计，所以留了开关。
-  let composerAvatar = null;
-  function matchComposerAvatar() {
+  const avatarDone = new WeakSet();
+  function matchComposerAvatar(btns) {
     if (!CFG.matchComposerAvatar) return;
-    if (composerAvatar && composerAvatar.isConnected) return;
-    composerAvatar = null;
-    const btn = publishButton();
-    if (!btn) return;
-    let row = btn.parentElement, av = null;
-    while (row && row !== document.body) {
-      av = [...row.querySelectorAll('img.Avatar')][0] || null;
-      if (av) break;
-      row = row.parentElement;
+    for (const btn of btns) {
+      const root = composerRoot(btn);
+      const scope = root && root.parentElement;
+      if (!scope || scope === document.body) continue;
+      const av = [...scope.children].find(c => c.tagName === 'IMG' && c.classList.contains('Avatar'));
+      if (!av || avatarDone.has(av)) continue;
+      const px = CFG.composerAvatarSize + 'px';
+      av.style.setProperty('width', px, 'important');
+      av.style.setProperty('height', px, 'important');
+      avatarDone.add(av);
     }
-    if (!av) return;
-    const px = CFG.composerAvatarSize + 'px';
-    av.style.setProperty('width', px, 'important');
-    av.style.setProperty('height', px, 'important');
-    composerAvatar = av;
   }
 
   let timer = null;
   function tick() {
+    // 周期性全量重扫：见「扫描记忆化」一节，抵消「看过的元素后续变大就漏掉」的代价
+    if (++sweepCount % SWEEP_EVERY === 0) clearScanMemo();
     hideSideRails(); capFixed(); capWide();
-    hideIdeaOption(); fitPublishButton(); matchComposerAvatar();
+    // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
+    const btns = publishButtons();
+    hideIdeaOption(); fitPublishButton(btns); matchComposerAvatar(btns);
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 
@@ -450,7 +506,11 @@
     obs.observe(document.body, { childList: true, subtree: true, attributes: false });
     tick(); syncCommentModal();
     window.addEventListener('resize', () => {
-      document.documentElement.style.setProperty('--z2m-w', Math.max(320, Math.min(screen.width || 393, 500)) + 'px');
+      // SW 是常量时会过期：横竖屏切换后 capFixed / capWide / fitPublishButton 仍按旧宽度判断。
+      // 同时屏幕尺寸变了，之前「看过就跳过」的结论也不再成立，清空重扫。
+      SW = Math.max(320, Math.min(screen.width || 393, 500));
+      document.documentElement.style.setProperty('--z2m-w', SW + 'px');
+      clearScanMemo();
     });
   }
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
@@ -458,8 +518,12 @@
   // 兜底轮询：防止某些「就地切换可见性」的开合漏掉 MutationObserver
   const poll = setInterval(syncCommentModal, 800);
 
+  // 注意：这是**半清理** —— 摘掉样式表、断开观察器、清定时器、还原反缩放，
+  // 但**不撤销各 pass 写入的内联样式**（display:none / max-width / flex / 头像尺寸等仍在）。
+  // 因此不要拿它当「关掉脚本」的对照基线做 A/B 诊断，详见 ARTIFACTS.md。
   window.__z2mStop = () => {
     obs.disconnect(); clearTimeout(timer); clearInterval(poll); st.remove();
+    curZ = 1; document.documentElement.style.removeProperty('zoom');
   };
   window.__z2mTick = tick;
   window.__z2mSync = syncCommentModal;

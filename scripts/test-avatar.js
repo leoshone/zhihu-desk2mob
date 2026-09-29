@@ -37,9 +37,15 @@ const ST = `JSON.stringify((()=>{
   const others = all.filter(i => i !== av);
   const tally = {};
   others.forEach(i => { const k = rect(i)[2] + '×' + rect(i)[3]; tally[k] = (tally[k] || 0) + 1; });
-  // 评论列表头像里最常见的那一档尺寸 —— 就是「其他评论者的头像大小」
+  // 评论列表头像里最常见的那一档尺寸 —— 就是「其他评论者的头像大小」。
+  // 必须排除退化尺寸（宽或高为 0）：页面上常有一批折叠/懒加载中的头像呈 0×38 这类形态，
+  // 它们的数量可能最多，会把「最常见」算歪（早期版本就因此误判过一次）。
   let commonSize = null, bestN = -1;
-  Object.keys(tally).forEach(k => { if (tally[k] > bestN) { bestN = tally[k]; commonSize = k; } });
+  Object.keys(tally).forEach(k => {
+    const [w, h] = k.split('×').map(Number);
+    if (!w || !h) return;
+    if (tally[k] > bestN) { bestN = tally[k]; commonSize = k; }
+  });
   const cs = av ? getComputedStyle(av) : null;
   const bcs = btn ? getComputedStyle(btn) : null;
   return {
@@ -141,6 +147,8 @@ async function prepareComposer() {
         ok(Math.abs(w - cw) <= 2 && Math.abs(h - cw) <= 2,
           '发布框头像与评论列表头像同尺寸（' + w + '×' + h + ' vs 列表最常见 ' + s.commonAvatarSize + '）',
           { composer: s.composerAvatar, list: s.commonAvatarSize });
+      } else {
+        console.log('  SKIP  页面上没有可用于对比的评论头像（退化尺寸全部排除），跳过同尺寸断言');
       }
     }
 

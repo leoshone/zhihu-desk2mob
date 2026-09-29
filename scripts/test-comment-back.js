@@ -47,7 +47,6 @@ const ST = `JSON.stringify((()=>{
     hasCloseBtn: !!document.querySelector('[aria-label="关闭"]'),
     layer: layer ? rect(layer) : null, card: card ? rect(card) : null,
     layerJustify: layer ? getComputedStyle(layer).justifyContent : null,
-    cardMaxW: card ? getComputedStyle(card).maxWidth : null,
   };
 })())`;
 

@@ -80,7 +80,6 @@ const ST = `JSON.stringify((()=>{
   let outer = leaf;
   while (outer && outer !== document.body && !norm(outer.innerText).includes('理性发言')) outer = outer.parentElement;
   const btn = [...document.querySelectorAll('button')].find(b => norm(b.innerText) === '发布');
-  const ed = [...document.querySelectorAll('[contenteditable="true"]')].pop();
   const vw = Math.round(document.body.getBoundingClientRect().width);
   const br = btn ? btn.getBoundingClientRect() : null;
   return {
@@ -93,7 +92,6 @@ const ST = `JSON.stringify((()=>{
     publishBtn: styleOf(btn),
     publishVisibleW: br ? Math.round(Math.max(0, Math.min(br.right, vw) - Math.max(br.left, 0))) : null,
     publishRightOverflow: br ? Math.round(br.right - vw) : null,
-    editableFocused: document.activeElement === ed,
     insideMain: leaf ? !!leaf.closest('main') : null,
   };
 })())`;

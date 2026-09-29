@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.0.6
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.0.7
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -191,13 +191,20 @@
       kids.forEach((k, i) => {
         if (i === 0) return;
         const r = k.getBoundingClientRect();
-        // 除尺寸外再要求它落在该行的**右半边**：侧栏在右、正文在左，
+        const cs = getComputedStyle(k);
+        if (cs.display === 'none') return;
+        // 必须落在该行的**右半边**：侧栏在右、正文在左，
         // 这样「左右两栏都在 80~420 宽」的版式不会被连正文一起隐藏。
-        if (r.width >= 80 && r.width <= 420 && r.height >= 300 &&
-            r.left >= rowR.left + rowR.width / 2 &&
-            getComputedStyle(k).display !== 'none') {
-          k.style.display = 'none';
-        }
+        if (r.left < rowR.left + rowR.width / 2) return;
+        // 形态 A：正常侧栏 —— 宽 80~420、够高
+        const normalRail = r.width >= 80 && r.width <= 420 && r.height >= 300;
+        // 形态 B：**被挤塌的侧栏** —— 宽度剩不到 4px，但里面还有文字。
+        // 这种最坑：宽度为 0 ⇒ white-space:normal 让每个字各自换行，而 overflow:visible
+        // 让文字照旧溢出显示 —— 屏幕上就是右边缘一条逐字竖排的「帮助中心/举报中心/关于知乎…」。
+        // 实测首页侧栏（含 大家都在搜 / 广告卡 / 页脚）就是这样塌成 0 宽的，
+        // 而形态 A 的宽度条件正好放过它，于是漏了出来。
+        const collapsedRail = r.width <= 4 && r.height >= 60 && (k.textContent || '').trim().length > 0;
+        if (normalRail || collapsedRail) k.style.display = 'none';
       });
     });
   }

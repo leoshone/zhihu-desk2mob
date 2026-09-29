@@ -33,6 +33,7 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢出定位修正
 node test-idea-option.js  --installed    # 发布框：隐藏「同时发布到想法」+ 发布按钮完整可见
 node test-avatar.js       --installed    # 发布框：头像不被拉高、与评论列表头像同尺寸
+node test-rightrail.js    --installed    # 首页右边缘：侧栏/页脚残留已清除（且正文列没被误伤）
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 ```
 

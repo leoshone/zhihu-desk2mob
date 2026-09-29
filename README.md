@@ -12,36 +12,17 @@
 
 评论点「N 条评论」展开、再点「收起评论」关闭，均已验证可用。回答里点「N 条评论」会打开评论弹层，**用系统返回手势即可关闭并回到问答页**。
 
-## 更新记录
+## 版本
 
-- **1.0.5** —— 发布框头像 + 弹层按钮修复（真机实测）
-  - 发布框头像不再被拉高：脚本自己的通用规则 `img { height: auto !important }` 顶掉了知乎
-    写给头像的固定高度，而头像所在行是 stretch，于是 40×40 被拉成 **40×122**（同一规则还让
-    8 个头像高度塌成 0）。改为把 `.Avatar` 排除出该规则，其余图片保持原样。
-  - 发布框头像缩到与评论列表头像同尺寸（**24×24**；知乎原本给 40px，可用
-    `CFG.matchComposerAvatar` 关掉回到 40）。
-  - 弹层内「发布」按钮不再竖排：脚本的按钮规则只写了 `main button, header button`，
-    而弹层挂在 body 的 portal 里、不在 `main` 内，于是弹层内按钮仍是 `white-space: normal`，
-    被挤到 49px 宽时文字折成两行。补上 `.Modal-content button` 后恢复 62×30 横排。
-  - 详见 [docs/v1.0.5-fix-avatar-and-modal-publish.md](docs/v1.0.5-fix-avatar-and-modal-publish.md)。
-- **1.0.4** —— 评论区发布框修复（真机实测）
-  - 去掉发布框里的「同时发布到想法」选项：它在窄列里被压成 0 宽、7 个汉字竖排成一列
-    （13×121），把整个发布框从 94px 撑到 185px。选项连同左侧单选框图标一起隐藏。
-  - 修正「发布」按钮右侧超出屏幕 20px（62px 只露出 42px）：该行可用宽 225px 而内容需
-    304px，编辑区与按钮都是 `flex: 0 0 auto`、互不相让。改为让编辑区可收缩，
-    按钮完整可见且发布框高度不变。
-  - 可用 `CFG.hideIdeaOption` / `CFG.fitPublishButton` 单独关闭上述两项。
-  - 详见 [docs/v1.0.4-fix-comment-composer.md](docs/v1.0.4-fix-comment-composer.md)。
-- **1.0.3** —— 评论弹层修复（真机实测）
-  - 点开弹层时压入一条历史记录，返回手势/返回键关闭弹层，不再直接离开知乎；
-    弹层被其它方式关闭时会主动撤回该记录，不会让用户多按一次返回。
-  - 修正弹层的桌面坐标系溢出：原先卡片（688×1832）比容器（373×734）大且容器垂直居中，
-    导致标题栏与最初几条评论被推到屏幕外且滚不回来、右侧约 315px 被裁切。
-    现在只在「卡片越界」时改为顶部对齐并收进屏幕宽度，不越界的弹窗不做任何改动。
-  - 可用 `CFG.commentBack` / `CFG.fixCommentLayout` 单独关闭上述两项。
-  - 详见 [docs/v1.0.3-fix-comment-modal.md](docs/v1.0.3-fix-comment-modal.md)。
-- 1.0.2 / 1.0.1 —— 文字截断治理、图片查看器居中、区块宽度一致性。
-  这两版与 1.0.3 起是**两条独立分支**：1.0.3 / 1.0.4 以 1.0.0 为基线，不含 1.0.1/1.0.2 的改动。
+**更新记录写在 [Releases](../../releases) 里** —— 每个版本的变更说明在对应的 Release note，
+脚本本体也作为 Release 附件随版本发布（想固定某个版本就用附件，想跟着更新用下面的 raw 地址）。
+
+- 最新版：<https://github.com/leoshone/zhihu-desk2mob/releases/latest>
+- 全部版本：<https://github.com/leoshone/zhihu-desk2mob/releases>
+
+> **关于版本号**：1.0.1 / 1.0.2 与 1.0.3 起是两条**独立分支**。1.0.3 往后以 1.0.0 为基线，
+> **不含** 1.0.1 / 1.0.2 的改动（文字截断治理、图片查看器居中、区块宽度一致性），
+> 因此这两版没有 Release。若需要「1.0.2 的全部改进 + 后续修复」，需另开一版把两条线合并。
 
 ## 已知问题
 
@@ -64,6 +45,9 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 
 手工安装：浏览器装 Tampermonkey / 暴力猴（Kiwi 可直接装 Chrome 扩展）→ 新建脚本 →
 粘贴 `zhihu-desk2mob.user.js` 内容并保存。
+
+想固定某个版本，就从 [Releases](../../releases) 下载该版本的附件再手工装入
+（用附件装不会自动更新，跟着更新请用上面的 raw 地址）。
 
 **务必在打开知乎之前开启该站点的「桌面版网站」开关**，否则脚本按设计不生效（避免破坏移动版页面）。
 

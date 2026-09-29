@@ -56,9 +56,24 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | 路径 | 说明 |
 | --- | --- |
 | `zhihu-desk2mob.user.js` | 脚本本体（单文件，无构建） |
-| `docs/` | 各版本的修复方案文档：根因分析、实测数据、方案取舍 |
-| `scripts/` | 真机回归测试（见 [scripts/README.md](scripts/README.md)） |
+| `docs/` | 各版本的修复方案文档：根因分析、实测数据、方案取舍（见下方索引） |
+| `scripts/` | 真机回归测试 + 诊断探针（见 [scripts/README.md](scripts/README.md)） |
 | `skills/kiwi-violentmonkey-cdp/` | 配套技能：用 CDP 驱动真机 Kiwi + 暴力猴（装／更新脚本、注入、取证） |
+
+### docs 索引
+
+| 文档 | 内容 |
+| --- | --- |
+| `v1.0.3-fix-comment-modal.md` | 评论弹层：返回键关闭 + 顶部不可达/右侧裁切的定位修正 |
+| `v1.0.4-fix-comment-composer.md` | 发布框：去掉「同时发布到想法」+ 让「发布」按钮完整可见 |
+| `v1.0.5-fix-avatar-and-modal-publish.md` | 发布框头像被拉高 + 弹层「发布」按钮竖排 |
+| `v1.0.7-fix-right-rail-residue.md` | 右边缘的侧栏/页脚残留（0 宽盒子仍在画字） |
+| `v1.0.9-fix-counter-zoom-fit.md` | 反缩放改为「恰好铺满」：不再被放大一点点，且加载期零视觉跳变 |
+| `code-review-v1.0.5.md` | 对 v1.0.5 的代码与文档审查：性能取证、结构性问题、一致性清单 |
+
+> v1.0.6（审查后加固）与 v1.0.8（已回滚）没有单独文档：前者的改动记在对应 Release note
+> 与上面的审查报告里，后者已被 `6331027` 回滚、Release 与 tag 已删除。
+
 
 `scripts/` 里的测试要驱动真机，依赖技能目录中的 CDP 工具库
 （`skills/kiwi-violentmonkey-cdp/scripts/cdp.js`，本仓库只存一份实现）。

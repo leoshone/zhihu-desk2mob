@@ -68,6 +68,31 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 - **页面出现 `document.body` 为 null** = CDP 长会话把 renderer 挂死了。
   执行 `adb shell am force-stop com.kiwibrowser.browser` 重启 Kiwi 即可。
 
+## 诊断探针（probe / shot）
+
+不是回归测试，而是**排查时用的量具**：只读、可反复跑，用来回答「这个现象出自哪个容器／
+这个按钮有没有越界／该隐藏哪一层」。改脚本前先跑探针定位，比盲改快得多。
+
+| 脚本 | 用途 | 常不常用 |
+| --- | --- | --- |
+| `probe-rightrail.js` | 定位右边缘残留出自哪个容器（含「侧栏 vs 正文列」的结构对照） | 常用 |
+| `probe-avatar.js` | 对比发布框头像与评论列表头像的尺寸分布 | 常用 |
+| `probe-publishbtn.js` | 量「发布」按钮是否越界、被挤出屏幕 | 常用 |
+| `probe-composer-fit.js` | 诊断发布框那一行的「内容宽 vs 可用宽」 | 常用 |
+| `probe-composer.js` / `probe-composer2.js` | 早期：dump 发布框结构 / 确定选项的出现条件 | 历史探针 |
+| `probe-comment.js` | 早期：环境 / 评论触发按钮 / 叠加层扫描 | 历史探针 |
+| `shot-composer.js` / `shot-answer-comments.js` | 取证：抓发布框前后对照、回答评论弹层的真机截屏 | 常用 |
+
+> **`probe-avatar.js` 与 `probe-publishbtn.js` 的 `--off` 有方法局限**：它们用
+> `window.__z2mStop()` 当「关掉脚本」的基线，而那个钩子是**半清理**（只摘样式表、不断
+> 内联样式），所以那组数据不是有效的无脚本对照。判断「某问题是否由某次改动引入」要用
+> **同一轮内的改前/改后对照**。两个脚本头部都写了这条。
+
+**通用的**两个探针不在这里，在技能目录（`skills/kiwi-violentmonkey-cdp/scripts/`）：
+`probe-element.js`（按文案定位元素并 dump 结构）与 `inspect.js`（判定屏幕顶层叠加层、
+切标签、可 `--out` 指定截图路径）。本目录**不再放它们的副本** —— 曾因副本漂移导致
+「本地跑的是旧版」而白查一轮。
+
 ## 依赖
 
 CDP 工具库本体在技能目录内：`../skills/kiwi-violentmonkey-cdp/scripts/cdp.js`。

@@ -40,6 +40,7 @@ node test-idea-option.js  --installed    # 发布框：隐藏「同时发布到�
 node test-avatar.js       --installed    # 发布框：头像不被拉高、与评论列表头像同尺寸
 node test-rightrail.js    --installed    # 首页右边缘：侧栏/页脚残留已清除（且正文列没被误伤）
 node test-question-actions.js --installed # 问题页：关注问题/写回答/邀请回答 三个按钮同排
+node test-actions-wrap.js --installed    # 回答页：底部「赞同」操作栏换行、右侧按钮不再被屏幕裁掉
 node test-counterzoom.js  --installed    # 反缩放：内容恰好铺满、加载期无视觉跳变、不跟捏合抢
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 ```
@@ -89,6 +90,12 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 > ⚠️ **设备上没开专栏页 / 回答页时，测试会退到别的页面并报出前置失败**（如「发布框打不开」），
 > 而不是自动补开 —— 那是**环境问题，不是产品回归**。所以务必先按上面「运行」一节各开一个标签页
 > （可以用 `open-page.js`）。这条是实测结论：两次「假失败」都是缺页面导致的。
+>
+> ⚠️ **更隐蔽的一种：测试会「吃掉」别的标签。** 它们靠 `findTab(子串)` 挑标签，挑不到就退到
+> *第一个* 标签并 `Page.navigate` 到它**自己想要**的页面 —— 于是那个标签的 URL 就被换掉了。
+> 实测（2026-09-30）：设备上没有首页标签时跑 `test-rightrail`，它把回答页标签导航成了首页，
+> 随后回答页相关的测试全部报前置失败，而根因早已不在现场。
+> 对策：**跑测试前把首页 / 回答页 / 问题页 / 专栏页各开好**，别让任何测试去「借用」别人的标签。
 
 ## 设计要点（都是踩坑后定下来的）
 

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.3.11
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.0
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -250,6 +250,26 @@
   .NumberBoard-item { width: auto !important; max-width: none !important; min-width: 0 !important; flex: 0 0 auto !important; }
   .NumberBoard-itemInner { display: flex !important; flex-wrap: nowrap !important; align-items: baseline !important; column-gap: 4px !important; }
   .NumberBoard-itemName, .NumberBoard-itemValue { width: auto !important; white-space: nowrap !important; }
+  /* ---- 卡片里的「赞同」操作栏（.ContentItem-actions）整排右出界 ----
+     知乎这一排是 display:flex + flex-wrap:nowrap，子项**全部 flex:0 0 auto**（谁也不收缩）。
+     桌面列宽 700+ 时刚好排成一行；脚本把列宽压到 358 后，实测内容 565~642px
+     ⇒ 右侧约 3 个按钮被屏幕切掉（且 overflow 是 visible：是**裁掉**，滚不到也点不到）。
+     实测（用户 2026-09-30 反馈）范围：回答页 3~5 处、关注页 20 处、首页 12 处。
+     ⚠️ **这条规则 v1.0.0 起就一直在**（原样就是 flex-wrap: wrap + row-gap: 4px），
+        但在 **v1.3.9 被误删**：那一版的主题是「顶部关注者 / 被浏览 横向排列」，
+        .NumberBoard 的新规则正好插在它原来的位置上，把这条一起删掉了
+        （commit 0ce4f3b 的 diff 里就是 - 一行旧规则 / + 一段新规则）。
+        而 v1.3.10 写 .Sticky 注释时**以为它还在** —— 那句「脚本里那条通用的
+        .ContentItem-actions { flex-wrap: wrap } 优先级不够」就是这么来的；
+        错误注释 + 规则缺失一路带到 v1.3.11：除吸底的 .Sticky 外，首页 / 问答 / 专栏的
+        赞同栏都不再换行 ⇒ 右侧按钮被裁。**本版（v1.4.0）按 v1.3.8 的原样恢复（含 row-gap: 4px）。**
+     ⚠️ 恢复时**只还原这一条，别顺手改间距或外边距**（v1.4.0 初稿试过，被用户否掉）：
+        初版额外把子项 margin-left 归零、容器加 column-gap: 16px，还把容器自身的
+        margin: 0 -20px「出血」归零 —— 结果操作栏**左端从贴着卡片边缩进到正文列**
+        （实测落点 [-4, 362, 366] → [16, 342, 326]），用户反馈「你把按钮区往中间靠了，
+        要保持在左侧的位置」。间距与出血都按知乎原样，一字不动。 */
+  .ContentItem-actions { flex-wrap: wrap !important; row-gap: 4px !important; }
+
   /* ---- 回答页底部的浮动操作栏（知乎的 .ContentItem-actions.Sticky）补成满宽 ----
      知乎给它 right: 40px 的桌面留白（实测 left:0 / right:39.9969px => 栏宽 318，而列宽 358），
      在手机上右侧就空出 40px；用户反馈「滚动后右侧空一块，想保持撑满」。
@@ -261,8 +281,12 @@
     width: auto !important; max-width: none !important;
     /* ⚠️ 关键：知乎给 Sticky 这一栏用的是 flex-wrap: nowrap，栏内按钮会一路排到屏幕外
        （实测 7 个按钮最右到 612px，屏幕只有 358 ⇒ 右侧被裁、点不到）。
-       脚本里那条通用的 .ContentItem-actions { flex-wrap: wrap } 优先级不够，压不住 .Sticky，
-       所以在这里用两个类的选择器 + !important 明确允许换行。 */
+       这里用两个类的选择器 + !important 明确允许换行。
+       ⚠️ 本段旧注释写着「脚本里那条通用的 .ContentItem-actions { flex-wrap: wrap } 优先级不够」
+          —— 这句是**错的**：那条通用规则早在 **v1.3.9 就被误删**（见上方注释与 commit 0ce4f3b），
+          当时全文件并没有它。这句注释把「卡片内联操作栏右侧被裁」误导成「已经处理过」，
+          一路拖到 v1.4.0 才被发现。现已在上方恢复通用规则；
+          这里仍保留两个类的写法，只为让 Sticky 的定位修正与换行各管各的。 */
     flex-wrap: wrap !important;
   }
 

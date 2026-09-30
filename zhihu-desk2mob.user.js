@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.1.2
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.2.0
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -31,6 +31,10 @@
   // 配置开关
   // ============================================================
   const CFG = {
+    // 块状版式：去掉内容列**两侧**的灰色留白，让「块」铺满整列；**块与块之间的灰色间隔保留**
+    // （间隔来自卡片自己的 margin-bottom，只改横向不会碰到它）。
+    // 留白 = 本脚本 `.App-main` 的 10px + 知乎最外层容器的 16px。详见 docs/v1.2.0-full-bleed.md。
+    bleedEdges: true,
     // 屏上换算因子：正文在屏幕上多大 = 名义字号 × 它。
     // 1 = 字号就是名义值（正文 16px）；0.98 = 15.7px。
     // 历次定值：0.90976（v1.0.9 铺满原始大小，14.6px）→ 0.98（v1.1.1，按真机捏合
@@ -46,6 +50,9 @@
     fixCommentLayout: true,
     // 评论区发布框：隐藏「同时发布到想法」选项（radio 图标 + 文案）
     hideIdeaOption: true,
+    // 首页「写想法」卡片：隐藏塌成 0 宽的竖排「同步到圈子」残留（它是「发到圈子」的开关；
+    // 用户 2026-09-30 明确要求去掉 —— 原为「已知未修」第 2 条，本次给了结论）
+    hideCircleSync: true,
     // 评论区发布框：让「发布」按钮完整落在屏幕内（该行内容原本比列宽多 79px）
     fitPublishButton: true,
     // 评论区发布框：把里面的头像缩到与评论列表头像同尺寸（知乎原本给 40px）
@@ -170,7 +177,22 @@
     max-width: 100% !important;
     min-width: 0 !important;
   }
+  /* ---- 块状版式（CFG.bleedEdges）：去掉内容列**两侧**的灰色留白，让「块」铺满整列 ----
+     留白 = 本脚本 .App-main 的 10px + 知乎最外层容器的 16px（首页是 .Topstory-container；
+     专栏/问答那个容器是 emotion hash，改用「稳定父类 > div」的结构选择器绕开）。
+     实测（列宽 358）：首页块 26..332 → **0..358**；专栏 10..348 → **0..358**；问答 → **0..358**。
+     ⚠️ 只动横向：块间竖直灰缝来自卡片自己的 margin-bottom，不受影响 —— 这正是需求要保留的。
+     ⚠️ 块**自带**内边距（首页 16px / 专栏 20px / 问答 22px），所以文字仍有呼吸感，
+        **不需要**再补内边距。关掉本开关则退回原来的两侧 10px 留白。 */
+  ${CFG.bleedEdges ? `
+  .App-main { padding-left: 0 !important; padding-right: 0 !important; }
+  .Topstory-container, .Post-content > div, .QuestionPage > div {
+    padding-left: 0 !important; padding-right: 0 !important;
+  }
+  .Topstory-mainColumn { margin-left: 0 !important; margin-right: 0 !important; }
+  ` : `
   .App-main { padding-left: 10px !important; padding-right: 10px !important; }
+  `}
 
   /* kill Zhihu's hard min-widths inside content (min-width beats max-width) */
   main div, main section, main article, main ul, main ol, main li,
@@ -492,6 +514,43 @@
     ideaBox = box;
   }
 
+  // ---- 隐藏首页「写想法」卡片里塌成 0 宽的竖排「同步到圈子」 ----
+  // 真机实测：那一行只有 234px 可用宽，这个「发到圈子」的开关被挤成 **0 宽**
+  // （rect {x:298, w:0, h:95}），7 个汉字因此逐字竖排，在内容列右侧看起来像一条竖排残渣。
+  // 它是**发到圈子的功能开关**，隐藏等于去掉该功能 —— 属产品取舍，用户 2026-09-30 明确要求
+  // 去掉（这条原是「已知未修」第 2 条，本次给了结论）。
+  // 定位方式与 hideIdeaOption 完全一致：按文案 XPath → 向上收成「除该文案外不含其它文字」的
+  // 最大祖先 —— 这样能带上它自己的图标，又**不会误伤同一行右侧的「发想法」按钮**
+  // （那个按钮的祖先文案里还有「发想法」三个字）。
+  let circleSyncBox = null;
+  function hideCircleSync() {
+    if (!CFG.hideCircleSync) return;
+    if (circleSyncBox && circleSyncBox.isConnected) return;
+    circleSyncBox = null;
+    // 廉价前置判断：该文案只出现在首页的「写想法」卡片里，而那张卡片必然带 .WriteArea。
+    // 没有它就直接跳过 —— 否则这条 XPath 会在每一个没有该卡片的页面上每拍全量重跑一次。
+    if (!document.querySelector('.WriteArea')) return;
+    const Q = '同步到圈子';
+    const strip = s => (s || '').replace(/[\s\u200b\u200c\u200d\ufeff]+/g, '');
+    let snap;
+    try {
+      snap = document.evaluate("//*[contains(., '" + Q + "')]", document, null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    } catch (e) { return; }
+    let label = null;
+    for (let i = 0; i < snap.snapshotLength; i++) {
+      const el = snap.snapshotItem(i);
+      if (strip(el.textContent) === Q) label = el;
+    }
+    if (!label) return;
+    let box = label;
+    while (box.parentElement && strip(box.parentElement.textContent).replace(Q, '') === '') {
+      box = box.parentElement;
+    }
+    box.style.setProperty('display', 'none', 'important');
+    circleSyncBox = box;
+  }
+
   // ---- 让发布框那一行放得下「发布」按钮 ----
   // 真机实测：这一行可用宽 225px（clientWidth），内容却需要 304px（scrollWidth）。
   // 原因是编辑区带知乎自己的 `flex: 0 0 auto`（218px，不收缩），而「发布」按钮又被
@@ -577,7 +636,7 @@
     hideSideRails(); capFixed(); capWide();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
-    hideIdeaOption(); fitPublishButton(btns); matchComposerAvatar(btns);
+    hideIdeaOption(); hideCircleSync(); fitPublishButton(btns); matchComposerAvatar(btns);
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 

@@ -2,5 +2,8 @@
 scripts/shots/
 _tmp/
 
-# WorkBuddy 的本地会话数据（记忆、技能联接等），不属于仓库内容
-.workbuddy/
+# WorkBuddy：仅将「项目级技能」纳入版本控制，其余一律排除。
+# .workbuddy/skills/ 需随仓库共享给团队；.workbuddy/memory/（项目记忆）
+# 及其他本地会话数据仅保留在本机，不入库、不上传。
+.workbuddy/*
+!.workbuddy/skills/

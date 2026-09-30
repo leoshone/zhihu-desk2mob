@@ -101,6 +101,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | `v1.1.2-text-scale-default.md` | 默认文字大小回到名义字号（`CFG.textScale = 1.0`）+ 一处工装缺陷的取证 |
 | `v1.2.0-full-bleed.md` | 块状版式铺满整列（去掉两侧灰边、保留块间灰缝）+ 隐藏竖排「同步到圈子」 |
 | `v1.2.2-feed-thumbnail.md` | 首页信息流封面缩略图改小（190→100px）+ 解开 BFC 让正文真正「右+下」环绕 |
+| `v1.2.3-modal-no-horizontal-slide.md` | 评论弹层不再能被横向滑动推走（关闭按钮在屏幕外造成的可滚区域已裁掉） |
 | `code-review-v1.0.5.md` | 对 v1.0.5 的代码与文档审查：性能取证、结构性问题、一致性清单 |
 
 > v1.0.6（审查后加固）与 v1.0.8（已回滚）没有单独文档：前者的改动记在对应 Release note

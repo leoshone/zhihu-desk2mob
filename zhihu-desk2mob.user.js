@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.3.3
+// @version      1.3.4
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -280,10 +280,12 @@
      （用户 2026-09-30 反馈「4 个文字按钮变成两行」）。间距改由容器的 column-gap 统一负责。 */
   .QuestionButtonGroup button, .QuestionHeaderActions button,
   .QuestionHeaderActions > * { margin-left: 0 !important; margin-right: 0 !important; }
-  /* 说明：页首还有一个宽 0 的壳 .QuestionHeader-actions（小写 actions，与 .QuestionHeaderActions
-     不是一个），它被 space-between 顶到最右、导致 4 个文字按钮全挤在左边。
-     我试过用 display: contents 去掉它，但那会**把页面横向撑爆**（zoom 被算成 3.99、整页放大 4 倍）
-     —— 已回滚，不再动它。右侧那点空白先留着。 */
+  /* 页首还有一个宽 0 的壳 .QuestionHeader-actions（小写 actions，与上面的 .QuestionHeaderActions
+     不是一个）。它虽然是 0 宽，但**也是一个 flex 项**，会被 space-between 顶到最右边，
+     于是 4 个文字按钮全挤在左边、「…」的右端距正文右界差一大截。
+     ⚠️ 只对**确实为空**的它生效（实测 0 个子元素、innerHTML 为空）—— 用 :empty 限定才安全，
+        无条件隐藏/解散它曾把页面横向撑爆过（v1.3.2 的回归，v1.3.3 已回滚）。 */
+  .QuestionHeader-actions:empty { display: none !important; }
 
   /* header nav: swipeable when overlong */
   .AppHeader > div, .AppHeader { overflow-x: auto !important; scrollbar-width: none !important; }

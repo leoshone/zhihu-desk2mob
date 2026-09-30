@@ -44,10 +44,17 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 
 > 两条注意：
 > - `test-counterzoom` 只在 `--installed` 下才有判别力（注入发生在加载之后，跑不到加载期的变化）；
-> - 它会临时改写页面比例（CDP `Emulation.setPageScaleFactor`）—— ⚠️ **收尾只重载页面、不还原比例**，
->   被它选中的那张标签会残留 `scale = 1`，**导致紧接着重跑时①步拿到 0 个样本**（3 条 FAIL：
->   「拿到足够样本」/「全程不超宽」/「视觉稳定」，看着像 renderer 挂死，其实不是）。
->   要重跑就先把那张标签 `Page.navigate` 走（移出匹配范围），或重启 Kiwi。
+> - 它会临时改写页面比例（CDP `Emulation.setPageScaleFactor`）。**收尾会自动还原**进测试前记录的比例
+>   （CDP 没有「清除 pageScaleFactor」的接口，`clearDeviceMetricsOverride` 实测也清不掉，
+>   只能先记下原值、收尾再设回去）。
+>   若某次运行**被中断**（Ctrl-C / 报错退出）没走到收尾，那张标签会残留被改写的比例，症状有两个：
+>   ① **页面能横向平移、右侧出现一片空白**（`visW < innerWidth`，实测 715 vs 891 ——
+>      它就是「怎么页面能拖动」这个疑问的来源）；
+>   ② 紧接着重跑本测试时①步拿到 **0 个样本**（残留 `scale = 1` 时 `Z = visW / SW` 恰等于
+>      `applyZoom()` 里 `curZ` 的初值，那行 `if (Math.abs(Z - curZ) < 0.005) return;` 会提前返回、
+>      **不写内联 zoom**，而①步只统计「有内联 zoom」的采样）。
+>   补救：把那张标签 `Page.navigate` 走（移出匹配范围），或用 `Emulation.setPageScaleFactor`
+>   把比例设回健康值（本机 0.40111）。
 >   建议放在整套测试的**最后**跑。
 >
 > **`test-counterzoom` 的 ②③ 会间歇性失败**（「捏合缩小后仍恰好铺满」等两条）：模拟捏合时浏览器会

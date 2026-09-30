@@ -116,12 +116,15 @@
   环境问题伪装成产品回归。（本机两次「假失败」都是缺页面造成的，已实测。）
 - **`test-counterzoom` 的 ②③ 会间歇失败**（同一份代码两次运行可能 5/7 或 7/7），
   原因见「已知未修」第 6 条 —— 看到它失败先重跑一次再判断。
-  ⚠️ **但重跑前必须先把它上一轮选中的那张标签移出匹配范围**（或重启 Kiwi）：该测试的 ②③④ 会
-  `Emulation.setPageScaleFactor` 且收尾不还原，被选标签会残留 `scale = 1`；而它每次只取**第一个**
-  匹配 `www.zhihu.com` 的标签 ⇒ 紧接着重跑时①步必拿 **0 个样本**（3 条 FAIL，看着像 renderer 挂死，
-  其实不是）。另注：`scale = 1` 时 `Z = visW / SW = 1` 恰等于 `curZ` 初值，`applyZoom()` 会提前
-  return **不写内联 zoom**，而①步只统计「有内联 zoom」的采样 —— 两者叠加即 0 样本。
-  取证见 [`v1.1.2-text-scale-default.md`](v1.1.2-text-scale-default.md) §4。
+  ⚠️ 该测试的 ②③④ 会 `Emulation.setPageScaleFactor` 改写页面比例，而 **CDP 没有「清除
+  pageScaleFactor」的接口**（`clearDeviceMetricsOverride` 实测也清不掉）—— 所以它现在会在**收尾时
+  记下进测试前的比例并设回去**。若某次运行被中断（Ctrl-C / 报错退出）没走到收尾，那张标签会残留
+  被改写的比例，两个症状：
+  ① **页面能横向平移、右侧出现一片空白**（`visW < innerWidth`，实测 715 vs 891）；
+  ② 紧接着重跑本测试时①步拿 **0 个样本**（残留 `scale = 1` 时 `Z = visW / SW` 恰等于 `applyZoom()`
+  里 `curZ` 的初值，那行 `if (Math.abs(Z - curZ) < 0.005) return;` 提前返回、不写内联 zoom）。
+  补救：把那张标签 `Page.navigate` 走（移出匹配范围），或把比例设回健康值（本机 **0.40111**）。
+  细节见 [`scripts/README.md`](../scripts/README.md) 的 counterzoom 注。
 
 ## 调试顺序（省时间的顺序）
 

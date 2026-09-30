@@ -57,6 +57,14 @@ const S = `JSON.stringify((()=>{
     const tab = await cdp.findTab(api, 'www.zhihu.com') || await cdp.findTab(api);
     sid = await cdp.attach(api, tab.targetId);
 
+    // 记下「进测试前浏览器自身的比例」。②③④ 会 Emulation.setPageScaleFactor 改写它，
+    // 而 CDP **没有清除 pageScaleFactor 的接口**（Emulation.clearDeviceMetricsOverride 实测也清不掉），
+    // 所以必须在收尾时把它设回原值 —— 否则这张标签会残留一个被改写过的比例，症状有两个：
+    //   ① 页面能横向平移、右侧出现一片空白（visW < innerWidth，实测 715 vs 891）；
+    //   ② 紧接着重跑本测试时①步拿到 0 个样本（残留 scale=1 时 Z=visW/SW 恰等于 curZ 初值）。
+    const pinch0 = await cdp.evalJson(api,
+      `JSON.stringify((()=>{const vv=window.visualViewport; return vv ? +vv.scale.toFixed(5) : null;})())`, sid, 8000);
+
     // ① 从导航一开始就密集采样，盯住「内容/可见宽度」与「视觉尺寸」
     await api.send('Page.navigate', { url: 'https://www.zhihu.com/' }, sid);
     const series = [];
@@ -112,6 +120,17 @@ const S = `JSON.stringify((()=>{
     const en = await cdp.evalJson(api, S, sid);
     ok(en.visualSize > before.visualSize * 1.2,
       '捏合放大仍然有效（不会被脚本抢回）', { before: before.visualSize, after: en.visualSize });
+
+    // 还原浏览器自身比例（见上面 pinch0 的注释）—— 必须在收尾导航之前做，
+    // 且要赶在截图之前，这样截图反映的也是还原后的状态。
+    if (pinch0) {
+      await api.send('Emulation.setPageScaleFactor', { pageScaleFactor: pinch0 }, sid).catch(() => {});
+      await cdp.sleep(900);
+      const back = await cdp.evalJson(api,
+        `JSON.stringify((()=>{const vv=window.visualViewport;return{scale:vv?+vv.scale.toFixed(5):null,visW:vv?Math.round(vv.width):null,innerW:window.innerWidth};})())`, sid, 8000);
+      console.log('  已还原比例 -> ' + JSON.stringify(back) +
+        (back && back.visW === back.innerW ? '（不再可横向平移 ✓）' : '（⚠️ 仍与 innerWidth 不等）'));
+    }
 
     await api.send('Page.bringToFront', {}, sid);
     execSync('adb exec-out screencap -p > "shots/29-fit.png"', { shell: 'bash' });

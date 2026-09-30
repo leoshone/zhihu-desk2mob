@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.2.8
+// @version      1.2.9
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -229,18 +229,32 @@
   .QuestionHeader, div[class*="QuestionHeader"] { flex-wrap: wrap !important; }
   .QuestionHeader div, [class*="QuestionHeader"] div { flex-wrap: wrap !important; }
   .QuestionHeader-side { width: auto !important; max-width: 100% !important; }
-  /* 手机上把问题页页首的三个按钮排成一行：知乎把「关注问题 / 写回答」放在 .QuestionButtonGroup、
-     「邀请回答」单独放在 .QuestionHeaderActions —— 两个容器各自成块，窄屏下必然上下堆叠
-     （实测「邀请回答」被挤到第 2 行，还和「好问题 / 评论」混在一行）。
-     把 Actions 用 display: contents **解散**（它只是个排布壳，没有自己的背景/边框），
-     外层改成可换行的横向 flex，三个按钮即可同排：
-     96 + 16 + 96 + 8 + 111 = 327（含边距约 351）≤ 列宽 358 ✓，
-     「好问题 / 评论 / 分享」自然换到第 2 行。
-     ⚠️ 只把外层改成 row 是不够的（实测无效）：Actions 作为一个整体仍换到下一行，
-        必须让它 display: contents 才能真正参与同一行的排布。
+  /* 问题页页首：把「关注问题 / 写回答 / 邀请回答」排成一行并**均匀分布**。
+     知乎的层级（实测）：
+       .QuestionHeader-footer-inner
+         └ .QuestionHeader-footer-main      ← 真正的「按钮行」：flex + wrap + 20px 左内边距
+             ├ .QuestionButtonGroup          （关注问题 + 写回答）
+             └ .QuestionHeaderActions        （邀请回答 + 好问题 + 评论 + 分享）
+     ⚠️ 类名是 **QuestionHeader-footer-main**，不是 QuestionHeader-footer —— 只改外层的
+        .QuestionHeader-footer-inner 不够，必须打到这一层才是按钮行。
+     两步：
+       ① 两个排布壳都 display: contents **解散**，按钮才能成为同一行的直接子项；
+       ② 清掉按钮自带的左右 8px 外边距 —— 尤其 **.QuestionButtonGroup 还带 -8px 右外边距**，
+          会把「邀请回答」拉到贴着「写回答」（实测间距 [16, 0]），这就是「右边两个挤在一起」的由来。
+          改用容器 column-gap + space-between 均匀分布。
+     实测（列宽 358）：三个按钮 0..96 / 124..220 / 247..358，间距 **28 / 27**，**左空 0、右空 0**。
      回归：scripts/test-question-actions.js */
-  .QuestionHeader-footer-inner { flex-direction: row !important; flex-wrap: wrap !important; align-items: flex-start !important; }
-  .QuestionHeaderActions { display: contents !important; }
+  .QuestionHeader-footer-inner {
+    flex-direction: row !important; flex-wrap: wrap !important; align-items: flex-start !important;
+    padding: 0 !important; margin-right: 0 !important;
+  }
+  .QuestionHeader-footer-main {
+    display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
+    align-items: flex-start !important; justify-content: space-between !important;
+    column-gap: 10px !important; padding-left: 0 !important; padding-right: 0 !important;
+  }
+  .QuestionButtonGroup, .QuestionHeaderActions { display: contents !important; }
+  .QuestionHeader-footer-main button { margin-left: 0 !important; margin-right: 0 !important; }
 
   /* header nav: swipeable when overlong */
   .AppHeader > div, .AppHeader { overflow-x: auto !important; scrollbar-width: none !important; }

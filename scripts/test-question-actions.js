@@ -87,6 +87,13 @@ const ST = `JSON.stringify((()=>{
     ok(s.三者行数 === 1, '三个按钮在同一行显示（行数=1）', { 行数: s.三者行数, T: [s.关注问题, s.写回答, s.邀请回答].map(x => x && x.T) });
     // ② 都在屏幕内
     const all = [s.关注问题, s.写回答, s.邀请回答].filter(Boolean);
+    // ②b 均匀分布：两处间距接近（原先右侧间距是 0，两个按钮贴在一起）
+    const gap1 = all.length >= 2 ? all[1].L - all[0].R : null;
+    const gap2 = all.length >= 3 ? all[2].L - all[1].R : null;
+    ok(gap1 != null && gap2 != null && Math.abs(gap1 - gap2) <= 4, '三按钮间距均匀（两处间距差 ≤4px）', { gap1, gap2 });
+    ok(gap1 !== null && gap1 > 0 && gap2 !== null && gap2 > 0, '两处间距都为正（没有贴在一起）', { gap1, gap2 });
+    ok(all.length > 0 && all[0].L <= 4 && (s.bodyW - all[all.length - 1].R) <= 4, '按钮区用满整行（左右空档都 ≤4px）',
+      { 左空: all[0] && all[0].L, 右空: all.length ? s.bodyW - all[all.length - 1].R : null });
     ok(all.every(b => b.L >= 0), '三个按钮都没有被左侧裁掉（L>=0）', all.map(b => b.L));
     ok(all.every(b => b.R <= s.bodyW + 1), '三个按钮都没有越出右缘（R<=列宽）', { bodyW: s.bodyW, R: all.map(b => b.R) });
     ok(all.every(b => b.W > 40 && b.H > 20), '三个按钮尺寸正常（没被压扁）', all.map(b => [b.W, b.H]));

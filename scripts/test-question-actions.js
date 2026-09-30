@@ -53,18 +53,30 @@ const ST = `JSON.stringify((()=>{
         || document.querySelector('.AnswerItem .RichText') || document.querySelector('.RichContent .RichText');
       if (!e) return null; const r = e.getBoundingClientRect();
       return { L: Math.round(r.left), R: Math.round(r.right) }; })(),
-    // 页首里所有按钮按 T 分行（用来核对「好问题/评论/分享」那行也是一行）
+    // 页首里所有按钮按 T 分行（用来核对「好问题/评论/分享」那行也是一行、行间距、右缘对齐）
     按钮行: (() => { const main = document.querySelector('.QuestionHeader-footer-main');
       if (!main) return null; const rows = {};
       [...main.querySelectorAll('button')].forEach(x => { const r = x.getBoundingClientRect();
-        if (r.height <= 0) return; const t = Math.round(r.top); (rows[t] = rows[t] || []).push((x.innerText||'').replace(/\s+/g, '').slice(0, 8)); });
-      return Object.keys(rows).map(Number).sort((a, b) => a - b).map(t => ({ T: t, 项: rows[t] })); })(),
+        if (r.height <= 0) return; const t = Math.round(r.top); (rows[t] = rows[t] || []).push(x); });
+      return Object.keys(rows).map(Number).sort((a, b) => a - b).map(t => {
+        const rs = rows[t].map(x => x.getBoundingClientRect());
+        return { T: Math.round(Math.min(...rs.map(r => r.top))), B: Math.round(Math.max(...rs.map(r => r.bottom))),
+          L: Math.round(Math.min(...rs.map(r => r.left))), R: Math.round(Math.max(...rs.map(r => r.right))),
+          项: rows[t].map(x => (x.innerText || '').replace(/\s+/g, '').slice(0, 8)) }; }); })(),
   };
 })())`;
 
 (async () => {
   const code = fs.readFileSync(SCRIPT, 'utf8');
   console.log('脚本: ' + SCRIPT.split(/[\\/]/).pop() + '  [' + (INJECT_MODE ? '注入模式' : '已安装版本') + ']');
+  // 断言的数值（两行 / 左右留白 20px）是按**竖屏**列的宽算的；横屏下列宽会变、7 项会挤进同一行。
+  // 所以跑之前强制竖屏，跑完恢复自动旋转 —— 手机本身横竖都不影响结果。
+  const rot = (acc, user) => { try {
+    execSync('adb shell settings put system accelerometer_rotation ' + acc, { shell: 'bash' });
+    if (user !== undefined) execSync('adb shell settings put system user_rotation ' + user, { shell: 'bash' });
+  } catch (e) { console.log('（设置旋转失败，忽略：' + e.message.split('\n')[0] + '）'); } };
+  rot(0, 0);
+  await new Promise(r => setTimeout(r, 2500));
   const api = await cdp.browserApi();
   try {
     const tab = await cdp.findTab(api, TAB_SUBSTR) || await cdp.findTab(api);
@@ -124,6 +136,15 @@ const ST = `JSON.stringify((()=>{
       const rGood = rowOf('好问题'), rShare = rowOf('分享');
       ok(rGood !== undefined && rShare !== undefined && rGood === rShare,
         '「好问题」与「分享」在同一行（文字按钮没被拆成两行）', { 好问题所在行: rGood, 分享所在行: rShare });
+      // ②e 两行之间要有间距（竖屏不挤）+ 文字按钮行右缘贴齐正文右界
+      const row1 = s.按钮行[0], row2 = s.按钮行[1];
+      if (row1 && row2) {
+        ok(row2.T - row1.B >= 8, '两行之间有间距（≥8px，竖屏不挤）', { 间距: row2.T - row1.B });
+        if (s.文字区) {
+          ok(Math.abs(row2.R - s.文字区.R) <= 2, '文字按钮行右缘贴齐正文右界（差 ≤2px）',
+            { 文字按钮行右缘: row2.R, 正文右界: s.文字区.R });
+        }
+      }
     } else {
       console.log('  SKIP  没找到 .QuestionHeader-footer-main');
     }
@@ -140,5 +161,5 @@ const ST = `JSON.stringify((()=>{
     console.log('\n截图: ' + p);
     console.log('\n===== 结果: ' + pass + ' passed / ' + fail + ' failed =====');
     process.exitCode = fail ? 1 : 0;
-  } finally { api.close(); }
+  } finally { api.close(); rot(1); }   // 恢复自动旋转（手机横竖由用户决定）
 })().catch(e => { console.error('ERR', e.message); process.exit(1); });

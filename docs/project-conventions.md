@@ -29,6 +29,23 @@
    **例外**：`.workbuddy/skills/`（项目级技能）**是入库的** —— 技能随仓库分发，
    `scripts/` 的测试靠它读 CDP 工具库，故不能删。
 
+## 产物清单（本仓库**不**建 `ARTIFACTS.md`）
+
+全局规则要求在各项目下维护 `ARTIFACTS.md`。本仓库**有意不建**：清单职能已由三处
+**就地**承担，且都与被登记的对象同址、随改动一起更新，比另立一份总表更不容易腐化。
+
+| 管什么 | 清单在哪 |
+| --- | --- |
+| 正式产物（脚本本体、文档、技能） | [`README.md`](../README.md) 的「文件」表 + 「docs 索引」 |
+| 诊断量具（probe / shot） | [`scripts/README.md`](../scripts/README.md) 的「诊断探针」表 |
+| 可删的中间产物 | 不入库，集中放 `_tmp/`、`scripts/shots/`（见 `.gitignore`） |
+
+> 曾有一版 `ARTIFACTS.md`（2026-09-28，commit `77f9ff1`），落在**已放弃的分支**上；
+> 同期审查（`code-review-v1.0.5.md` 的 L8）已发现它**跟不上目录变化**（缺 `_tmp/release/`、
+> `_tmp/skills-backup/`，`_tmp/probes/` 也多出了本轮脚本）—— 这是本仓库不另立总表的实证理由：
+> 独立清单在快速迭代下会腐化，而就地索引不会。
+> **新增/移动/删除产物时，请同步更新上表对应的就地清单。**
+
 ## 反缩放契约（v1.1.0 起）
 
 - `html{zoom} = visW / SW`（`visW` = `visualViewport.width`），目标是**内容恰好铺满**（`fitRatio = 1`），

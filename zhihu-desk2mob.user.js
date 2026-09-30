@@ -600,7 +600,8 @@
 
   // 注意：这是**半清理** —— 摘掉样式表、断开观察器、清定时器、还原反缩放，
   // 但**不撤销各 pass 写入的内联样式**（display:none / max-width / flex / 头像尺寸等仍在）。
-  // 因此不要拿它当「关掉脚本」的对照基线做 A/B 诊断，详见 ARTIFACTS.md。
+  // 因此不要拿它当「关掉脚本」的对照基线做 A/B 诊断，
+  // 详见 docs/project-conventions.md 的「验证」一节与 scripts/README.md 的探针表注。
   window.__z2mStop = () => {
     obs.disconnect(); clearTimeout(timer); clearTimeout(zoomFixTimer); clearInterval(poll); st.remove();
     curZ = 1; document.documentElement.style.removeProperty('zoom');

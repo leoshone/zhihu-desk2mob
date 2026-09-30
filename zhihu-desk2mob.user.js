@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.2.4
+// @version      1.2.5
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -269,6 +269,12 @@
     /* 让图片顶对齐文字首行的**视觉顶**：文字有半行距 (行高-字号)/2 = 6px，
        实测再减 2px 才是精确对齐（margin-top 4px 时顶/底偏差同时为 0）。 */
     margin-top: 4px !important;
+    /* ⚠️ 必须把知乎自带的 margin-bottom: 4px 抵消成 0（即 -4px）。
+       浮动的**影响高度 = margin-top + height + margin-bottom** —— 只要它超过 N × 行高，
+       第 N+1 行的行框就会被它压住、跟着缩成窄列，看上去就像图片占了 N+1 行
+       （实测：84 + 4 + 4 = 92 > 84 ⇒ 4 行变窄；改成 84 + 4 + 0 = 88 > 84 仍 4 行；
+       84 + 4 + (-4) = 84 ⇒ 第 4 行回到全宽 ✓，且图片底边正好落在第 4 行文字顶上）。 */
+    margin-bottom: -4px !important;
   }
   .RichContent-cover-inner { width: 100% !important; height: 100% !important; }
   .RichContent-cover img { width: 100% !important; height: 100% !important; }

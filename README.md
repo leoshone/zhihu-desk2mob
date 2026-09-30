@@ -49,6 +49,8 @@ Kiwi 桌面模式把布局视口锁在远比屏幕宽的值（本机实测 `inne
 | `hideIdeaOption` | `true` | 隐藏评论发布框里的「同时发布到想法」——它会被挤成竖排、把发布框撑高一倍。 |
 | `hideCircleSync` | `true` | 隐藏首页「写想法」卡片里塌成 0 宽、竖排成一列的「同步到圈子」残留（它是「发到圈子」的功能开关，去掉即失去该入口）。 |
 | `fitIdeaButton` | `true` | 把首页「写想法」卡片里的「发想法」按钮**收进屏幕内完整可见**（知乎给它写死了 `75px` 宽度并带 `margin-left: 20px`，去灰边后它会越出屏幕右缘 9px）。 |
+| `feedThumbWidth` | `100` | 首页信息流**封面缩略图宽度**（px）。知乎默认 `190px`，占内容列 326px 的 58%，把右侧文字挤成每行 7~8 字；改成 `100px` 后右侧文字可用宽 136 → **226px**。设 `0` 则不干预。 |
+| `wrapAroundThumb` | `true` | 让正文在封面**下方也回到全宽**（真正的「右 + 下」环绕）。知乎的 `.RichContent-inner` 是 `overflow: hidden`，那会形成 **BFC**、永不在浮动下方回宽 ⇒ 文字一路都是窄列。设 `false` 则只绕右侧。 |
 | `fitPublishButton` | `true` | 让发布框那一行放得下「发布」按钮（该行内容原本比列宽宽 79px，按钮会被挤出屏幕）。 |
 | `matchComposerAvatar` | `true` | 把发布框里的头像缩到与评论列表头像同尺寸（知乎原本给 40px）。 |
 | `composerAvatarSize` | `24` | 上面那个头像的尺寸（px）。 |
@@ -98,6 +100,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | `v1.1.1-text-scale.md` | 正文字号按真机手感微调（`CFG.textScale = 0.98`）+ 一条已知的间歇测试失败 |
 | `v1.1.2-text-scale-default.md` | 默认文字大小回到名义字号（`CFG.textScale = 1.0`）+ 一处工装缺陷的取证 |
 | `v1.2.0-full-bleed.md` | 块状版式铺满整列（去掉两侧灰边、保留块间灰缝）+ 隐藏竖排「同步到圈子」 |
+| `v1.2.2-feed-thumbnail.md` | 首页信息流封面缩略图改小（190→100px）+ 解开 BFC 让正文真正「右+下」环绕 |
 | `code-review-v1.0.5.md` | 对 v1.0.5 的代码与文档审查：性能取证、结构性问题、一致性清单 |
 
 > v1.0.6（审查后加固）与 v1.0.8（已回滚）没有单独文档：前者的改动记在对应 Release note

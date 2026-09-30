@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.2.1
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.2.2
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图改小（190 → 100px），正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -55,6 +55,14 @@
     hideCircleSync: true,
     // 首页「写想法」卡片：把「发想法」按钮收进屏幕内（知乎给它写死了 75px 宽度 + 20px 左外边距）
     fitIdeaButton: true,
+    // 首页信息流：封面缩略图宽度（px）。知乎默认 **190px**，占内容列 326px 的 58%，
+    // 把绕在右侧的文字挤成每行只有 7~8 字。设 0 则不干预（保持知乎原样）。
+    feedThumbWidth: 100,
+    // 首页信息流：让正文在封面**下方**也回到全宽（真正的「右+下」环绕）。
+    // 知乎的 `.RichContent-inner` 是 `overflow: hidden` —— 那会形成 **BFC**，而 BFC 会被整体
+    // 挤到浮动元素旁边、**永远不会在浮动下方回宽**，于是文字只绕右侧、一路都是窄列。
+    // 解开它（overflow: visible）即得到「右 + 下」环绕。设 false 则只绕右侧。
+    wrapAroundThumb: true,
     // 评论区发布框：让「发布」按钮完整落在屏幕内（该行内容原本比列宽多 79px）
     fitPublishButton: true,
     // 评论区发布框：把里面的头像缩到与评论列表头像同尺寸（知乎原本给 40px）
@@ -236,6 +244,28 @@
     -webkit-line-clamp: unset !important;
     overflow: visible !important;
   }
+
+  /* ---- 首页信息流：封面缩略图改小 + 让正文在封面**下方**也回到全宽 ----
+     （开关：CFG.feedThumbWidth / CFG.wrapAroundThumb）
+     知乎的封面是 float: left 的固定 190x105 盒子（内有 absolute 的 inner 与 object-fit:cover 的图片）。
+     190px 占内容列 326px 的 58%，绕在右侧的文字只剩 136px（每行 7~8 字）。
+     ⚠️ **只改尺寸，别动 inner 的 position** —— 把它改成 static 会把图片推出屏幕（实测 L=-44），
+        卡片只剩一块浮动占位。
+     ⚠️ 也别想用 zoom 缩放：浮动盒仍是 190x105，文字列不会变宽。
+     ⚠️ 真正决定「下方是否回宽」的是 .RichContent-inner 的 overflow：值为 hidden 时它会成为
+        **BFC**，而 BFC 被整体挤到浮动旁边、**永不在浮动下方回宽** ⇒ 文字一路都是窄列。 */
+  ${CFG.feedThumbWidth > 0 ? `
+  .RichContent-cover {
+    width: ${CFG.feedThumbWidth}px !important;
+    height: auto !important;
+    aspect-ratio: 190 / 105 !important;
+  }
+  .RichContent-cover-inner { width: 100% !important; height: 100% !important; }
+  .RichContent-cover img { width: 100% !important; height: 100% !important; }
+  ` : ''}
+  ${CFG.wrapAroundThumb ? `
+  .ContentItem .RichContent-inner { overflow: visible !important; }
+  ` : ''}
 
   /* ---- 放大后列变窄的副作用：作者行里的名字会被硬切 ----
      CFG.textScale > 0.91 时列宽比 screen.width 窄，而头像/关注按钮仍是原来的 CSS 尺寸，

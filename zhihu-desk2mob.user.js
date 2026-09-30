@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.0
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.1
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -358,6 +358,62 @@
      ⚠️ 只对**确实为空**的它生效（实测 0 个子元素、innerHTML 为空）—— 用 :empty 限定才安全，
         无条件隐藏/解散它曾把页面横向撑爆过（v1.3.2 的回归，v1.3.3 已回滚）。 */
   .QuestionHeader-actions:empty { display: none !important; }
+
+  /* ---- 问题页「吸顶迷你头」：把标题与「关注问题」压成一行 ----
+     滚动后知乎会把标题收进顶部那条 188px 宽的吸顶栏（.PageHeader，左右被 logo 与头像各占 85px），
+     栏内 .QuestionHeader-content 是 flex-wrap: wrap ⇒「长标题 + 96px 的关注问题按钮」必然折成两行
+     （实测吸顶栏高 62px = 标题行 28 + 按钮行 34）。用户 2026-09-30 要求压成一行、并把两者都缩小。
+     硬约束：标题不换行时自然宽 **380px**（20px 字号），而可用内容宽只有 156px
+     ⇒ 并排就必然要截断标题，且**按钮占多少宽度，标题就少多少字**。实测三组：
+       · 强行一行、按钮不缩          ⇒ 标题 48px ≈ 3.4 字（比改之前还少）✗
+       · 两行 + 都缩小               ⇒ 标题 164px ≈ 10.9 字（可读性最好，但不是一行）
+       · 一行 + 缩小 + 左移 + 让无关按钮让位 ⇒ 标题 112px ≈ 8.6 字 ✓（本版采用）
+     三处关键，缺一条标题就少约 2 个字：
+       ① 覆盖 .FollowButton 写死的 min-width: 96px（不覆盖的话字号/内边距再怎么小，按钮仍是 96px）；
+       ② 清掉左内边距（content 的 16px + main 的 20px），标题才能贴到 logo 右侧（实测 x: 121 → 89）；
+       ③ 隐藏吸顶栏里那个蓝色圆形加号 .SearchBar-askDropdownButton（34px，和「关注问题」挤在一起，
+          与问题页语境无关），以及「写回答」等在这条窄栏里本就显示不下的按钮。
+     ⚠️ 作用域必须限定在 .PageHeader 内 —— 未滚动时的完整标题区（大字号标题 + 三个按钮那行）
+        也在 .QuestionHeader-main / .QuestionHeader-side 里，别误伤。
+     实测（真机 1080×2400，列宽 361）：标题 99..229（**130px**，15px 字号 ≈ **8.7 字**）、按钮 56×24
+       且右端推到 **293**（距右上角头像左缘 304 只有 11px）、两者同一行；
+       标题左端 99 与「知乎」LOGO 右缘 84 之间正好 15px（= 一个 15px 字号的字宽）。
+       吸顶栏高度仍是 62px（知乎固定值，未强改）。
+     ⚠️ 用户 2026-09-30 追加五条：**只留「关注问题」**（其余按钮一律不显示，含那个蓝色圆形加号）、
+        **按钮再往右靠**（margin-left: auto + margin-right: -20px + 右侧内边距归零）、
+        **标题再大一号**（13px → 15px）、**按钮与右上角头像之间只留一个空**、
+        **标题与「知乎」LOGO 之间留一个字**（padding-left 4px → 14px）。
+        注意字号与字数是此消彼长的：13px 时标题能显示 8.6 字，放大到 15px 后若不推按钮只剩 8 字；
+        把按钮右推让出 20px 后回到 9.3 字，再给 LOGO 让出一个字宽后落定 **8.7 字**。 */
+  .PageHeader .QuestionHeader-content {
+    flex-wrap: nowrap !important; align-items: center !important;
+    /* padding-left: 14px —— 标题与「知乎」LOGO 之间留一个字（LOGO 右缘 84，标题左端 89 只空 5px 太挤；
+       14px ⇒ 标题左端 99、与 LOGO 之间正好 15px ≈ 一个 15px 字号的字宽）。用户 2026-09-30 要求。 */
+    padding-left: 14px !important; padding-right: 0 !important; column-gap: 8px !important;
+  }
+  .PageHeader .QuestionHeader-main { flex: 1 1 0 !important; min-width: 0 !important; padding-left: 0 !important; }
+  .PageHeader .QuestionHeader-title {
+    font-size: 15px !important; line-height: 22px !important; display: block !important;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
+  }
+  .PageHeader .QuestionHeader-side {
+    flex: 0 0 auto !important; width: auto !important; padding-left: 0 !important; flex-wrap: nowrap !important;
+    /* margin-left:auto 先把按钮顶到容器最右；margin-right:-20px 再往右推 20px ——
+       否则按钮右端只停在 .PageHeader 的右缘 **273**，而右上角头像左缘在 **304**，
+       中间空 31px、看起来很散（用户 2026-09-30 反馈「跟头像中间留一个空就可以了」）。
+       推 20px 后按钮右端 **293**、距头像 11px；.PageHeader 是 overflow:visible，溢出不会被裁。
+       副作用（正面）：标题可用宽度反而 120px → 140px（约 8 字 → 9.3 字）。 */
+    margin-left: auto !important; margin-right: -20px !important;
+  }
+  .PageHeader .QuestionHeader-profile { display: none !important; }
+  .PageHeader .QuestionButtonGroup > button:not(.FollowButton),
+  .PageHeader .QuestionHeaderActions { display: none !important; }
+  .PageHeader .SearchBar-askDropdownButton { display: none !important; }
+  .PageHeader .FollowButton {
+    min-width: 0 !important; width: auto !important;
+    font-size: 11px !important; padding-left: 5px !important; padding-right: 5px !important;
+    height: 24px !important; min-height: 0 !important; line-height: 24px !important;
+  }
 
   /* header nav: swipeable when overlong */
   .AppHeader > div, .AppHeader { overflow-x: auto !important; scrollbar-width: none !important; }

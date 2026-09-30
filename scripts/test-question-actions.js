@@ -53,6 +53,12 @@ const ST = `JSON.stringify((()=>{
         || document.querySelector('.AnswerItem .RichText') || document.querySelector('.RichContent .RichText');
       if (!e) return null; const r = e.getBoundingClientRect();
       return { L: Math.round(r.left), R: Math.round(r.right) }; })(),
+    // 页首里所有按钮按 T 分行（用来核对「好问题/评论/分享」那行也是一行）
+    按钮行: (() => { const main = document.querySelector('.QuestionHeader-footer-main');
+      if (!main) return null; const rows = {};
+      [...main.querySelectorAll('button')].forEach(x => { const r = x.getBoundingClientRect();
+        if (r.height <= 0) return; const t = Math.round(r.top); (rows[t] = rows[t] || []).push((x.innerText||'').replace(/\s+/g, '').slice(0, 8)); });
+      return Object.keys(rows).map(Number).sort((a, b) => a - b).map(t => ({ T: t, 项: rows[t] })); })(),
   };
 })())`;
 
@@ -108,6 +114,18 @@ const ST = `JSON.stringify((()=>{
         { 按钮区: all.length ? [all[0].L, all[all.length - 1].R] : null, 文字区: s.文字区 });
     } else {
       console.log('  SKIP  页面上没找到正文（无法核对「不超出文字区」）');
+    }
+    // ②d 下面的纯文字按钮（好问题 / 评论 / 分享…）也要在同一行
+    if (s.按钮行) {
+      ok(s.按钮行.length <= 2, '页首按钮总共只有 2 行（主按钮行 + 文字按钮行）',
+        s.按钮行.map(r => r.T + ': ' + r.项.join(' / ')));
+      // 直接盯「好问题」与「分享」是否同行（它们分别是这批文字按钮的首尾）
+      const rowOf = kw => (s.按钮行.find(r => r.项.some(t => t.indexOf(kw) >= 0)) || {}).T;
+      const rGood = rowOf('好问题'), rShare = rowOf('分享');
+      ok(rGood !== undefined && rShare !== undefined && rGood === rShare,
+        '「好问题」与「分享」在同一行（文字按钮没被拆成两行）', { 好问题所在行: rGood, 分享所在行: rShare });
+    } else {
+      console.log('  SKIP  没找到 .QuestionHeader-footer-main');
     }
     ok(all.every(b => b.L >= 0), '三个按钮都没有被左侧裁掉（L>=0）', all.map(b => b.L));
     ok(all.every(b => b.R <= s.bodyW + 1), '三个按钮都没有越出右缘（R<=列宽）', { bodyW: s.bodyW, R: all.map(b => b.R) });

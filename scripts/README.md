@@ -24,6 +24,10 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 
 ## 运行
 
+**在本目录（`scripts/`）下运行** —— 测试的截图写的是相对路径 `shots/`（即 `scripts/shots/`），
+从仓库根跑会因为该目录不存在而在**末尾**报错（断言其实已经跑完，但看不到结果行）。
+`scripts/shots/` 是运行期产物、已被 `.gitignore` 排除，不存在就先 `mkdir -p scripts/shots`。
+
 真机上先各开一个页面（测试会自行复制新标签页，但需要一个「样板标签页」来确定 URL）：
 
 - 回答页 `www.zhihu.com/question/.../answer/...` —— 给 `test-comment-back.js`
@@ -40,8 +44,11 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 
 > 两条注意：
 > - `test-counterzoom` 只在 `--installed` 下才有判别力（注入发生在加载之后，跑不到加载期的变化）；
-> - 它会临时改写页面比例（CDP `Emulation.setPageScaleFactor`，仅本会话有效），结束会重载页面。
-> 建议放在整套测试的**最后**跑。
+> - 它会临时改写页面比例（CDP `Emulation.setPageScaleFactor`）—— ⚠️ **收尾只重载页面、不还原比例**，
+>   被它选中的那张标签会残留 `scale = 1`，**导致紧接着重跑时①步拿到 0 个样本**（3 条 FAIL：
+>   「拿到足够样本」/「全程不超宽」/「视觉稳定」，看着像 renderer 挂死，其实不是）。
+>   要重跑就先把那张标签 `Page.navigate` 走（移出匹配范围），或重启 Kiwi。
+>   建议放在整套测试的**最后**跑。
 >
 > **`test-counterzoom` 的 ②③ 会间歇性失败**（「捏合缩小后仍恰好铺满」等两条）：模拟捏合时浏览器会
 > 先经过「最小比例」那一档，脚本按那一档重算出的 zoom 偏大，而最后那一发事件又因「捏合不变量」

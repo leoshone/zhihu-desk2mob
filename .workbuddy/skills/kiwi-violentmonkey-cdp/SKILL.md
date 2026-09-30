@@ -58,6 +58,16 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
   **已在 `cdp.js` 的 `attach()` 里统一修掉**（attach 前自动 `Target.activateTarget`），调用方不用管；
   但若自己绕过 `attach()` 直接用 `api.send('Target.attachToTarget')`，仍需自行先激活。
   （踩过：两次白等 2 分钟，一度误判成 renderer 挂死；`test-counterzoom --installed` 曾因此 0 采样、7 连败。）
+- **另一条与「冻结」无关的 0 采样成因：`test-counterzoom` 会把被选标签留成 `scale = 1`**。
+  它的 ②③④ 会 `Emulation.setPageScaleFactor`，收尾只 `Page.navigate` **不还原**；而它每次都取
+  **第一个**匹配 `www.zhihu.com` 的标签 ⇒ 紧接着重跑时①步必拿 **0 个样本**。
+  机理：被污染标签 `scale = 1` ⇒ `Z = visW / SW = 1`，**恰等于 `applyZoom()` 里 `curZ` 的初值**，
+  于是 `if (Math.abs(Z - curZ) < 0.005) return;` 提前返回、**不写内联 `style.zoom`**；
+  而①步只统计「有内联 zoom」的采样 ⇒ 0 个。
+  **症状是 3 条 FAIL（「拿到足够样本」/「全程不超宽」/「视觉稳定」），看着像 renderer 挂死，其实不是**。
+  对策：重跑前把那张标签 `Page.navigate` 走（移出匹配范围），或重启 Kiwi。
+  ⚠️ `Emulation.clearDeviceMetricsOverride` **清不掉**它（实测无效）。
+  取证见 zhihu-desk2mob 的 `docs/v1.1.2-text-scale-default.md` §4。
 - **页面上完全没有脚本痕迹 ≠ 脚本没注入**：先看 `#z2m-style` 在不在、`documentElement.style.zoom` 是否为空，
   再怀疑「脚本自己抛错」。真机踩过：在初始化早期执行的函数里调用了一个依赖后面 `let` 声明的清理函数
   → 撞暂时性死区（TDZ）、整个 IIFE 抛错，页面表现与「暴力猴没注入」一模一样。
@@ -77,6 +87,7 @@ curl -s --noproxy 127.0.0.1 --max-time 5 http://127.0.0.1:9222/json/version
   而且第二次起会因端口被占而报错/空转，于是你会以为「服务已重启」其实一直是旧那个在服务
   （踩过：同一轮里起了两次，两个都活着，只关了一个，另一个留到会话结束）。
   收尾时用 `netstat -ano | grep :8899` 确认，再 `taskkill /PID <pid> /F`。
+  ⚠️ 在 **Git Bash** 下 `/PID` 会被当成路径而失败，要写成 `taskkill //PID <pid> //F`（双斜杠）。
 - **SPA 会把「评论展开」这类状态存进会话**：站点（如知乎）记住「评论是否展开」——刷新后可能
   恢复成内联评论而不是弹层，且同意图点击会走不同路径（按钮文本变成「收起评论」）。
   所以① 测弹层路径前先点「收起评论」归零；② 断言对**两种形态分别成立**，别假设单一路径。

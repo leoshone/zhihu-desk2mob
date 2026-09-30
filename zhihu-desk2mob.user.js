@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.3.8
+// @version      1.3.9
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -235,8 +235,20 @@
      注：只作用在 .Post-content 下（专栏页专属），首页/问答页不受影响。 */
   .Post-content > div > *:not(:first-child) { display: none !important; }
 
-  /* action bars wrap */
-  .ContentItem-actions { flex-wrap: wrap !important; row-gap: 4px !important; }
+  /* ---- 顶部「关注者 N / 被浏览 N」：改成横向排列、左对齐 ----
+     实测知乎给这一栏（.NumberBoard）带了 margin-left: 158.001px（桌面端居中留白），
+     窄屏下整排被推到右边、左侧空一大块（用户反馈「关注者左侧比较空」）；
+     而且「关注者」那一格被压到 58px 宽，名称和数值挤成两行。
+     清掉左边距改成 flex-start 后：栏 158..358 -> 0..358，两格都在同一行（H 51 -> 29）✓ */
+  .NumberBoard {
+    display: flex !important; flex-wrap: wrap !important;
+    justify-content: flex-start !important; align-items: center !important;
+    column-gap: 14px !important; width: auto !important;
+    margin-left: 0 !important; margin-right: auto !important;
+  }
+  .NumberBoard-item { width: auto !important; max-width: none !important; min-width: 0 !important; flex: 0 0 auto !important; }
+  .NumberBoard-itemInner { display: flex !important; flex-wrap: nowrap !important; align-items: baseline !important; column-gap: 4px !important; }
+  .NumberBoard-itemName, .NumberBoard-itemValue { width: auto !important; white-space: nowrap !important; }
   /* ---- 回答页底部的浮动操作栏（知乎的 .ContentItem-actions.Sticky）补成满宽 ----
      知乎给它 right: 40px 的桌面留白（实测 left:0 / right:39.9969px => 栏宽 318，而列宽 358），
      在手机上右侧就空出 40px；用户反馈「滚动后右侧空一块，想保持撑满」。

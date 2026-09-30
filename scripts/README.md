@@ -100,12 +100,12 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 > 内联样式），所以那组数据不是有效的无脚本对照。判断「某问题是否由某次改动引入」要用
 > **同一轮内的改前/改后对照**。两个脚本头部都写了这条。
 
-**通用的**两个探针不在这里，在技能目录（`skills/kiwi-violentmonkey-cdp/scripts/`）：
+**通用的**两个探针不在这里，在技能目录（`.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/`）：
 `probe-element.js`（按文案定位元素并 dump 结构）与 `inspect.js`（判定屏幕顶层叠加层、
 切标签、可 `--out` 指定截图路径）。本目录**不再放它们的副本** —— 曾因副本漂移导致
 「本地跑的是旧版」而白查一轮。
 
 ## 依赖
 
-CDP 工具库本体在技能目录内：`../skills/kiwi-violentmonkey-cdp/scripts/cdp.js`。
+CDP 工具库本体在技能目录内：`../.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/cdp.js`。
 本目录的 `cdp.js` 只是一行转发，以保证全仓库只有一份实现。

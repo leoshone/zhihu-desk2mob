@@ -78,7 +78,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | `zhihu-desk2mob.user.js` | 脚本本体（单文件，无构建） |
 | `docs/` | 各版本的修复方案文档：根因分析、实测数据、方案取舍（见下方索引） |
 | `scripts/` | 真机回归测试 + 诊断探针（见 [scripts/README.md](scripts/README.md)） |
-| `skills/kiwi-violentmonkey-cdp/` | 配套技能：用 CDP 驱动真机 Kiwi + 暴力猴（装／更新脚本、注入、取证） |
+| `.workbuddy/skills/kiwi-violentmonkey-cdp/` | 配套技能：用 CDP 驱动真机 Kiwi + 暴力猴（装／更新脚本、注入、取证） |
 
 ### docs 索引
 
@@ -99,5 +99,5 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 
 
 `scripts/` 里的测试要驱动真机，依赖技能目录中的 CDP 工具库
-（`skills/kiwi-violentmonkey-cdp/scripts/cdp.js`，本仓库只存一份实现）。
+（`.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/cdp.js`，本仓库只存一份实现）。
 技能本身可以单独拿走使用，不依赖本脚本。

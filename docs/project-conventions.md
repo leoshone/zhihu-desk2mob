@@ -1,7 +1,7 @@
 # 项目约定（接手须知）
 
 这份文档是**换机／换人接手时需要知道的项目决策**，不重复技能与 README 已写的内容：
-环境与工具用法见 [`skills/kiwi-violentmonkey-cdp/SKILL.md`](../skills/kiwi-violentmonkey-cdp/SKILL.md)，
+环境与工具用法见 [`.workbuddy/skills/kiwi-violentmonkey-cdp/SKILL.md`](../.workbuddy/skills/kiwi-violentmonkey-cdp/SKILL.md)，
 测试怎么跑见 [`scripts/README.md`](../scripts/README.md)，各版本根因见 [`docs/`](.)。
 
 ## 环境（实测）
@@ -23,9 +23,11 @@
 5. 要跑测试：**在真机上先开好一个专栏页 + 一个回答页标签**（否则测试会退到别的页面、报前置失败
    —— 见 `scripts/README.md`）。`adb forward tcp:9222 …` 由 `scripts/cdp.js` 加载时自建。
 6. 要发版：`gh auth login`（走设备码网页流程）→ `gh auth setup-git` → 按下面「发布流程」。
-7. **只在本地、不入库**的东西：`.workbuddy/`（本机 agent 记忆与技能联接）、`_tmp/`（一次性探针）、
+7. **只在本地、不入库**的东西：`.workbuddy/memory/`（本机 agent 记忆）、`_tmp/`（一次性探针）、
    `scripts/shots/`（测试截图）。换机后这些不会跟过来，但**结论都已沉淀进 `docs/`**；
    常用诊断探针也已收进 `scripts/`（见其 README 的探针表）。
+   **例外**：`.workbuddy/skills/`（项目级技能）**是入库的** —— 技能随仓库分发，
+   `scripts/` 的测试靠它读 CDP 工具库，故不能删。
 
 ## 反缩放契约（v1.1.0 起）
 
@@ -85,7 +87,7 @@
 ## 调试顺序（省时间的顺序）
 
 1. `scripts/probe-*.js` 定位「现象出自哪个容器／哪一层」，别先猜 CSS；
-2. `scripts/inspect.js`（技能里）看屏幕顶层叠加层与关闭入口在不在屏幕内；
+2. `.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/inspect.js` 看屏幕顶层叠加层与关闭入口在不在屏幕内；
 3. 改脚本 → `--installed` 跑对应测试 → 全套；
 4. 涉及视觉的改动：`adb exec-out screencap -p` 抓真机屏（比 `Page.captureScreenshot` 抗造）。
 
@@ -142,5 +144,5 @@
 
 **排查工具**：`scripts/probe-rightrail.js`（结构对照）、`scripts/probe-overlay.js` /
 `probe-topalign.js` / `probe-sticky.js`（浮层与吸顶取证）、技能里的
-`skills/kiwi-violentmonkey-cdp/scripts/inspect.js`（顶层叠加层 + 关闭入口是否在屏幕内）、
+`.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/inspect.js`（顶层叠加层 + 关闭入口是否在屏幕内）、
 `adb exec-out screencap -p` 抓真机屏。注意 `Page.captureScreenshot` 在长会话后不可靠。

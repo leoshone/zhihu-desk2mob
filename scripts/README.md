@@ -31,6 +31,7 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 真机上先各开一个页面（测试会自行复制新标签页，但需要一个「样板标签页」来确定 URL）：
 
 - 回答页 `www.zhihu.com/question/.../answer/...` —— 给 `test-comment-back.js`
+- 问题页（任意 `www.zhihu.com/question/...`）—— 给 `test-question-actions.js`
 - 专栏页 `zhuanlan.zhihu.com/p/...` —— 给 `test-idea-option.js`
 
 ```bash
@@ -38,6 +39,7 @@ node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢�
 node test-idea-option.js  --installed    # 发布框：隐藏「同时发布到想法」+ 发布按钮完整可见
 node test-avatar.js       --installed    # 发布框：头像不被拉高、与评论列表头像同尺寸
 node test-rightrail.js    --installed    # 首页右边缘：侧栏/页脚残留已清除（且正文列没被误伤）
+node test-question-actions.js --installed # 问题页：关注问题/写回答/邀请回答 三个按钮同排
 node test-counterzoom.js  --installed    # 反缩放：内容恰好铺满、加载期无视觉跳变、不跟捏合抢
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 ```

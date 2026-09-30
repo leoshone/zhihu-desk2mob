@@ -140,10 +140,8 @@ const ST = `JSON.stringify((()=>{
       const row1 = s.按钮行[0], row2 = s.按钮行[1];
       if (row1 && row2) {
         ok(row2.T - row1.B >= 8, '两行之间有间距（≥8px，竖屏不挤）', { 间距: row2.T - row1.B });
-        if (s.文字区) {
-          ok(Math.abs(row2.R - s.文字区.R) <= 2, '文字按钮行右缘贴齐正文右界（差 ≤2px）',
-            { 文字按钮行右缘: row2.R, 正文右界: s.文字区.R });
-        }
+        // 注：曾有「文字按钮行右缘贴齐正文右界」一条断言，靠给宽 0 的壳加 display: contents 实现，
+        // 但那会把页面横向撑爆（zoom 3.99、整页放大 4 倍）=> 已回滚，该断言随之删除（v1.3.3）。
       }
     } else {
       console.log('  SKIP  没找到 .QuestionHeader-footer-main');

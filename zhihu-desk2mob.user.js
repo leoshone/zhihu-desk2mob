@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.1.1
+// @version      1.1.2
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*

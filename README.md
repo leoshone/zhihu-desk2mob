@@ -93,6 +93,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | `v1.0.9-fix-counter-zoom-fit.md` | 反缩放改为「恰好铺满」：不再被放大一点点，且加载期零视觉跳变 |
 | `v1.1.0-limit-zoom-out.md` | 限制「手工缩小」：捏合不会被缩成半屏小字（含与 v1.0.9 §5 的取舍）|
 | `v1.1.1-text-scale.md` | 正文字号按真机手感微调（`CFG.textScale = 0.98`）+ 一条已知的间歇测试失败 |
+| `v1.1.2-text-scale-default.md` | 默认文字大小回到名义字号（`CFG.textScale = 1.0`）+ 一处工装缺陷的取证 |
 | `code-review-v1.0.5.md` | 对 v1.0.5 的代码与文档审查：性能取证、结构性问题、一致性清单 |
 
 > v1.0.6（审查后加固）与 v1.0.8（已回滚）没有单独文档：前者的改动记在对应 Release note

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.2.9
+// @version      1.2.10
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -251,10 +251,19 @@
   .QuestionHeader-footer-main {
     display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
     align-items: flex-start !important; justify-content: space-between !important;
-    column-gap: 10px !important; padding-left: 0 !important; padding-right: 0 !important;
+    column-gap: 10px !important;
+    /* 两侧留白要对齐**正文文字区**（实测 .AnswerItem / .RichText 是 20..338，左右各 20px）。
+       ⚠️ 不能写成 padding: 0 —— 那样按钮会顶到屏幕边缘（用户 2026-09-30 反馈）。
+       留白取 20px 后可用宽只剩 318，而三个按钮原样占 303 + 两处 10px 间隙 = 323 > 318 ⇒ 会换行；
+       所以同时把按钮自带的左右 16px 内边距收到 13px（每个各窄 6px，合计省下 18px），
+       实测宽度 96/90/105 = 291，放得下且间距 14/13 均匀。 */
+    padding-left: 20px !important; padding-right: 20px !important;
   }
   .QuestionButtonGroup, .QuestionHeaderActions { display: contents !important; }
-  .QuestionHeader-footer-main button { margin-left: 0 !important; margin-right: 0 !important; }
+  .QuestionHeader-footer-main button {
+    margin-left: 0 !important; margin-right: 0 !important;
+    padding-left: 13px !important; padding-right: 13px !important;
+  }
 
   /* header nav: swipeable when overlong */
   .AppHeader > div, .AppHeader { overflow-x: auto !important; scrollbar-width: none !important; }

@@ -48,6 +48,11 @@ const ST = `JSON.stringify((()=>{
       return i ? { dir: getComputedStyle(i).flexDirection, wrap: getComputedStyle(i).flexWrap } : null; })(),
     actsDisp: (() => { const a = document.querySelector('.QuestionHeaderActions');
       return a ? getComputedStyle(a).display : null; })(),
+    // 正文文字区（用来核对按钮区没有超出它）：回答卡片 / 正文
+    文字区: (() => { const e = document.querySelector('.AnswerItem') || document.querySelector('.List-item')
+        || document.querySelector('.AnswerItem .RichText') || document.querySelector('.RichContent .RichText');
+      if (!e) return null; const r = e.getBoundingClientRect();
+      return { L: Math.round(r.left), R: Math.round(r.right) }; })(),
   };
 })())`;
 
@@ -92,8 +97,18 @@ const ST = `JSON.stringify((()=>{
     const gap2 = all.length >= 3 ? all[2].L - all[1].R : null;
     ok(gap1 != null && gap2 != null && Math.abs(gap1 - gap2) <= 4, '三按钮间距均匀（两处间距差 ≤4px）', { gap1, gap2 });
     ok(gap1 !== null && gap1 > 0 && gap2 !== null && gap2 > 0, '两处间距都为正（没有贴在一起）', { gap1, gap2 });
-    ok(all.length > 0 && all[0].L <= 4 && (s.bodyW - all[all.length - 1].R) <= 4, '按钮区用满整行（左右空档都 ≤4px）',
-      { 左空: all[0] && all[0].L, 右空: all.length ? s.bodyW - all[all.length - 1].R : null });
+    // ②c 两侧要留白，且不超出正文文字区（用户：按钮区不该顶到屏幕边缘）
+    const leftPad = all.length ? all[0].L : null;
+    const rightPad = all.length ? s.bodyW - all[all.length - 1].R : null;
+    ok(leftPad !== null && leftPad >= 8 && rightPad !== null && rightPad >= 8, '按钮区两侧都有留白（≥8px，不顶屏幕边）',
+      { 左空: leftPad, 右空: rightPad });
+    if (s.文字区) {
+      ok(all.length > 0 && all[0].L >= s.文字区.L - 1 && all[all.length - 1].R <= s.文字区.R + 1,
+        '按钮区没有超出正文文字区（' + s.文字区.L + '..' + s.文字区.R + '）',
+        { 按钮区: all.length ? [all[0].L, all[all.length - 1].R] : null, 文字区: s.文字区 });
+    } else {
+      console.log('  SKIP  页面上没找到正文（无法核对「不超出文字区」）');
+    }
     ok(all.every(b => b.L >= 0), '三个按钮都没有被左侧裁掉（L>=0）', all.map(b => b.L));
     ok(all.every(b => b.R <= s.bodyW + 1), '三个按钮都没有越出右缘（R<=列宽）', { bodyW: s.bodyW, R: all.map(b => b.R) });
     ok(all.every(b => b.W > 40 && b.H > 20), '三个按钮尺寸正常（没被压扁）', all.map(b => [b.W, b.H]));

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.3.4
+// @version      1.3.5
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -214,6 +214,14 @@
     min-width: 0 !important;
     max-width: 100% !important;
   }
+
+  /* ---- 首屏就藏掉侧栏，避免「先显示再消失」的闪烁 ----
+     原先只在 JS 的 hideSideRails() 里隐藏，而它跑在 tick 里（300ms 去抖 + 等 DOM 就绪），
+     所以首屏**必然先画出来一次** —— 用户会看到右侧栏（大家都在搜 / 关于作者…）先占位再消失。
+     样式表是在 document-start 注入的，把**类名可判定**的这部分挪到 CSS，首屏直接不画。
+     JS 那一步保留：用来兜住动态插入、或没有这些类名的其它栏。
+     注：display:none 只是不渲染，网络请求仍会发出（要彻底不拉需要阻断请求，本脚本不做）。 */
+  .GlobalSideBar, .Question-sideColumn, [class*="SideBar"] { display: none !important; }
 
   /* action bars wrap */
   .ContentItem-actions { flex-wrap: wrap !important; row-gap: 4px !important; }

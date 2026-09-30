@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.2.0
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.2.1
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -53,6 +53,8 @@
     // 首页「写想法」卡片：隐藏塌成 0 宽的竖排「同步到圈子」残留（它是「发到圈子」的开关；
     // 用户 2026-09-30 明确要求去掉 —— 原为「已知未修」第 2 条，本次给了结论）
     hideCircleSync: true,
+    // 首页「写想法」卡片：把「发想法」按钮收进屏幕内（知乎给它写死了 75px 宽度 + 20px 左外边距）
+    fitIdeaButton: true,
     // 评论区发布框：让「发布」按钮完整落在屏幕内（该行内容原本比列宽多 79px）
     fitPublishButton: true,
     // 评论区发布框：把里面的头像缩到与评论列表头像同尺寸（知乎原本给 40px）
@@ -627,6 +629,34 @@
     }
   }
 
+  // ---- 让首页「写想法」卡片里的「发想法」按钮完整落在屏幕内 ----
+  // 真机实测（v1.2.0 去掉两侧灰边之后）：该按钮越出屏幕右缘 9px。三个原因，缺一不可：
+  //   ① 知乎给按钮写了**固定宽度 75px** —— 把它的内边距改成 8px，计算宽度仍是 74.9998px
+  //      （宽度根本不随内边距走），所以「只收窄内边距」无效；
+  //   ② 它自带 `margin-left: 20px`，把按钮从所在行的 272 顶到 292；
+  //   ③ 文字本身 45px + 左右内边距 18px×2 = 81px，而它所在的盒子只有 66px 宽 → 只能溢出。
+  // 解法：把宽度交还给内容（width:auto）、清掉那段额外左外边距、内边距收到 12px。
+  // 实测：按钮 292..367（越出 9px）→ **272..341**：完整可见，距屏幕右缘 17px，
+  // 与块内其它内容的右边界（342）基本对齐。
+  // ⚠️ **不要**改用「让所在行换行」的办法：那会让按钮独占一行（实测可完全进屏，越界 −20px），
+  //    但观感变化大，用户 2026-09-30 已明确否掉。也别指望 `:has()` —— 它在这个布局里帮不上忙。
+  let ideaBtnDone = null;      // 缓存已处理节点；SPA 重建后 isConnected 变 false 会自动重找
+  function fitIdeaButton() {
+    if (!CFG.fitIdeaButton) return;
+    if (ideaBtnDone && ideaBtnDone.isConnected) return;
+    ideaBtnDone = null;
+    // 廉价前置判断：该按钮只可能出现在首页的「写想法」卡片里，而那张卡片必然带 .WriteArea
+    const area = document.querySelector('.WriteArea');
+    if (!area) return;
+    const btn = [...area.querySelectorAll('button')].find(b => normText(b.innerText) === '发想法');
+    if (!btn) return;
+    btn.style.setProperty('width', 'auto', 'important');
+    btn.style.setProperty('margin-left', '0', 'important');
+    btn.style.setProperty('padding-left', '12px', 'important');
+    btn.style.setProperty('padding-right', '12px', 'important');
+    ideaBtnDone = btn;
+  }
+
   let timer = null;
   let lastTickSW = -1;        // 上一拍的 SW；变了说明阈值全变，记忆作废（applyZoom 会改 SW，见那里的注释）
   function tick() {
@@ -636,7 +666,7 @@
     hideSideRails(); capFixed(); capWide();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
-    hideIdeaOption(); hideCircleSync(); fitPublishButton(btns); matchComposerAvatar(btns);
+    hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fitPublishButton(btns); matchComposerAvatar(btns);
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 

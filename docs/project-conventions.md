@@ -234,8 +234,9 @@
   - 判断依据是「**这个改动可能破坏什么**」，不是「跑全套更保险」——全套要好几轮真机往返，
     对小改动是纯浪费。
   - 无论跑几套，**新写的断言都要先做改前/改后对照**，确认它有判别力（改前必须 FAIL）。
-- **`test-counterzoom` 的 ②③ 会间歇失败**（同一份代码两次运行可能 5/7 或 7/7），
-  原因见「已知未修」第 6 条 —— 看到它失败先重跑一次再判断。
+- **`test-counterzoom` 的 ②③ 会失败**（5/7）：文档早先记为「间歇」，2026-10-01 复核为**稳定复现**、
+  且**与脚本版本无关**（`--installed` 跑旧版同样失败、数据一字不差）—— 机理见「已知未修」第 6 条。
+  **不要靠重跑判断**，用 `--installed` 对照排除「是否本次改动引入」即可。
   ⚠️ 该测试的 ②③④ 会 `Emulation.setPageScaleFactor` 改写页面比例，而 **CDP 没有「清除
   pageScaleFactor」的接口**（`clearDeviceMetricsOverride` 实测也清不掉）—— 所以它现在会在**收尾时
   记下进测试前的比例并设回去**。若某次运行被中断（Ctrl-C / 报错退出）没走到收尾，那张标签会残留
@@ -250,34 +251,54 @@
   **已用 v1.2.2 的发布件 A/B 排除**（同版本三次运行有一次复现）⇒ 是**既有的、与版本无关的
   加载期竞态**。看到 ①② 失败同样**先重跑一次**再判断。
 
-## 加载期闪烁：隐藏类 pass 必须同步跑在 observer 回调里（v1.4.2 起）
+## 加载期闪烁：隐藏 / 矫正类 pass 必须同步跑在 observer 回调里（v1.4.2 起）
 
 - **症状**：首页加载时「写想法」卡片里的竖排「同步到圈子」会**先显示出来、随后才消失**，
-  页面跟着抖一下（用户 2026-10-01 反馈）。
-- **根因**：`hideCircleSync()` 只挂在 `tick()` 上，而 `tick()` 有 **300ms 去抖**
+  「发想法」按钮也会先以**越出屏幕**的形态出现、再跳回屏内 —— 页面看起来就是抖一下
+  （用户 2026-10-01 两次反馈）。
+- **根因**：`hideCircleSync()` / `fitIdeaButton()` 都只挂在 `tick()` 上，而 `tick()` 有 **300ms 去抖**
   （`schedule()` = `setTimeout(tick, 300)`），并且**每次 DOM 变动都会重置这个计时器** ——
-  页面加载期变动密集，于是被一路推迟。真机实测延迟 **1.8~1.9 秒**（远不止 300ms）。
-- **解法**：把它像 `syncCommentModal()` 一样**同步挂在 MutationObserver 回调里**
-  （`new MutationObserver(() => { syncCommentModal(); hideCircleSync(); schedule(); })`）。
-  observer 回调是**微任务**、跑在同一帧渲染之前 ⇒ 元素一出现就被藏掉。
-  成本可控：该函数自带记忆化（`circleSyncBox` 仍连在 DOM 上就直接 return）+ `.WriteArea` 廉价前置判断。
-- **实测**（用 `Page.addScriptToEvaluateOnNewDocument` 注入探针，记录「标签出现在 DOM」与「被隐藏」的时间差）：
+  页面加载期变动密集，于是被一路推迟。实测「同步到圈子」延迟 **1.8~1.9 秒**（远不止 300ms）。
+- **解法**：把**所有「矫正类」pass** 像 `syncCommentModal()` 一样**同步挂在 MutationObserver 回调里**：
 
-  | | 出现 | 隐藏 | 延迟 |
-  | --- | --- | --- | --- |
-  | 改前（v1.4.1） | ~1350~1660ms | ~3160~3770ms | **~1830ms** |
-  | 改后（v1.4.2） | ~1350ms | ~1375ms | **~27ms** |
+  ```js
+  const obs = new MutationObserver(() => {
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption();
+    const btns = publishButtons();            // 一次查询给下面两个 pass 共用
+    fitPublishButton(btns); matchComposerAvatar(btns);
+    schedule();
+  });
+  ```
 
-- ⚠️ **通用教训**：凡是「加载期需要隐藏／改造某个元素」的 pass，**都不能只挂在去抖的 `tick` 上** ——
+  observer 回调是**微任务**、跑在同一帧渲染之前 ⇒ 元素一出现就被处理。
+- ⚠️ **前提：每个 pass 都要有廉价前置判断**，否则「每次 DOM 变动都跑一遍」会拖慢主线程：
+  - `hideCircleSync` / `fitIdeaButton` —— `.WriteArea` 不存在就直接 return；
+  - `hideIdeaOption` —— `[contenteditable="true"]` 不存在就直接 return（它那条 XPath 单次 3~7ms）；
+  - `publishButtons` —— **2026-10-01 补上的前置**：`[contenteditable="true"]` 不存在就返回空数组。
+    这次「全文档 button 扫描」在首页要遍历 **125 个按钮、单次 0.6ms**；加前置后降到 **0.1ms**
+    （guard 查询本身 0.06ms）。有了它，下游的 `fitPublishButton` / `matchComposerAvatar`
+    才能一起挂上来 —— 否则打开评论框时「发布」按钮与头像也会先闪一下。
+  实测各 pass 稳态单次开销 **0.06~0.1ms**（`_tmp/bench-publishbuttons.js`）。
+- `tick` 里原有的那一遍调用**全部保留**，作为「周期性全量重扫」的兜底。
+- **实测**（用 `Page.addScriptToEvaluateOnNewDocument` 注入探针，记录「元素出现」与「被处理」的时间差）：
+
+  | 目标 | 改前 | 改后 |
+  | --- | --- | --- |
+  | 「同步到圈子」被隐藏 | ~1830ms | **~27ms** |
+  | 「发想法」按钮被修正 | 35.7 / 39.2 / 370 / **3040** ms（波动极大）| **42~49ms（稳定）** |
+
+- ⚠️ **通用教训**：凡是「加载期需要隐藏／矫正某个元素」的 pass，**都不能只挂在去抖的 `tick` 上** ——
   用户会看到元素先以未处理形态出现、再被修正，也就是「抖动」。
   先例：v1.3.5 把「首屏藏侧栏」从 JS 挪到 CSS，也是同一个问题。
 - ⚠️ **验证这类改动的两个坑**（本次都踩了）：
-  1. 探针必须监听 `attributes` / `style` —— 隐藏是靠**改内联样式**实现的，只听 `childList` 测不到那一刻，
+  1. 探针必须监听 `attributes` / `style` —— 隐藏与矫正都是靠**改内联样式**实现的，只听 `childList` 测不到那一刻，
      `firstHidden` 会被推迟到下一次 DOM 变动，从而得出一张「改了也没用」的假表。
   2. `Page.addScriptToEvaluateOnNewDocument` **比暴力猴的 `@run-at document-start` 还早**，
      那时 `document.documentElement` 是 `null`，脚本开头写 viewport meta 会抛错并**静默中断**
      （症状：注入的实例完全不生效，`phase` 停在 'A'）。注入整份脚本时必须包一层
      「等 `documentElement` 就绪再跑」。
+  3. 基线是**波动**的（36ms ~ 3040ms，取决于元素出现在 DOMContentLoaded 之前还是之后），
+     所以**单次采样会骗人** —— 至少要采 4 轮看分布。
 
 ## 调试顺序（省时间的顺序）
 
@@ -315,12 +336,17 @@
    去掉 rect 全 0 时的假通过），现在它会**如实报**「找不到任何『发布』按钮可见的发布框」。
    要恢复判别力，需要改掉「靠固定偏移扫滚动」的定位方式（页高一变就落空）。
    **与列宽无关**：同页 A/B（只改 `--z2m-w`）里发布按钮在 393 / 358 / 325 下都正常（61×29 可见）。
-6. **`test-counterzoom` 的 ②③ 会间歇失败**（v1.1.0 起，与 v1.1.1 无关）：模拟捏合时浏览器会先
+6. **`test-counterzoom` 的 ②③ 会失败**（v1.1.0 起，与 v1.1.1 无关）：模拟捏合时浏览器会先
    经过「最小比例」那一档，脚本按那一档重算出的 zoom 偏大；最后那一发事件又因「捏合不变量」
    （`visW × scale` 不变）被 return 掉，于是停在「内容比屏幕宽 25%」。
    试过两种修法（延后 200ms；延后 + 若仍在最小比例就再等一拍）**均无效，已回退**。
    真机连续捏合不经过那个中间态；即便出现，用户再捏一下就恢复。
    机理与取舍见 [`v1.1.1-text-scale.md`](v1.1.1-text-scale.md) §3。
+   ⚠️ **2026-10-01 复核：在当前真机环境下它是「稳定复现」，不是间歇** —— 连跑三次数据完全一致
+   （`fitRatio 1.4431` / `scale 0.5` / `before 0.9987` / `after 1.4412`），而且用 `--installed`
+   跑旧版（v1.4.2）**同样复现、数据一字不差** ⇒ **与脚本版本无关**，是「模拟捏合」这套方式
+   在当前环境下的问题，不是回归。
+   **所以看到这 2 条 FAIL 不要靠重跑去判断**（重跑没用），用 `--installed` 对照即可确认是否与本次改动相关。
 7. **加载期会出现一次短暂的「放大约 16%」**（间歇，1~2 个采样）：`test-counterzoom` 的①②
    因此在部分运行里报 FAIL（`fitRatio` 开头是 `1.1577`、`worstFit 0.158`、`jitter 15.8%`），
    随后自动收敛到 1。**已用 v1.2.2 的发布件 A/B 排除版本相关**（同版本三次运行有一次复现）。

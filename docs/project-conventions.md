@@ -256,6 +256,35 @@
   **已用 v1.2.2 的发布件 A/B 排除**（同版本三次运行有一次复现）⇒ 是**既有的、与版本无关的
   加载期竞态**。看到 ①② 失败同样**先重跑一次**再判断。
 
+## 加载期闪烁：隐藏类 pass 必须同步跑在 observer 回调里（v1.4.2 起）
+
+- **症状**：首页加载时「写想法」卡片里的竖排「同步到圈子」会**先显示出来、随后才消失**，
+  页面跟着抖一下（用户 2026-10-01 反馈）。
+- **根因**：`hideCircleSync()` 只挂在 `tick()` 上，而 `tick()` 有 **300ms 去抖**
+  （`schedule()` = `setTimeout(tick, 300)`），并且**每次 DOM 变动都会重置这个计时器** ——
+  页面加载期变动密集，于是被一路推迟。真机实测延迟 **1.8~1.9 秒**（远不止 300ms）。
+- **解法**：把它像 `syncCommentModal()` 一样**同步挂在 MutationObserver 回调里**
+  （`new MutationObserver(() => { syncCommentModal(); hideCircleSync(); schedule(); })`）。
+  observer 回调是**微任务**、跑在同一帧渲染之前 ⇒ 元素一出现就被藏掉。
+  成本可控：该函数自带记忆化（`circleSyncBox` 仍连在 DOM 上就直接 return）+ `.WriteArea` 廉价前置判断。
+- **实测**（用 `Page.addScriptToEvaluateOnNewDocument` 注入探针，记录「标签出现在 DOM」与「被隐藏」的时间差）：
+
+  | | 出现 | 隐藏 | 延迟 |
+  | --- | --- | --- | --- |
+  | 改前（v1.4.1） | ~1350~1660ms | ~3160~3770ms | **~1830ms** |
+  | 改后（v1.4.2） | ~1350ms | ~1375ms | **~27ms** |
+
+- ⚠️ **通用教训**：凡是「加载期需要隐藏／改造某个元素」的 pass，**都不能只挂在去抖的 `tick` 上** ——
+  用户会看到元素先以未处理形态出现、再被修正，也就是「抖动」。
+  先例：v1.3.5 把「首屏藏侧栏」从 JS 挪到 CSS，也是同一个问题。
+- ⚠️ **验证这类改动的两个坑**（本次都踩了）：
+  1. 探针必须监听 `attributes` / `style` —— 隐藏是靠**改内联样式**实现的，只听 `childList` 测不到那一刻，
+     `firstHidden` 会被推迟到下一次 DOM 变动，从而得出一张「改了也没用」的假表。
+  2. `Page.addScriptToEvaluateOnNewDocument` **比暴力猴的 `@run-at document-start` 还早**，
+     那时 `document.documentElement` 是 `null`，脚本开头写 viewport meta 会抛错并**静默中断**
+     （症状：注入的实例完全不生效，`phase` 停在 'A'）。注入整份脚本时必须包一层
+     「等 `documentElement` 就绪再跑」。
+
 ## 调试顺序（省时间的顺序）
 
 0. **先判断这是不是「以前正常、现在不正常」的回归** —— 若是，**先用 git 历史定位**，别急着改代码：

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.1
+// @version      1.4.2
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -914,7 +914,13 @@
 
   // 弹层开合要快于 tick 的 300ms 去抖：直接挂在 observer 回调里同步，
   // 避免用户刚点开评论就按返回、哨兵还没压入。
-  const obs = new MutationObserver(() => { syncCommentModal(); schedule(); });
+  // ⚠️ hideCircleSync 同理必须**同步**跑在这里，不能只留给 tick ——
+  //    tick 有 300ms 去抖（见下面的 schedule），「同步到圈子」会先以塌陷形态渲染出来、
+  //    半秒后才被隐藏，用户看到的就是「先闪一下再消失、页面跟着抖」（2026-10-01 反馈）。
+  //    MutationObserver 回调是**微任务**，跑在同一帧渲染之前 ⇒ 同步执行即可做到「一出现就藏掉」。
+  //    成本可控：该函数内有记忆化（circleSyncBox 仍连在 DOM 上就直接 return），
+  //    以及 `.WriteArea` 的廉价前置判断（没有「写想法」卡片时连 XPath 都不跑）。
+  const obs = new MutationObserver(() => { syncCommentModal(); hideCircleSync(); schedule(); });
   function start() {
     obs.observe(document.body, { childList: true, subtree: true, attributes: false });
     tick(); syncCommentModal();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.3
+// @version      1.4.4
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -301,6 +301,15 @@
   .QuestionHeader, div[class*="QuestionHeader"] { flex-wrap: wrap !important; }
   .QuestionHeader div, [class*="QuestionHeader"] div { flex-wrap: wrap !important; }
   .QuestionHeader-side { width: auto !important; max-width: 100% !important; }
+
+  /* ---- 页面里的「问题头」：标题与问题描述右侧贴边（知乎只给了左内边距） ----
+     实测（列宽 358）：.QuestionHeader-main 的 padding 是 **0 0 0 20px** —— 左 20、**右 0**，
+     于是它里面的标签 / 标题 / 问题描述一律从 20 一直排到 **358**（屏幕右缘），
+     比正文列（20..338，左右各 20px）多出 20px，右边完全没有留白（用户 2026-10-01 反馈）。
+     补上对称的 padding-right 即可 —— 一处同时解决标签、标题、描述（三者都在这层内）。
+     ⚠️ 吸顶迷你头里也有 .QuestionHeader-main，但它有自己的几何约束（见上面的 .PageHeader 段），
+        必须把 padding-right 保持为 0，否则标题可用宽度会少 20px；所以下面那条用更高特异性覆盖回去。 */
+  .QuestionHeader-main { padding-right: 20px !important; }
   /* 问题页页首：把「关注问题 / 写回答 / 邀请回答」排成一行并**均匀分布**。
      知乎的层级（实测）：
        .QuestionHeader-footer-inner
@@ -391,7 +400,7 @@
        14px ⇒ 标题左端 99、与 LOGO 之间正好 15px ≈ 一个 15px 字号的字宽）。用户 2026-09-30 要求。 */
     padding-left: 14px !important; padding-right: 0 !important; column-gap: 8px !important;
   }
-  .PageHeader .QuestionHeader-main { flex: 1 1 0 !important; min-width: 0 !important; padding-left: 0 !important; }
+  .PageHeader .QuestionHeader-main { flex: 1 1 0 !important; min-width: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
   .PageHeader .QuestionHeader-title {
     font-size: 15px !important; line-height: 22px !important; display: block !important;
     white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;

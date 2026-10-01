@@ -224,6 +224,10 @@
 
 完整步骤见技能 SKILL.md 的「发布 Release」一节，这里只记**容易忘的硬性约定**：
 
+- **不再逐次征询**（用户 2026-10-01 明确：「后面你都自己发」）：改动完成 + 自测通过后**直接发**，
+  走完整流程（`node scripts/check-injected.js` 体检 → 提交 push → 抽发布件并记 sha256 → Release →
+  装机 → `--installed` 终验），**事后报告**即可。不再问「要发吗」。
+
 - Release note 里写更新记录 + 安装地址 + **sha256**；**更新记录不写进 README**。
 - tag 指向**该版本当时的提交**（不是 HEAD），附件是那个提交的 `zhihu-desk2mob.user.js`
   （`git show <commit>:zhihu-desk2mob.user.js`）。

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.4
+// @version      1.4.5
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -250,6 +250,21 @@
   .NumberBoard-item { width: auto !important; max-width: none !important; min-width: 0 !important; flex: 0 0 auto !important; }
   .NumberBoard-itemInner { display: flex !important; flex-wrap: nowrap !important; align-items: baseline !important; column-gap: 4px !important; }
   .NumberBoard-itemName, .NumberBoard-itemValue { width: auto !important; white-space: nowrap !important; }
+
+  /* ---- 「关注者 / 被浏览」中间的竖线两侧空隙不等 ----
+     实测（列宽 358）：这根竖线其实是**第二个「被浏览」的 .NumberBoard-itemInner 的 border-left**
+     （0.93px solid），它落在第二个 item 的左边界上；而 .NumberBoard 的 column-gap 是 14px、
+     itemInner 左右各 8px 内边距 ⇒ 竖线到「关注者」22px、到「被浏览」只有 8.9px（用户 2026-10-01 反馈）。
+     解法：column-gap 收到 7px，并给「第二个及以后」的 itemInner 补 padding-left: 14px ——
+     竖线随之移到两段文字的正中（实测左空 15 / 右空 14.9），总间距几乎不变（30.9 → 30）。
+     ⚠️ 只作用于 .NumberBoard--divider（带分隔线的统计栏），不影响没有竖线的 NumberBoard。
+     ⚠️ padding-left 必须用 .NumberBoard-item:not(:first-child) 限定，否则「关注者」也会被推右 6px。
+     ⚠️ 这段在 **JS 模板串**里：注释中**不能出现反引号**，否则模板串会被提前闭合、整份样式注入失败
+        （症状是 #z2m-style 不存在、测试第一条就 FAIL）。本项目已踩三次，写注释时务必检查。 */
+  .NumberBoard--divider { column-gap: 7px !important; }
+  .NumberBoard--divider .NumberBoard-item:not(:first-child) .NumberBoard-itemInner {
+    padding-left: 14px !important;
+  }
   /* ---- 卡片里的「赞同」操作栏（.ContentItem-actions）整排右出界 ----
      知乎这一排是 display:flex + flex-wrap:nowrap，子项**全部 flex:0 0 auto**（谁也不收缩）。
      桌面列宽 700+ 时刚好排成一行；脚本把列宽压到 358 后，实测内容 565~642px

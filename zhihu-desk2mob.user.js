@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.8
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.9
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行），正文从第 4 行起回落全宽（不再是图片旁的窄列）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -70,6 +70,19 @@
     // 另外知乎在 .HotItem-img 上用 ::after 放了一块固定 190x105 的**灰色占位**，
     // 不随锚点缩小 ⇒ 会从图片右侧/底部露灰边，必须一并收成 100%（见下面 CSS 段）。
     hotThumbLines: 2,
+    // 专栏页（/column-square）「推荐专栏」列表：卡片右侧那张**文章预览图**按正文行数定高。
+    // 可填 0 / 2 / 3 / 4：0 表示不干预。
+    // 结构（实测）：.recommend-column-content > .subscrib-card > a > .card-content
+    //               > .article-content(display:flex) > [ p.article-text , img.article-image ]
+    // 知乎原生：图在**右侧**（宽 190px 或 94px），文字被挤在左侧 ~124px 的窄列里，且**一路都是窄列**
+    // （`.article-text` 是 `-webkit-box` + `overflow:hidden`，既不绕浮动、也不会在浮动下方回宽）。
+    // ⚠️ 与首页/热榜的**关键差异**：这张图在 DOM 里排在文字**之后** —— 浮动盒按源码顺序落位，
+    //    排在块之后的浮动会被放到块的**下方**（实测：图 top 落到正文底部、文字全程全宽），
+    //    文字根本绕不上去。所以本项必须**同时**做两件事：
+    //      ① CSS：容器改 block、图 float:right（见下方「专栏推荐列表」版式段）；
+    //      ② JS：fitColumnPreview() 把图**移到容器首位**。
+    //    只做①实测无效（图沉底、文字全宽）；只做②无效（flex 容器忽略 float）。
+    columnThumbLines: 3,
     // 首页信息流：让正文在封面**下方**也回到全宽（真正的「右+下」环绕）。
     // 知乎的 `.RichContent-inner` 是 `overflow: hidden` —— 那会形成 **BFC**，而 BFC 会被整体
     // 挤到浮动元素旁边、**永远不会在浮动下方回宽**，于是文字只绕右侧、一路都是窄列。
@@ -565,6 +578,43 @@
   .HotItem-content { overflow: visible !important; }
   ` : ''}
 
+  /* ---- 专栏页（/column-square）「推荐专栏」列表：右侧文章预览图按正文行数定高 + 正文第 N+1 行起回落全宽 ----
+     （开关：CFG.columnThumbLines；DOM 重排见 JS 的 fitColumnPreview）
+     结构（实测）：.recommend-column-content > .subscrib-card > a > .card-content
+                   > .article-content(flex) > [ p.article-text , img.article-image ]
+     知乎原生：图在右（190px 或 94px 宽），文字被挤在左侧 ~124px 窄列、且一路都是窄列：
+       · .article-content 是 flex 文字与图是两个 flex 列，文字永远只在左列；
+       · .article-text 是 display:-webkit-box + overflow:hidden 既像 flex 盒（不绕浮动），
+         又是 BFC（永不在浮动下方回宽）。
+     这里三件事一起才成立：
+       ① 容器改 display:block（flex 会忽略 float，必须先退出 flex）；
+       ② 图 float:right + 高 = N 行字形盒（沿用首页封面口径 N x 行高 - 13px）+ width:auto 保持原比例；
+       ③ 文字改 display:block + overflow:visible（解 BFC）前 N 行绕右、第 N+1 行起全宽。
+     float 按源码顺序落位，而这张图在 DOM 里排在文字之后 不先重排的话图会落到正文下方
+        （实测 top 落在正文底部、文字全程全宽）。故必须配合 JS fitColumnPreview() 把图移到容器首位。
+     只作用于带图的卡片（:has(.article-image)）：不带图的卡（.article-text.answer-text-no-image）
+        本就是全宽，别去动它（否则会顺手把它的摘要也一起展开）。:has() 在 Kiwi/Chromium 上可用（实测）。 */
+  ${CFG.columnThumbLines > 0 ? `
+  .recommend-column-content .article-content:has(.article-image) { display: block !important; }
+  .recommend-column-content .article-content:has(.article-image) .article-image {
+    float: right !important;
+    height: calc(var(--z2m-line) * ${CFG.columnThumbLines} - 13px) !important;
+    width: auto !important;
+    object-fit: cover !important;
+    /* top 6.3px：图顶对齐第 1 行字形顶（与首页封面同一口径）；bottom -4px：抵消知乎 4px 外边距，
+       保证浮动影响高度 ≤ N x 行高、第 N+1 行能回到全宽；left 10px：图文间距。 */
+    margin: 6.3px 0 -4px 10px !important;
+  }
+  .recommend-column-content .article-content:has(.article-image) .article-text {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    max-height: none !important;
+    width: auto !important;
+  }
+  ` : ''}
+
 
   /* ---- 放大后列变窄的副作用：作者行里的名字会被硬切 ----
      CFG.textScale > 0.91 时列宽比 screen.width 窄，而头像/关注按钮仍是原来的 CSS 尺寸，
@@ -1046,13 +1096,31 @@
     ideaBtnDone = btn;
   }
 
+  // ---- 专栏页「推荐专栏」列表：把文章预览图移到文字之前（float 才能落在文字右侧）----
+  // 为什么必须重排（而不是纯 CSS）：float 按**源码顺序**落位，而这张图在 DOM 里排在文字之后，
+  // 排在块之后的浮动会被放到块的**下方** —— 实测图 top 落到正文底部、文字全程全宽，绕排根本不成立。
+  // 把图移到容器首位后，float:right 才会落在文字右侧、前 N 行绕排、第 N+1 行起全宽。
+  // 廉价前置：该结构只出现在专栏页（.recommend-column-content），不在该页时 querySelector 直接返回 null，
+  // 稳态成本≈0。只在「图还不是首位」时才动 DOM，避免观察器自激（重排本身也会触发一次 childList）。
+  // ⚠️ 这是**唯一**会移动 DOM 的 pass；`__z2mStop` 的「半清理」同样不撤销它（与内联样式一样），
+  //    重排后节点仍在原地，只是顺序变了，故即便「关掉」脚本也不会造成错位。
+  function fitColumnPreview() {
+    if (!(CFG.columnThumbLines > 0)) return;
+    const box = document.querySelector('.recommend-column-content');
+    if (!box) return;
+    box.querySelectorAll('.article-content > .article-image').forEach(img => {
+      const ac = img.parentElement;
+      if (ac.firstElementChild !== img) ac.insertBefore(img, ac.firstElementChild);
+    });
+  }
+
   let timer = null;
   let lastTickSW = -1;        // 上一拍的 SW；变了说明阈值全变，记忆作废（applyZoom 会改 SW，见那里的注释）
   function tick() {
     if (SW !== lastTickSW) { lastTickSW = SW; clearScanMemo(); }
     // 周期性全量重扫：见「扫描记忆化」一节，抵消「看过的元素后续变大就漏掉」的代价
     if (++sweepCount % SWEEP_EVERY === 0) clearScanMemo();
-    hideSideRails(); capFixed(); capWide();
+    hideSideRails(); capFixed(); capWide(); fitColumnPreview();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
     hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns);
@@ -1074,7 +1142,7 @@
   //    实测单次开销：publishButtons 0.1ms、guard 查询 0.06ms。
   //    tick 里原有的那一遍全部保留，作为「周期性全量重扫」的兜底。
   const obs = new MutationObserver(() => {
-    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer();
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview();
     const btns = publishButtons();       // 一次查询给下面两个 pass 共用（与 tick 里的做法一致）
     fitPublishButton(btns); matchComposerAvatar(btns);
     schedule();

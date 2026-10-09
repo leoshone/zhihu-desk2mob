@@ -1,15 +1,18 @@
-// test-hot-thumb.js — 验证「热榜条目缩略图按标题行数定高 + metrics 行收回文档流」
+// test-hot-thumb.js — 验证「热榜条目缩略图按标题行数定高 + metrics 行收回文档流 + ::after 灰底随图缩小」
 // 用法: node test-hot-thumb.js             重载热榜并注入 src 下脚本
 //       node test-hot-thumb.js --installed 测真机暴力猴里已安装的版本
 //
 // 背景：热榜条目 .HotItem 是 flex row（序号 | 内容 | 图片 190x105）。图片缩小后卡片被文字压矮，
 // 而「N 万热度/分享」行是 position:absolute; bottom:16px 锚在卡片底 —— 会叠到摘要上
 // （脚本必须把 .HotItem-metrics--bottom 改回 static 才算修好）。
-// 断言：① 图片高度 = 3 行字形盒高（73px 附近，即 3x28-11）；② 图片宽 < 150（不再是 190）；
+// 另：知乎在 .HotItem-img 上挂了 ::after 灰色占位（写死 190x105，background:rgba(25,27,31,.05)），
+// 不随锚点缩小 ⇒ 会从缩小后的图片右/下露出灰边（用户 2026-10-09 反馈），须一并收成 100%。
+// 断言：① 图片高度 = 2 行字形盒高（45px 附近，即 2x28-11）；② 图片宽 < 150（不再是 190）；
 //       ③ metrics 行 position 为 static；④ metrics 与标题/摘要无垂直重叠（改前 28 条全重叠）；
 //       ⑤ 图片顶与标题第 1 行内联盒顶偏差在 8px 内（对齐口径）；
 //       ⑥ 「N 万热度」文本不折行（折行会上下叠字，改前 2 个行框）；
-//       ⑦ 「分享」按钮不被 .HotItem-content 的 overflow:hidden 裁掉（改前 30/30 被裁）。
+//       ⑦ 「分享」按钮不被 .HotItem-content 的 overflow:hidden 裁掉（改前 30/30 被裁）；
+//       ⑧ ::after 灰色占位与图片同尺寸（改前 190x105 vs 图片，露灰边）。
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -28,21 +31,27 @@ function ok(cond, label, extra) {
 const ST = `JSON.stringify((()=>{
   const items = [...document.querySelectorAll('.HotItem')];
   if (!items.length) return { err: 'no HotItem', z2m: !!document.getElementById('z2m-style') };
-  const lh = 28;   // 标题 18px 字体的行框（.HotItem-title 实测 28px）
+  const N = 2;                 // CFG.hotThumbLines 的期望值（本回归对应 2 行）
+  const lh = 28;               // 标题 18px 字体的行框（.HotItem-title 实测 28px）
   // 字形盒高（canvas 量「国」）：18px 字体实测 ascent 15 + descent 1 = 16px
   const cv = document.createElement('canvas').getContext('2d');
   const tcs = getComputedStyle(items[0].querySelector('.HotItem-title'));
   cv.font = tcs.fontWeight + ' ' + tcs.fontSize + ' ' + tcs.fontFamily;
   const mm = cv.measureText('\\u56fd');
   const glyphBox = mm.actualBoundingBoxAscent + mm.actualBoundingBoxDescent;
-  const expectH = 2 * lh + glyphBox;   // (N-1) x 行框 + 字形盒，N=3
+  const expectH = (N - 1) * lh + glyphBox;   // (N-1) x 行框 + 字形盒
 
-  let imgHs = [], imgWs = [], staticMetrics = 0, absMetrics = 0, overlap = 0, topDevMax = 0, wrappedText = 0, btnClipped = 0;
+  let imgHs = [], imgWs = [], staticMetrics = 0, absMetrics = 0, overlap = 0, topDevMax = 0, wrappedText = 0, btnClipped = 0, afterBad = 0, afterDevMax = 0;
   for (const it of items) {
     const img = it.querySelector('.HotItem-img');
     if (img) {
       const b = img.getBoundingClientRect();
       imgHs.push(b.height); imgWs.push(b.width);
+      // ::after 灰色占位（知乎写死 190x105，须随锚点收成 100%）
+      const af = getComputedStyle(img, '::after');
+      const aw = parseFloat(af.width) || 0, ah = parseFloat(af.height) || 0;
+      const dev = Math.max(Math.abs(aw - b.width), Math.abs(ah - b.height));
+      if (dev > 2) { afterBad++; afterDevMax = Math.max(afterDevMax, dev); }
       const title = it.querySelector('.HotItem-title');
       if (title) {
         const range = document.createRange();
@@ -86,7 +95,8 @@ const ST = `JSON.stringify((()=>{
     avgImgW: Math.round(avg(imgWs) * 10) / 10,
     staticMetrics, absMetrics, overlap,
     topDev: Math.round(topDevMax * 10) / 10,
-    wrappedText, btnClipped
+    wrappedText, btnClipped,
+    afterBad, afterDevMax: Math.round(afterDevMax * 10) / 10
   };
 })())`;
 
@@ -112,17 +122,18 @@ const ST = `JSON.stringify((()=>{
     }
     const d = await cdp.evalJson(api, ST, sid);
     if (!d || d.err) { console.log('FAIL  前置：拿不到热榜条目 ' + JSON.stringify(d)); process.exit(1); }
-    console.log(`条目 ${d.itemCount}（带图 ${d.withImg}）  字形盒 ${d.glyphBox}  期望图高 ${d.expectH}  实测均高 ${d.avgImgH}  均宽 ${d.avgImgW}  metrics static ${d.staticMetrics}/${d.staticMetrics + d.absMetrics}  重叠 ${d.overlap}  顶偏差 ${d.topDev}  热度文本折行 ${d.wrappedText}  按钮被裁 ${d.btnClipped}`);
+    console.log(`条目 ${d.itemCount}（带图 ${d.withImg}）  字形盒 ${d.glyphBox}  期望图高 ${d.expectH}  实测均高 ${d.avgImgH}  均宽 ${d.avgImgW}  metrics static ${d.staticMetrics}/${d.staticMetrics + d.absMetrics}  重叠 ${d.overlap}  顶偏差 ${d.topDev}  热度文本折行 ${d.wrappedText}  按钮被裁 ${d.btnClipped}  ::after 超差 ${d.afterBad}（max ${d.afterDevMax}）`);
 
     ok(d.z2m, '① 脚本样式已注入（#z2m-style 存在）');
     ok(d.withImg > 0, '② 页面上有带图热榜条目', d.withImg);
-    ok(Math.abs(d.avgImgH - d.expectH) <= 2, '③ 图片高度 = 3 行字形盒高(±2px)', { expect: d.expectH, got: d.avgImgH });
+    ok(Math.abs(d.avgImgH - d.expectH) <= 2, '③ 图片高度 = 2 行字形盒高(±2px)', { expect: d.expectH, got: d.avgImgH });
     ok(d.avgImgW > 0 && d.avgImgW < 150, '④ 图片宽已收窄（<150，原 190）', d.avgImgW);
     ok(d.absMetrics === 0 && d.staticMetrics > 0, '⑤ metrics 行全部为 static（收回文档流）', { static: d.staticMetrics, abs: d.absMetrics });
     ok(d.overlap === 0, '⑥ metrics 行与摘要/标题零重叠', d.overlap);
     ok(d.topDev <= 8, '⑦ 图片顶与标题第 1 行内联盒顶偏差 ≤8px', d.topDev);
     ok(d.wrappedText === 0, '⑧ 「N 万热度」文本不折行（折行即叠字）', d.wrappedText);
     ok(d.btnClipped === 0, '⑨ 「分享」按钮不被 content 的 overflow:hidden 裁掉', d.btnClipped);
+    ok(d.afterBad === 0, '⑩ ::after 灰色占位与图片同尺寸（不露灰边）', { bad: d.afterBad, maxDev: d.afterDevMax });
   } finally {
     try { await api.close(); } catch (e) {}
   }

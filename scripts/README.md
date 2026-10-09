@@ -44,7 +44,7 @@ node test-actions-wrap.js --installed    # 回答页：底部「赞同」操作�
 node test-counterzoom.js  --installed    # 反缩放：内容恰好铺满、加载期无视觉跳变、不跟捏合抢
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 node test-image-viewer.js --installed    # 图片查看器：放大的图片回到屏幕中央（需先在评论里点开一张图）
-node test-hot-thumb.js    --installed    # 热榜：条目缩略图 3 行高 +「万热度/分享」行不叠字不被裁
+node test-hot-thumb.js    --installed    # 热榜：条目缩略图 2 行高 +「万热度/分享」行不叠字不被裁 + ::after 灰底随图缩小
 ```
 
 > 两条注意：

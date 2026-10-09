@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.5
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.6
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -69,6 +69,11 @@
     wrapAroundThumb: true,
     // 评论区发布框：让「发布」按钮完整落在屏幕内（该行内容原本比列宽多 79px）
     fitPublishButton: true,
+    // 图片浮层（点击评论/正文图片弹出的查看器）：放大的图片居中显示。
+    // 知乎查看器的「居中+放大」全编码在 img 的 transform 里，坐标按未反缩放的页面算，
+    // 根 zoom 把它推到屏幕外（只露左上角）。修法是把 img 改为 fixed + margin:auto 自居中
+    // （脱离知乎的 transform 动画布局），尺寸按浮层的 94%/88% 约束。设 false 不干预。
+    fixImageViewer: true,
     // 评论区发布框：把里面的头像缩到与评论列表头像同尺寸（知乎原本给 40px）
     matchComposerAvatar: true,
     composerAvatarSize: 24,
@@ -496,6 +501,7 @@
   .ContentItem .RichContent-inner { overflow: visible !important; }
   ` : ''}
 
+
   /* ---- 放大后列变窄的副作用：作者行里的名字会被硬切 ----
      CFG.textScale > 0.91 时列宽比 screen.width 窄，而头像/关注按钮仍是原来的 CSS 尺寸，
      作者名那一格就变挤。知乎自己给了 overflow:hidden + nowrap 但没有省略号，长名字会被
@@ -744,6 +750,53 @@
     if (modalEl()) closeCommentModal();
   });
 
+  // ---- 图片查看器（.ImageView）：放大的图片回到屏幕中央 ----
+  // 真机实测（2026-10-08，用户反馈「评论中点击图片，没有在屏幕中间显示放大的图片」）：
+  //   · 浮层结构：body portal > .ImageView(fixed, z=203, 全屏遮罩, overflow:hidden)
+  //               > .ImageView-inner(overflow:auto, height:100%) > img.ImageView-img
+  //   · 知乎的打开动画：img width 是缩略图尺寸（202px），「居中+放大到合适大小」全编码在
+  //     transform（matrix(3.95,…,344,790)，逐帧重写）。那套坐标按「页面未被反缩放」假设
+  //     计算 —— 根 zoom（≈2.49）把绘制连同坐标一起放大，图片整体落到屏幕外（只露左上角）。
+  //   · ✗ 试过的弯路（2026-10-08 实测作废）：给浮层设 zoom=1/Z。图片位置确实「回到知乎
+  //     预期的布局位置」，但 zoom 把浮层内部的一切（含视口尺寸解释）都除以 Z —— 图片
+  //     缩到约 1/6 面积（视觉 ~129 物理px），「可见」但极小且不在屏幕中心。zoom 与
+  //     fixed 定位/根 zoom 的三重耦合无法靠它修复。
+  //   · ✓ 最终方案（真机 A/B 已验证，fix3 截图）：**把 img 从知乎的动画布局里解放出来**，
+  //     用 CSS 原生居中 —— position:fixed + inset:0 + margin:auto + transform:none。
+  //     fixed 元素的 inset:0 = 视觉视口（浮层 rect 实测 358×704，即「视口 CSS px」，
+  //     天然含 zoom 换算，不需要自己除 Z）；margin:auto 让替换元素（img）在 inset 盒内居中。
+  //     尺寸约束 = 浮层 rect × 94% / 88%（px，JS 每次打开时按当前浮层尺寸写入）。
+  //     实测：img rect 11,209 337×286 —— 中心 (179.5,352) 与浮层中心 (179,352) 重合。
+  //   · ⚠️ transform/transition 必须 none：知乎的动画 JS 会逐帧重写 img 的内联 transform，
+  //     我们用内联 !important（后写者胜）+ transition:none 让它一次到位、不再被动画拉走。
+  //   · ⚠️ 尺寸约束要在「浮层打开」与「resize」时刷新（浮层 rect 随视口变）；
+  //     关闭时知乎移除 DOM，内联样式随节点销毁，无残留。
+  const ivDone = new WeakSet();
+  function fixImageViewer() {
+    if (!CFG.fixImageViewer) return;
+    document.querySelectorAll('.ImageView').forEach(iv => {
+      const img = iv.querySelector('img.ImageView-img');
+      if (!img) return;
+      // 浮层 rect：fixed inset:0 的实际视口盒（若被 capFixed 收窄过，以实际为准）
+      const r = iv.getBoundingClientRect();
+      if (r.width < 50 || r.height < 50) return;   // 未布局/已收起，等下一拍
+      img.style.setProperty('position', 'fixed', 'important');
+      img.style.setProperty('inset', '0', 'important');
+      img.style.setProperty('margin', 'auto', 'important');
+      img.style.setProperty('transform', 'none', 'important');
+      img.style.setProperty('transition', 'none', 'important');
+      img.style.setProperty('max-width', Math.round(r.width * 0.94) + 'px', 'important');
+      img.style.setProperty('max-height', Math.round(r.height * 0.88) + 'px', 'important');
+      img.style.setProperty('width', 'auto', 'important');
+      img.style.setProperty('height', 'auto', 'important');
+      img.style.setProperty('object-fit', 'contain', 'important');
+      ivDone.add(iv);
+    });
+  }
+  // resize 时浮层还在开着的情形：清掉记忆让上面的约束按新尺寸重写。
+  // （ivDone 目前只作语义标记；约束值每次都重写，成本低——浮层通常只有 1 个 img。）
+  window.addEventListener('resize', () => { if (CFG.fixImageViewer) fixImageViewer(); });
+
   // ---- hide the "同时发布到想法" option in the comment composer ----
   // 真机实测：该选项包裹层被挤成 0 宽，7 个汉字竖排成一列（文案 13×121~155，随页面状态），
   // 把发布框从 94px 撑到 185px（另一次实测到 219px）。这里连同它左侧的 radio 图标一起隐藏。
@@ -938,7 +991,7 @@
     hideSideRails(); capFixed(); capWide();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
-    hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fitPublishButton(btns); matchComposerAvatar(btns);
+    hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns);
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 
@@ -957,7 +1010,7 @@
   //    实测单次开销：publishButtons 0.1ms、guard 查询 0.06ms。
   //    tick 里原有的那一遍全部保留，作为「周期性全量重扫」的兜底。
   const obs = new MutationObserver(() => {
-    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption();
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer();
     const btns = publishButtons();       // 一次查询给下面两个 pass 共用（与 tick 里的做法一致）
     fitPublishButton(btns); matchComposerAvatar(btns);
     schedule();

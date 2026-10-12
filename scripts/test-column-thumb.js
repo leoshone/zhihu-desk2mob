@@ -41,9 +41,11 @@ const ST = `JSON.stringify((()=>{
   cv.font = tcs.fontWeight + ' ' + tcs.fontSize + ' ' + tcs.fontFamily;
   const mm = cv.measureText('\\u56fd');
   const glyphBox = mm.actualBoundingBoxAscent + mm.actualBoundingBoxDescent;
-  const expectH = (N - 1) * lh + glyphBox;   // (N-1) x 行框 + 字形盒 = N x 行框 - 13
+  // 高度口径（与源码一致）：N x 行框 - 18，让图底正好落在第 N 行文字底（比封面口径 -13 少 5px）
+  const expectH = N * lh - 18;
 
   let imgHs = [], imgWs = [], floatRight = 0, firstChild = 0, fullSample = 0, narrowBad = 0, fullBad = 0;
+  let alignBad = 0, gapBad = 0, gapMin = 999;
   for (const img of imgs) {
     const b = img.getBoundingClientRect();
     imgHs.push(b.height); imgWs.push(b.width);
@@ -72,6 +74,14 @@ const ST = `JSON.stringify((()=>{
           belowMaxRight = Math.max(belowMaxRight, rc.right);
         }
       });
+      // 图底对齐第 N 行文字底 + 与第 N+1 行留间距（用户 2026-10-12 反馈：原图底压到第 N+1 行）
+      const l3 = rects[2], l4 = rects[3];
+      if (l3 && l4) {
+        if (Math.abs(b.bottom - l3.bottom) > 3) alignBad++;       // 图底 vs 第 N 行文字底（≤3px 视为对齐）
+        const gap = l4.top - b.bottom;                            // 图底到第 N+1 行顶的间距
+        if (gap < 2) gapBad++;                                    // 间距过小 ⇒ 压到第 N+1 行
+        gapMin = Math.min(gapMin, gap);
+      }
     }
     // ⑦ 顶部确有「窄列」（前 N 行被图挤窄）：窄列最右明显小于整列右缘
     if (hasNarrow && narrowMaxRight > acB.right - 25) narrowBad++;
@@ -87,7 +97,7 @@ const ST = `JSON.stringify((()=>{
     avgImgH: Math.round(avg(imgHs) * 10) / 10,
     avgImgW: Math.round(avg(imgWs) * 10) / 10,
     floatRight, firstChild,
-    fullSample, narrowBad, fullBad
+    fullSample, narrowBad, fullBad, alignBad, gapBad, gapMin: Math.round(gapMin * 10) / 10
   };
 })())`;
 
@@ -113,16 +123,18 @@ const ST = `JSON.stringify((()=>{
     }
     const d = await cdp.evalJson(api, ST, sid);
     if (!d || d.err) { console.log('FAIL  前置：拿不到推荐专栏列表 ' + JSON.stringify(d)); process.exit(1); }
-    console.log(`带图卡片 ${d.cardCount}  字形盒 ${d.glyphBox}  期望图高 ${d.expectH}  实测均高 ${d.avgImgH}  均宽 ${d.avgImgW}  float:right ${d.floatRight}/${d.cardCount}  首位子元素 ${d.firstChild}/${d.cardCount}  够长样本 ${d.fullSample}  窄列坏 ${d.narrowBad}  整宽坏 ${d.fullBad}`);
+    console.log(`带图卡片 ${d.cardCount}  字形盒 ${d.glyphBox}  期望图高 ${d.expectH}  实测均高 ${d.avgImgH}  均宽 ${d.avgImgW}  float:right ${d.floatRight}/${d.cardCount}  首位子元素 ${d.firstChild}/${d.cardCount}  够长样本 ${d.fullSample}  窄列坏 ${d.narrowBad}  整宽坏 ${d.fullBad}  底对齐坏 ${d.alignBad}  间距坏 ${d.gapBad}(min ${d.gapMin})`);
 
     ok(d.z2m, '① 脚本样式已注入（#z2m-style 存在）');
     ok(d.cardCount > 0, '② 页面有带图推荐卡片', d.cardCount);
-    ok(Math.abs(d.avgImgH - d.expectH) <= 3, '③ 图片高度 = 3 行字形盒高(±3px)', { expect: d.expectH, got: d.avgImgH });
+    ok(Math.abs(d.avgImgH - d.expectH) <= 3, '③ 图片高度 = 3 行高(±3px)', { expect: d.expectH, got: d.avgImgH });
     ok(d.floatRight === d.cardCount, '④ 图片全部 float:right', { right: d.floatRight, total: d.cardCount });
     ok(d.firstChild === d.cardCount, '⑤ 图片全部为 .article-content 首个子元素（DOM 重排，区别于沉底坏情况）', { first: d.firstChild, total: d.cardCount });
     ok(d.fullSample > 0, '⑥ 存在 ≥4 行正文的带图卡片（可验证绕排）', d.fullSample);
     ok(d.narrowBad === 0, '⑦ 前 3 行在图片右侧呈窄列（未被整宽挤占）', d.narrowBad);
     ok(d.fullBad === 0, '⑧ 第 4 行起回到接近整列宽（解 BFC 回落全宽）', d.fullBad);
+    ok(d.alignBad === 0, '⑨ 图片底对齐第 3 行文字底（≤3px，不偏下/偏上）', d.alignBad);
+    ok(d.gapBad === 0, '⑩ 图片底与第 4 行留有间距（≥2px，不再压第 4 行）', { bad: d.gapBad, minGap: d.gapMin });
   } finally {
     try { await api.close(); } catch (e) {}
   }

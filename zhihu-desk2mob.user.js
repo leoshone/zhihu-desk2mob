@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.11
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.12
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移并水平居中（原版文字左偏、又离底部太远）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -55,6 +55,10 @@
     hideCircleSync: true,
     // 首页「写想法」卡片：把「发想法」按钮收进屏幕内（知乎给它写死了 75px 宽度 + 20px 左外边距）
     fitIdeaButton: true,
+    // 圈子页（/ring-feeds）底部「与圈友分享你的想法…」浮动框：下移 + 居中
+    // （知乎把它做成 position:fixed 的窄壳，文字左偏、又离底部太远；用户要求再往下、并居中）
+    fitIdeaBox: true,
+    ideaBoxBottom: 20,          // 浮动框距视口底部的距离（px）；原版写死 70，改小 ⇒ 更靠下
     // 首页信息流：封面缩略图**按正文行数定高**（宽度按原始比例跟随）。
     // 可填 0 / 2 / 3 / 4：0 表示不干预（保持知乎原来的 190x105）。
     // 为什么用「行数」而不是「宽度」：图片顶/底能正好落在正文的行边界上，绕排看起来整齐
@@ -1104,6 +1108,62 @@
     ideaBtnDone = btn;
   }
 
+  // ---- 圈子页底部「与圈友分享你的想法…」浮动框：下移 + 居中 ----
+  // 真机实测（圈子 /ring-feeds）：页面底部那个「与圈友分享你的想法…」输入框是一个
+  // position:fixed 的浮动框（祖先带 `left:40px; right:0; bottom:70px`），文字左偏
+  // （l84 r220，宽 136，落在 358px 宽的列里），看起来像没居中、又离底部有点远。
+  // 用户要求：① 再往下一些 —— 原来距视口底部 70px，缩小 bottom（同时把 top 改成 auto，
+  // 否则 top+bottom 会被拉伸、文字仍贴在原来高度）；② 居中 —— 让容器 left:0;right:0 铺满、
+  // 再用 flex 把唯一子元素水平居中（不强行改变输入框本身的宽度，只把内容挪到中间）。
+  // 定位不依赖 emotion hash（随构建变）：按文案 XPath 找到「最内层含该文案」节点，
+  // 再向上走到第一个 position:fixed 的祖先，即浮动框本身。
+  let ideaBoxDone = null;
+  function fitIdeaBox() {
+    if (!CFG.fitIdeaBox) return;
+    if (ideaBoxDone && ideaBoxDone.isConnected) return;
+    ideaBoxDone = null;
+    // 廉价前置：这个浮动框只出现在圈子页，且内部文案含「与圈友分享」
+    const Q = '与圈友分享';
+    let el = null;
+    try {
+      const snap = document.evaluate("//*[contains(., '" + Q + "')]", document, null,
+        XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+      const all = [];
+      for (let i = 0; i < snap.snapshotLength; i++) all.push(snap.snapshotItem(i));
+      // 取「最内层」：没有其它匹配节点是它祖先的那个（避免命中整段外层容器）
+      const isAnc = (a, b) => { let p = b; while (p) { if (p === a) return true; p = p.parentElement; } return false; };
+      el = all.find(m => !all.some(o => o !== m && isAnc(m, o))) || null;
+    } catch (e) { return; }
+    if (!el) return;
+    // 向上走到第一个 position:fixed 的祖先（即浮动框本身）
+    let box = el;
+    while (box && box !== document.body) {
+      if (getComputedStyle(box).position === 'fixed') break;
+      box = box.parentElement;
+    }
+    if (!box || box === document.body) return;
+    box.style.setProperty('top', 'auto', 'important');
+    box.style.setProperty('bottom', CFG.ideaBoxBottom + 'px', 'important');
+    box.style.setProperty('left', '0', 'important');
+    box.style.setProperty('right', '0', 'important');
+    box.style.setProperty('text-align', 'center', 'important');
+    // 承载「图标 + 占位文字」的那一行（el 的 flex 父）整体居中：
+    // 关键是不给 el 撑满宽度（否则那一行被拉满、justify-content 失效），让其保持内容宽度，
+    // 再由 justify-content:center 把「图标+文字」整组挪到正中。取到 el 最近的 flex 祖先即可。
+    let row = el.parentElement;
+    while (row && row !== box && getComputedStyle(row).display !== 'flex') row = row.parentElement;
+    if (row && getComputedStyle(row).display === 'flex') {
+      row.style.setProperty('justify-content', 'center', 'important');
+    }
+    // 最内层含文案元素：保持内容宽度、文字居中（不依赖 emotion hash）。
+    el.style.setProperty('display', 'block', 'important');
+    el.style.setProperty('width', 'auto', 'important');
+    el.style.setProperty('box-sizing', 'border-box', 'important');
+    el.style.setProperty('text-align', 'center', 'important');
+    el.style.setProperty('margin', '0', 'important');
+    ideaBoxDone = box;
+  }
+
   // ---- 专栏页「推荐专栏」列表：把文章预览图移到文字之前（float 才能落在文字右侧）----
   // 为什么必须重排（而不是纯 CSS）：float 按**源码顺序**落位，而这张图在 DOM 里排在文字之后，
   // 排在块之后的浮动会被放到块的**下方** —— 实测图 top 落到正文底部、文字全程全宽，绕排根本不成立。
@@ -1131,7 +1191,7 @@
     hideSideRails(); capFixed(); capWide(); fitColumnPreview();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
-    hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns);
+    hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns); fitIdeaBox();
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(tick, 300); }
 
@@ -1150,7 +1210,7 @@
   //    实测单次开销：publishButtons 0.1ms、guard 查询 0.06ms。
   //    tick 里原有的那一遍全部保留，作为「周期性全量重扫」的兜底。
   const obs = new MutationObserver(() => {
-    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview();
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox();
     const btns = publishButtons();       // 一次查询给下面两个 pass 共用（与 tick 里的做法一致）
     fitPublishButton(btns); matchComposerAvatar(btns);
     schedule();

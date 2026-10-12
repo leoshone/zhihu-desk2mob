@@ -48,6 +48,7 @@ node test-image-viewer.js --installed    # 图片查看器：放大的图片回�
 node test-hot-thumb.js    --installed    # 热榜：条目缩略图 2 行高 +「万热度/分享」行不叠字不被裁 + ::after 灰底随图缩小
 node test-column-thumb.js --installed    # 专栏广场：推荐卡片右侧图 3 行高 + 正文第 4 行起回落全宽（DOM 重排到首位）
 node test-ring-comment.js --installed    # 圈子：PinItem 图文网格缩略图不再溢出方框格子、盖住「评论」动作栏
+node test-idea-box.js    --installed    # 圈子：底部「与圈友分享」浮动框下移 + 水平居中（文字左偏/离底太远）
 ```
 
 > 两条注意：

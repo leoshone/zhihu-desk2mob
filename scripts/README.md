@@ -33,6 +33,7 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 - 回答页 `www.zhihu.com/question/.../answer/...` —— 给 `test-comment-back.js`
 - 问题页（任意 `www.zhihu.com/question/...`）—— 给 `test-question-actions.js`
 - 专栏页 `zhuanlan.zhihu.com/p/...` —— 给 `test-idea-option.js`
+- 圈子页 `www.zhihu.com/ring-feeds` —— 给 `test-ring-comment.js`
 
 ```bash
 node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢出定位修正
@@ -46,6 +47,7 @@ node test-modal-layout.js                # 弹层溢出定位修正（受控夹�
 node test-image-viewer.js --installed    # 图片查看器：放大的图片回到屏幕中央（需先在评论里点开一张图）
 node test-hot-thumb.js    --installed    # 热榜：条目缩略图 2 行高 +「万热度/分享」行不叠字不被裁 + ::after 灰底随图缩小
 node test-column-thumb.js --installed    # 专栏广场：推荐卡片右侧图 3 行高 + 正文第 4 行起回落全宽（DOM 重排到首位）
+node test-ring-comment.js --installed    # 圈子：PinItem 图文网格缩略图不再溢出方框格子、盖住「评论」动作栏
 ```
 
 > 两条注意：

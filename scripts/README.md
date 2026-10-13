@@ -33,7 +33,8 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 - 回答页 `www.zhihu.com/question/.../answer/...` —— 给 `test-comment-back.js`
 - 问题页（任意 `www.zhihu.com/question/...`）—— 给 `test-question-actions.js`
 - 专栏页 `zhuanlan.zhihu.com/p/...` —— 给 `test-idea-option.js`
-- 圈子页 `www.zhihu.com/ring-feeds` —— 给 `test-ring-comment.js`
+- 文章页 `zhuanlan.zhihu.com/p/...` —— 给 `test-reco-carousel.js`（「推荐阅读」在文章末尾）
+- 圈子页 `www.zhihu.com/ring-feeds` —— 给 `test-ring-comment.js`、`test-idea-box.js`
 
 ```bash
 node test-comment-back.js --installed    # 评论弹层：返回键关闭 + 溢出定位修正
@@ -49,6 +50,7 @@ node test-hot-thumb.js    --installed    # 热榜：条目缩略图 2 行高 +�
 node test-column-thumb.js --installed    # 专栏广场：推荐卡片右侧图 3 行高 + 正文第 4 行起回落全宽（DOM 重排到首位）
 node test-ring-comment.js --installed    # 圈子：PinItem 图文网格缩略图不再溢出方框格子、盖住「评论」动作栏
 node test-idea-box.js    --installed    # 圈子：底部「与圈友分享」浮动框在页面上居中（框内图标/文案保持默认）+ 收窄不顶屏幕两边 + 下移
+node test-reco-carousel.js --installed  # 文章页：底部「推荐阅读」第一张对齐正文、完整可见，其余卡片右滑可见（修掉居中对齐把第一张挤出屏幕）
 ```
 
 > 两条注意：

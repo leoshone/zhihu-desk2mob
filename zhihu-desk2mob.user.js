@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.16
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；**v1.4.16 起改为跟随知乎逐帧动画持续复位，修掉放大图被动画重新拉到屏幕外、停在屏外的问题**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.17
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -946,7 +946,7 @@
   // 另给浮层本身挂一个 class 观察器：查看器多是**预渲染的 portal**，点击只是加 .is-active
   // （属性变化，主 observer 只盯 childList 会漏），class 一变就立刻重跑，避免干等 300ms tick。
   const ivStyleObs = new WeakMap();   // img -> 观察其 style 的 observer
-  const ivClassObs = new WeakMap();   // .ImageView -> 观察其 class 的 observer
+  const ivClassObs = new WeakMap();   // 浮层 -> 观察其 class 的 observer
   function applyIvStyles(iv, img) {
     const r = iv.getBoundingClientRect();
     if (r.width < 50 || r.height < 50) return false;   // 未布局/已收起
@@ -964,29 +964,64 @@
     s.setProperty('object-fit', 'contain', 'important');
     return true;
   }
+  // 给已接管 img 挂 style 观察器、给浮层挂 class 观察器。reassert 是「重新居中」的具体做法
+  // （.ImageView 路径只用 applyIvStyles；light-box 路径还要反复清祖先 transform）。
+  // 防自激：回调里先 disconnect 再写、写完再挂回。
+  function attachIvObservers(iv, img, reassert) {
+    const apply = reassert || applyIvStyles;
+    if (!ivStyleObs.has(img)) {
+      const obs = new MutationObserver(() => {
+        obs.disconnect();
+        if (img.isConnected && iv.isConnected) apply(iv, img);
+        if (img.isConnected) obs.observe(img, { attributes: true, attributeFilter: ['style'] });
+      });
+      obs.observe(img, { attributes: true, attributeFilter: ['style'] });
+      ivStyleObs.set(img, obs);
+    }
+    if (!ivClassObs.has(iv)) {
+      const o = new MutationObserver(() => fixImageViewer());
+      o.observe(iv, { attributes: true, attributeFilter: ['class'] });
+      ivClassObs.set(iv, o);
+    }
+  }
   function fixImageViewer() {
     if (!CFG.fixImageViewer) return;
     document.querySelectorAll('.ImageView').forEach(iv => {
       const img = iv.querySelector('img.ImageView-img');
       if (!img) return;
       applyIvStyles(iv, img);
-      // 观察 img 的 style：知乎动画每改一次，我就在微任务里重新居中一次（先断开再写，防自激）
-      if (!ivStyleObs.has(img)) {
-        const obs = new MutationObserver(() => {
-          obs.disconnect();
-          if (img.isConnected && iv.isConnected) applyIvStyles(iv, img);
-          if (img.isConnected) obs.observe(img, { attributes: true, attributeFilter: ['style'] });
-        });
-        obs.observe(img, { attributes: true, attributeFilter: ['style'] });
-        ivStyleObs.set(img, obs);
-      }
-      // 观察浮层的 class：预渲染 portal 靠加 is-active 激活，class 一变立刻重跑
-      if (!ivClassObs.has(iv)) {
-        const o = new MutationObserver(() => fixImageViewer());
-        o.observe(iv, { attributes: true, attributeFilter: ['class'] });
-        ivClassObs.set(iv, o);
-      }
+      attachIvObservers(iv, img);
     });
+    fixLightboxViewer();
+  }
+
+  // ---- 第二种图片查看器（正文 zh-lightbox 图；浮层/画布/图全是 emotion hash 类名）----
+  // 真机抓到现行（2026-10-13，用户反馈「点击图片放大的图跑到屏幕外」且 v1.4.16 无效后，
+  // 请用户保持放大图打开、立即快照）：**放大图是 body 的直接子元素** ——
+  //   body > img.css-xxx(position:absolute; z-index:999; transform:matrix(2.305,…,536,847)，动画逐帧重写)
+  // 另有一个全屏遮罩 div.css-xxx(fixed 358×704, z=999) 是它的**兄弟**（不是祖先）。
+  // 类名全是 css-xxx hash —— fixImageViewer 只认 .ImageView，对它完全没接管 ⇒ 图被甩出屏幕停住
+  // （此前 probe 里见到的 .ImageView 其实是我自己注入的夹具，误导了一轮）。
+  // 识别特征（不依赖类名）：**body 的直接子级 img** + computed transform 非 none（正文静态图
+  // 没有）+ 尺寸不小（排除小图标）+ z-index 高（≥500，正文图 z=auto）。用「祖宗是 body」
+  // 而不是「找 fixed 祖先」—— 该查看器里图与遮罩是平级兄弟，图没有浮层祖先。
+  // 修法与 .ImageView 同路（position:fixed + inset:0 + margin:auto 居中 + style 观察器逐帧复位）。
+  // ⚠️ 图在 body 直下、html/body 又无 transform，fixed 直接相对视口 —— 无需清祖先 transform。
+  function applyLightboxStyles(overlay, img) {
+    return applyIvStyles(document.documentElement, img);
+  }
+  function fixLightboxViewer() {
+    for (const img of document.body ? document.body.children : []) {
+      if (img.tagName !== 'IMG') continue;
+      if (ivStyleObs.has(img)) continue;   // 已接管（含 .ImageView 路径）
+      const cs = getComputedStyle(img);
+      if (!cs.transform || cs.transform === 'none') continue;   // 核心特征：被变换过
+      if ((parseInt(cs.zIndex, 10) || 0) < 500) continue;       // 查看器层 z=999；正文图 z=auto
+      const r = img.getBoundingClientRect();
+      if (r.width < 200 && r.height < 200) continue;   // 排除小图（角标/图标不会大到 200）
+      applyIvStyles(document.documentElement, img);
+      attachIvObservers(document.documentElement, img, applyLightboxStyles);
+    }
   }
   // resize 时浮层还在开着的情形：清掉记忆让上面的约束按新尺寸重写。
   window.addEventListener('resize', () => { if (CFG.fixImageViewer) fixImageViewer(); });

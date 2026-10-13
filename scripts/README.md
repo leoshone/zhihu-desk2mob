@@ -47,6 +47,7 @@ node test-counterzoom.js  --installed    # 反缩放：内容恰好铺满、加�
 node test-modal-layout.js                # 弹层溢出定位修正（受控夹具，不依赖线上状态）
 node test-image-viewer.js --installed    # 图片查看器：放大的图片回到屏幕中央（需先在评论里点开一张图）
 node test-image-viewer-anim.js           # 图片查看器：知乎逐帧动画重写样式时，放大的图仍稳定居中（受控夹具+激进动画）
+node test-lightbox-viewer.js             # 正文图查看器（body 直下 img）：不被动画甩出屏、稳定居中（受控夹具+激进动画）
 node test-hot-thumb.js    --installed    # 热榜：条目缩略图 2 行高 +「万热度/分享」行不叠字不被裁 + ::after 灰底随图缩小
 node test-column-thumb.js --installed    # 专栏广场：推荐卡片右侧图 3 行高 + 正文第 4 行起回落全宽（DOM 重排到首位）
 node test-ring-comment.js --installed    # 圈子：PinItem 图文网格缩略图不再溢出方框格子、盖住「评论」动作栏

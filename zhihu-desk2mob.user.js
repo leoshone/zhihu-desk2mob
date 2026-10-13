@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.15
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.16
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；**v1.4.16 起改为跟随知乎逐帧动画持续复位，修掉放大图被动画重新拉到屏幕外、停在屏外的问题**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -939,30 +939,56 @@
   //     我们用内联 !important（后写者胜）+ transition:none 让它一次到位、不再被动画拉走。
   //   · ⚠️ 尺寸约束要在「浮层打开」与「resize」时刷新（浮层 rect 随视口变）；
   //     关闭时知乎移除 DOM，内联样式随节点销毁，无残留。
-  const ivDone = new WeakSet();
+  // 每张已接管的 img 配一个 style 观察器：知乎的「打开动画」会**逐帧重写** img 的内联
+  // transform/位置（v1.4.6 已证实）。一次性写入的 !important 只能赢那一帧，动画随后又改回去
+  // —— 这正是「放大的图跑到屏幕外、停在那儿」的根因（v1.4.16 修）。这里在每次知乎改写
+  // style 后（MutationObserver 微任务里，必然排在知乎那次写之后）立刻重新居中，稳定压过动画。
+  // 另给浮层本身挂一个 class 观察器：查看器多是**预渲染的 portal**，点击只是加 .is-active
+  // （属性变化，主 observer 只盯 childList 会漏），class 一变就立刻重跑，避免干等 300ms tick。
+  const ivStyleObs = new WeakMap();   // img -> 观察其 style 的 observer
+  const ivClassObs = new WeakMap();   // .ImageView -> 观察其 class 的 observer
+  function applyIvStyles(iv, img) {
+    const r = iv.getBoundingClientRect();
+    if (r.width < 50 || r.height < 50) return false;   // 未布局/已收起
+    const s = img.style;
+    s.setProperty('position', 'fixed', 'important');
+    s.setProperty('inset', '0', 'important');
+    s.setProperty('margin', 'auto', 'important');
+    s.setProperty('transform', 'none', 'important');
+    s.setProperty('translate', 'none', 'important');   // 个别变换属性也归位（防新版动画改用 translate）
+    s.setProperty('transition', 'none', 'important');
+    s.setProperty('max-width', Math.round(r.width * 0.94) + 'px', 'important');
+    s.setProperty('max-height', Math.round(r.height * 0.88) + 'px', 'important');
+    s.setProperty('width', 'auto', 'important');
+    s.setProperty('height', 'auto', 'important');
+    s.setProperty('object-fit', 'contain', 'important');
+    return true;
+  }
   function fixImageViewer() {
     if (!CFG.fixImageViewer) return;
     document.querySelectorAll('.ImageView').forEach(iv => {
       const img = iv.querySelector('img.ImageView-img');
       if (!img) return;
-      // 浮层 rect：fixed inset:0 的实际视口盒（若被 capFixed 收窄过，以实际为准）
-      const r = iv.getBoundingClientRect();
-      if (r.width < 50 || r.height < 50) return;   // 未布局/已收起，等下一拍
-      img.style.setProperty('position', 'fixed', 'important');
-      img.style.setProperty('inset', '0', 'important');
-      img.style.setProperty('margin', 'auto', 'important');
-      img.style.setProperty('transform', 'none', 'important');
-      img.style.setProperty('transition', 'none', 'important');
-      img.style.setProperty('max-width', Math.round(r.width * 0.94) + 'px', 'important');
-      img.style.setProperty('max-height', Math.round(r.height * 0.88) + 'px', 'important');
-      img.style.setProperty('width', 'auto', 'important');
-      img.style.setProperty('height', 'auto', 'important');
-      img.style.setProperty('object-fit', 'contain', 'important');
-      ivDone.add(iv);
+      applyIvStyles(iv, img);
+      // 观察 img 的 style：知乎动画每改一次，我就在微任务里重新居中一次（先断开再写，防自激）
+      if (!ivStyleObs.has(img)) {
+        const obs = new MutationObserver(() => {
+          obs.disconnect();
+          if (img.isConnected && iv.isConnected) applyIvStyles(iv, img);
+          if (img.isConnected) obs.observe(img, { attributes: true, attributeFilter: ['style'] });
+        });
+        obs.observe(img, { attributes: true, attributeFilter: ['style'] });
+        ivStyleObs.set(img, obs);
+      }
+      // 观察浮层的 class：预渲染 portal 靠加 is-active 激活，class 一变立刻重跑
+      if (!ivClassObs.has(iv)) {
+        const o = new MutationObserver(() => fixImageViewer());
+        o.observe(iv, { attributes: true, attributeFilter: ['class'] });
+        ivClassObs.set(iv, o);
+      }
     });
   }
   // resize 时浮层还在开着的情形：清掉记忆让上面的约束按新尺寸重写。
-  // （ivDone 目前只作语义标记；约束值每次都重写，成本低——浮层通常只有 1 个 img。）
   window.addEventListener('resize', () => { if (CFG.fixImageViewer) fixImageViewer(); });
 
   // ---- hide the "同时发布到想法" option in the comment composer ----

@@ -10,10 +10,12 @@
 //       修法（v1.4.14，纯 CSS、稳定语义类名）：列表改 justify-content:flex-start + overflow-x:auto，
 //       隐藏 PagingButton，去掉标题负 margin，卡片 transform 归位。
 // 断言：① 找到「推荐阅读」卡片行（≥3 张卡）；
-//       ② 第一张卡片左对齐正文、不被裁掉（第一张左缘 ≈ 列表左缘，容差 2px —— 改前 ≈-339px，必 FAIL）；
+//       ② 第一张卡片左缘与正文左内缩一致、不顶手机边缘（|第一张左缘 − 正文左内缩| ≤ 6 ——
+//          正文左内缩动态取正文段落文字左缘的众数，实测 ~20px；改前第一张在 0，必 FAIL）；
 //       ③ 列表可横向滑动（overflow-x==auto 且 scrollWidth>clientWidth —— 改前 overflow-x:visible，必 FAIL）；
 //       ④ 桌面翻页箭头已隐藏（.PagingButton 全 display:none —— 改前可见，必 FAIL）；
-//       ⑤ 其余卡片确实溢出到右侧、可滑出（最后一张右缘 > 列表右缘）。
+//       ⑤ 其余卡片确实溢出到右侧、可滑出（最后一张右缘 > 列表右缘）；
+//       ⑥ 「推荐阅读」标题文字左缘也与正文左内缩一致（|标题文字左缘 − 正文左内缩| ≤ 6 —— 改前在 0，必 FAIL）。
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -36,17 +38,30 @@ const ST = `JSON.stringify((()=>{
   const cs = getComputedStyle(list);
   const cards = [...list.querySelectorAll('.PostItem')];
   const btns = [...list.querySelectorAll('.PagingButton')];
+  const heading = document.querySelector('.Recommendations-BlockTitle');
   const first = cards[0] ? cards[0].getBoundingClientRect() : null;
   const last  = cards.length ? cards[cards.length-1].getBoundingClientRect() : null;
   const btnDisplays = btns.map(b => getComputedStyle(b).display);
+  // 正文左内缩：取正文段落文字左缘的众数（四舍五入到 5px）；无正文则退 20
+  function textLeft(el){ try{ const rg=document.createRange(); rg.selectNodeContents(el);
+      const rs=rg.getClientRects(); for(const rr of rs){ if(rr.width>2) return Math.round(rr.left); } }catch(e){}
+    const r=el.getBoundingClientRect(); return Math.round(r.left); }
+  const ps=[...document.querySelectorAll('.Post-content .RichText p, .Post-content p')]
+    .filter(p=>((p.textContent||'').replace(/\\s+/g,'').length)>=6);
+  const hist={}; for(const p of ps){ const k=Math.round(textLeft(p)/5)*5; hist[k]=(hist[k]||0)+1; }
+  const srt=Object.entries(hist).sort((a,b)=>b[1]-a[1]);
+  const bodyInset = srt.length ? parseInt(srt[0][0]) : 20;
+  const headingTextLeft = heading ? textLeft(heading) : null;
   return {
     found:true,
     cardCount: cards.length,
     listLeft: Math.round(lr.left), listRight: Math.round(lr.right),
     clientW: list.clientWidth, scrollW: list.scrollWidth,
     overflowX: cs.overflowX, justifyContent: cs.justifyContent,
-    firstCardDeltaLeft: first ? Math.round(first.left - lr.left) : null,   // 第一张相对列表左缘
-    lastCardDeltaRight: last ? Math.round(last.right - lr.right) : null,   // 最后一张相对列表右缘
+    bodyInset,
+    firstCardLeft: first ? Math.round(first.left) : null,
+    headingTextLeft,
+    lastCardDeltaRight: last ? Math.round(last.right - lr.right) : null,
     btnCount: btns.length, btnDisplays
   };
 })())`;
@@ -75,14 +90,20 @@ const ST = `JSON.stringify((()=>{
     console.log('几何: ' + JSON.stringify(d));
 
     ok(d.cardCount >= 3, `① 找到「推荐阅读」卡片行（${d.cardCount} 张）`, { cardCount: d.cardCount });
-    ok(d.firstCardDeltaLeft != null && d.firstCardDeltaLeft >= -2,
-      `② 第一张卡片左对齐正文、不被裁掉（相对列表左缘 ${d.firstCardDeltaLeft}px ≥ -2）`, { firstCardDeltaLeft: d.firstCardDeltaLeft });
+    const cardErr = (d.firstCardLeft != null) ? Math.abs(d.firstCardLeft - d.bodyInset) : 999;
+    ok(d.firstCardLeft != null && cardErr <= 6,
+      `② 第一张卡片左缘与正文左内缩一致、不顶边（第一张 ${d.firstCardLeft}px vs 正文 ${d.bodyInset}px，误差 ${cardErr}px ≤ 6）`,
+      { firstCardLeft: d.firstCardLeft, bodyInset: d.bodyInset });
     ok(d.overflowX === 'auto' && d.scrollW > d.clientW + 4,
       `③ 列表可横向滑动（overflowX=${d.overflowX}, scrollW=${d.scrollW} > clientW=${d.clientW}）`, { overflowX: d.overflowX, scrollW: d.scrollW, clientW: d.clientW });
     ok(d.btnCount > 0 && d.btnDisplays.every(x => x === 'none'),
       `④ 桌面翻页箭头已隐藏（${d.btnCount} 个 .PagingButton 全 display:none）`, { btnCount: d.btnCount, btnDisplays: d.btnDisplays });
     ok(d.lastCardDeltaRight != null && d.lastCardDeltaRight > 4,
       `⑤ 其余卡片溢出到右侧、可滑出（最后一张右缘超列表右缘 ${d.lastCardDeltaRight}px）`, { lastCardDeltaRight: d.lastCardDeltaRight });
+    const headErr = (d.headingTextLeft != null) ? Math.abs(d.headingTextLeft - d.bodyInset) : 999;
+    ok(d.headingTextLeft != null && headErr <= 6,
+      `⑥ 「推荐阅读」标题文字左缘与正文左内缩一致（标题 ${d.headingTextLeft}px vs 正文 ${d.bodyInset}px，误差 ${headErr}px ≤ 6）`,
+      { headingTextLeft: d.headingTextLeft, bodyInset: d.bodyInset });
   } finally {
     try { await api.close(); } catch (e) {}
   }

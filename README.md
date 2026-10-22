@@ -105,6 +105,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | `v1.2.3-modal-no-horizontal-slide.md` | 评论弹层不再能被横向滑动推走（关闭按钮在屏幕外造成的可滚区域已裁掉） |
 | `v1.2.4-thumb-line-align.md` | 首页封面按「正文行数」定尺寸（默认 3 行）+ 上下与文字精确对齐 |
 | `v1.2.8-question-actions-one-line.md` | 问题页「关注问题/写回答/邀请回答」三个按钮同排 + 均匀分布 + 两侧留白对齐正文文字区（`display: contents` 解散排布壳）|
+| `v1.4.18-fix-sign-page.md` | 登录/注册页单列化：去背景插画与撑高、隐藏「打开知乎App」推广面板，登录卡片占满整列（输入区不再被屏幕右缘裁掉）|
 | `code-review-v1.0.5.md` | 对 v1.0.5 的代码与文档审查：性能取证、结构性问题、一致性清单 |
 
 > v1.0.6（审查后加固）与 v1.0.8（已回滚）没有单独文档：前者的改动记在对应 Release note

@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.18
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.4.19
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -719,6 +719,46 @@
   .signQr-container { display: block !important; }
   .signQr-rightContainer, .signQr-rightContainer > div { width: 100% !important; }
   .SignContainer-content { width: 100% !important; }
+
+  /* ---- 个人主页（/people/... 的 Profile 版式）单列化 ----
+     桌面版式在窄列下的四处问题（2026-10-23 真机 MuMu(小米13) 登录态实测）：
+       1) .ProfileHeader / .Profile-main 带 margin-right:-32px（桌面头图出血）+ box-sizing:content-box
+          + width:358px + 左右 padding 各 16px ⇒ 实际宽 358+32=390px，右侧 32px 被屏幕裁掉；
+       2) 头像 .ProfileHeader-avatar 是 position:absolute（挂在 .ProfileHeader-main 左上），
+          content 靠 border-left:164px solid transparent 让出桌面位置 ⇒ 若直接清掉 border-left，
+          名字/签名会移到头像下面被 168px 的头像整块盖住；
+       3) contentBody 写死 width:524px（桌面正文宽），contentHead 里的「关注他」等 .Button--plain
+          被 absolute 定到 right:0（窄列下压住签名文字）；
+       4) 顶部导航 nav 在窄壳（flex 中列，自身 max-width 100% 但被搜索层挤压）里 463px 宽溢出，
+          「专栏/圈子」被屏幕右缘裁掉且无法滚动。
+     修法：①/③ 清负 margin + border-box；头像改 static 独立成行、content 清 border-left 占满整行
+     （上下排布 —— 桌面的「左头像右内容」在 358px 列宽放不下，并排会把内容压到 82px）；
+     contentHead 里的普通按钮改回文档流；contentBody 解除写死宽度。
+     ④ 导航允许横向滚动（nav 与其壳层都可滚，nav width:max-content 保持一行不折字）。
+     实测（列宽 358）：.ProfileHeader/.Profile-main 0..358；头像 36..322 居中；
+     名字 52 起、contentBody 254px 全宽；「关注他/发私信」按钮并排完整可见；
+     顶部导航可横向滚（scrollWidth 651 > clientWidth 188），整页无横向溢出。
+     ⚠️ .css-51utkw / .css-72pd91 是 emotion hash，但它们是「知乎全局导航在窄屏下的唯一容器路径」，
+        无稳定类名可替代；hash 变化时本段导航规则会失效（仅导航回不到滚动状态，不影响内容），可接受。 */
+  .ProfileHeader, .Profile-main { margin-right: 0 !important; box-sizing: border-box !important; }
+  .ProfileHeader-main { display: block !important; }
+  .ProfileHeader-avatar { position: static !important; display: block !important; margin: 0 auto 4px !important; }
+  .ProfileHeader-content {
+    border-left: 0 !important;
+    padding-left: 16px !important; padding-right: 16px !important;
+    padding-top: 8px !important; margin-top: 4px !important;
+  }
+  .ProfileHeader-contentHead { max-width: 100% !important; }
+  .ProfileHeader-contentHead .Button--plain { position: static !important; }
+  .ProfileHeader-contentBody { width: auto !important; max-width: 100% !important; max-height: none !important; }
+  .AppHeader nav {
+    overflow-x: auto !important; overflow-y: hidden !important;
+    scrollbar-width: none !important; white-space: nowrap !important;
+  }
+  .AppHeader nav::-webkit-scrollbar { display: none !important; }
+  .AppHeader nav a { white-space: nowrap !important; flex: 0 0 auto !important; }
+  .AppHeader nav.css-72pd91 { width: max-content !important; min-width: 0 !important; flex: 0 0 auto !important; }
+  .AppHeader .css-51utkw { overflow-x: auto !important; display: flex !important; flex: 1 1 0 !important; min-width: 0 !important; }
   `;
   (document.head || document.documentElement).appendChild(st);
 

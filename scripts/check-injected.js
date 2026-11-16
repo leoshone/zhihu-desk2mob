@@ -12,7 +12,7 @@
 //
 // 用法：node scripts/check-injected.js [url子串]
 'use strict';
-const cdp = require('../.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/cdp.js');
+const cdp = require('./lib/cdp.js');
 
 const substr = process.argv[2] || 'zhihu.com';
 

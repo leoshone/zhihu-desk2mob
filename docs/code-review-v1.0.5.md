@@ -1,7 +1,7 @@
 # 代码与文档审查 · zhihu-desk2mob v1.0.5
 
 审查范围：`src/zhihu-desk2mob.user.js`（467 行）、`docs/` 三份方案文档、`README.md`、
-`scripts/` 四个测试 + 工具、技能 `kiwi-violentmonkey-cdp`。
+`scripts/` 四个测试 + 工具、技能 `kiwi-violentmonkey-cdp`（2026-11 已迁移至 leoshone/Skills 仓库）。
 结论优先按严重度排列，每条给定位与依据。**带「实测」的都是真机取证，不是读代码推测。**
 
 ---

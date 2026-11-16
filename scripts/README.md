@@ -164,12 +164,14 @@ node scripts/check-injected.js "zhihu.com/question"
 > 内联样式），所以那组数据不是有效的无脚本对照。判断「某问题是否由某次改动引入」要用
 > **同一轮内的改前/改后对照**。两个脚本头部都写了这条。
 
-**通用的**两个探针不在这里，在技能目录（`.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/`）：
-`probe-element.js`（按文案定位元素并 dump 结构）与 `inspect.js`（判定屏幕顶层叠加层、
-切标签、可 `--out` 指定截图路径）。本目录**不再放它们的副本** —— 曾因副本漂移导致
+**通用的**两个探针（`probe-element.js` 按文案定位元素并 dump 结构、`inspect.js` 判定屏幕顶层
+叠加层/切标签/截图）原先放在 `.workbuddy/skills/kiwi-violentmonkey-cdp/` 技能目录；
+2026-11 该技能已迁移到独立仓库
+[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有），
+项目内的技能目录已删除。需要这两个探针时从该仓库取，本目录不放副本 —— 曾因副本漂移导致
 「本地跑的是旧版」而白查一轮。
 
 ## 依赖
 
-CDP 工具库本体在技能目录内：`../.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/cdp.js`。
-本目录的 `cdp.js` 只是一行转发，以保证全仓库只有一份实现。
+CDP 工具库本体在 `scripts/lib/cdp.js`。本目录的 `cdp.js` 只是一行转发，
+以保证全仓库只有一份实现。

@@ -1,7 +1,7 @@
 # 项目约定（接手须知）
 
 这份文档是**换机／换人接手时需要知道的项目决策**，不重复技能与 README 已写的内容：
-环境与工具用法见 [`.workbuddy/skills/kiwi-violentmonkey-cdp/SKILL.md`](../.workbuddy/skills/kiwi-violentmonkey-cdp/SKILL.md)，
+环境与工具方法论见 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有，原项目内技能 kiwi-violentmonkey-cdp 已于 2026-11 迁入该仓库），
 测试怎么跑见 [`scripts/README.md`](../scripts/README.md)，各版本根因见 [`docs/`](.)。
 
 ## 环境（实测）
@@ -333,7 +333,7 @@
    本轮就是这么查出「赞同栏不再换行 = **v1.3.9 误删**了 v1.0.0 起就存在的通用换行规则」——
    从「怀疑 v1.3.8」到定案只花了三条命令，且避免了我按自己想法自创修法（那版修法已被用户否掉一次）。
 1. `scripts/probe-*.js` 定位「现象出自哪个容器／哪一层」，别先猜 CSS；
-2. `.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/inspect.js` 看屏幕顶层叠加层与关闭入口在不在屏幕内；
+2. `inspect.js`（原技能工具，现随 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e) 分发）看屏幕顶层叠加层与关闭入口在不在屏幕内；
 3. 改脚本 → `--installed` 跑对应测试 → 全套；
 4. 涉及视觉的改动：`adb exec-out screencap -p` 抓真机屏（比 `Page.captureScreenshot` 抗造）。
 
@@ -400,5 +400,5 @@
 
 **排查工具**：`scripts/probe-rightrail.js`（结构对照）、`scripts/probe-overlay.js` /
 `probe-topalign.js` / `probe-sticky.js`（浮层与吸顶取证）、技能里的
-`.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/inspect.js`（顶层叠加层 + 关闭入口是否在屏幕内）、
+`inspect.js`（原技能工具，现随 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e) 分发）（顶层叠加层 + 关闭入口是否在屏幕内）、
 `adb exec-out screencap -p` 抓真机屏。注意 `Page.captureScreenshot` 在长会话后不可靠。

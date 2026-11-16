@@ -84,8 +84,12 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | --- | --- |
 | `zhihu-desk2mob.user.js` | 脚本本体（单文件，无构建） |
 | `docs/` | 各版本的修复方案文档：根因分析、实测数据、方案取舍（见下方索引） |
-| `scripts/` | 真机回归测试 + 诊断探针（见 [scripts/README.md](scripts/README.md)） |
-| `.workbuddy/skills/kiwi-violentmonkey-cdp/` | 配套技能：用 CDP 驱动真机 Kiwi + 暴力猴（装／更新脚本、注入、取证） |
+| `scripts/` | 真机回归测试 + 诊断探针（见 [scripts/README.md](scripts/README.md)）；`scripts/lib/cdp.js` 为 CDP 工具库本体 |
+
+### 配套方法论（外部仓库）
+
+CDP 驱动真机浏览器（装／更新脚本、注入、取证）的**通用方法论**已沉淀到独立仓库：
+[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有，需 git 凭据）。含：INTERNAL crx profile 搭建、CDP 驱动要点、环境陷阱表、Python 驱动模板。本仓库的 `scripts/lib/cdp.js` 是其中 Kiwi/真机路径的 Node 实现。
 
 ### docs 索引
 
@@ -113,6 +117,5 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 > 与上面的审查报告里，后者已被 `6331027` 回滚、Release 与 tag 已删除。
 
 
-`scripts/` 里的测试要驱动真机，依赖技能目录中的 CDP 工具库
-（`.workbuddy/skills/kiwi-violentmonkey-cdp/scripts/cdp.js`，本仓库只存一份实现）。
-技能本身可以单独拿走使用，不依赖本脚本。
+`scripts/` 里的测试要驱动真机，依赖 CDP 工具库 `scripts/lib/cdp.js`（项目内，单一实现）。
+方法论与陷阱速查见 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)。

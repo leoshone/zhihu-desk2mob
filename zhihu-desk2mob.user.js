@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.6.4
+// @version      1.6.5
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -1711,6 +1711,101 @@
     });
   }
 
+  // ---- 顶部导航重排（2026-11-19 用户反馈）----
+  // 「Logo 往左靠、头像移到热榜后面（屏幕内）、搜索框挤进屏幕、注意间距」
+  // 实测布局（358 列）：Logo@40..104（左留白 40 太大）、tabs@138..304（gap 32 偏大）、
+  // SearchBar@304..524（220px 超出屏幕只露 54px）、头像区@358..572（完全在屏幕外）。
+  // 重排方案：
+  //   1. Logo margin-left 12px（与全站留白一致）
+  //   2. tabs gap 32 → 10px
+  //   3. 头像区（消息/私信/创作中心/头像 4 个 48px 按钮）只保留头像按钮——入口冗余
+  //      （消息/私信在站内信图标可达、创作中心在内容区导航有），排到 tabs 后
+  //   4. SearchBar 到头像后面、宽度收进屏幕剩余空间
+  // ⚠️ 结构陷阱：SearchBar 外层容器链（css-1pbgcc2 flex-basis 704px → css-rtxb0v →
+  //    css-7corvk overflow clip）每层都要 min-width:0 才能让 SearchBar 收缩；
+  //    头像按钮在其自己的容器 css-1ww4ngr（358..572），只藏按钮不移容器——容器也要收。
+  const headerDone = new WeakSet();
+  function reflowHeader() {
+    const bar = document.querySelector('.LeanAppHeaderBar');
+    if (!bar) return;
+    const shell = bar.firstElementChild;                    // css-1dj87r3 flex 行
+    if (!shell) return;
+    const logo = shell.querySelector(':scope > a');
+    if (!logo) return;
+    // ⚠️ 不记忆化：SearchBar 的绝对定位值依赖头像的实时位置，首拍时头像还在旧位置
+    //    （flex 重排后 avatar 移动），必须每拍重读重写。样式写入幂等、开销可忽略。
+    // 1) Logo 靠左
+    logo.style.setProperty('margin-left', '12px', 'important');
+    // 2) tabs gap 压缩 + tabs 容器（css-1pbgcc2）自带 padding-left 40 去掉——
+    //    否则 tabs 起点 138、把头像/搜索框挤到屏幕外（间距预算见 reflowHeader 头注释）
+    const nav = bar.querySelector('nav');
+    if (nav) nav.style.setProperty('column-gap', '10px', 'important');
+    const tabsWrap2 = nav ? nav.parentElement : null;
+    if (tabsWrap2) {
+      tabsWrap2.style.setProperty('padding-left', '12px', 'important');
+      tabsWrap2.style.setProperty('padding-right', '0', 'important');
+      // css-1pbgcc2 自身的子项间距（nav/头像/SearchBar 之间）也要压——默认 22px+
+      tabsWrap2.style.setProperty('column-gap', '10px', 'important');
+    }
+    // 3) 头像区：只留头像按钮（消息/私信/创作中心入口冗余）
+    const avBtns = bar.querySelectorAll('button[class*="css-f8uegh"], a[class*="css-f8uegh"]');
+    avBtns.forEach(b => b.style.setProperty('display', 'none', 'important'));
+    // 4) DOM 重排（最稳方案）：头像按钮从深嵌套容器「搬出来」，插到 SearchBar 容器
+    //    之前——这样 [nav(tabs) → 头像 → SearchBar] 顺着 flex 自然排布，不需要绝对
+    //    定位/坐标换算（absolute 方案在 CSS zoom + 包含块偏移下坐标换算不可靠）。
+    //    SearchBar 容器 flex 1 占剩余宽、min-width 0；知乎原容器链（704px/clip）不管——
+    //    可见性由新位置决定。
+    const sb = bar.querySelector('.SearchBar');
+    const av = bar.querySelector('button[class*="AppHeader-profile"]');
+    if (sb && av) {
+      const sbWrap = sb.parentElement;                       // css-c0w5vr
+      const anchor = sbWrap.parentElement;                   // css-1pbgcc2（nav 也在里面）
+      if (anchor && !av.__z2mMoved) {
+        av.__z2mMoved = true;
+        av.style.setProperty('flex', '0 0 auto', 'important');
+        av.style.setProperty('margin-left', '10px', 'important');
+        av.style.setProperty('margin-right', '10px', 'important');
+        anchor.insertBefore(av, sbWrap);
+      }
+      // 头像原容器（css-1ww4ngr）留着但已空（3 个按钮隐藏了），清掉占位
+      const avWrap = bar.querySelector('[class*="css-1ww4ngr"]');
+      if (avWrap && !avWrap.querySelector('button, a')) {
+        avWrap.style.setProperty('display', 'none', 'important');
+      }
+      // SearchBar 容器链允许收缩
+      let e = sbWrap;
+      for (let i = 0; i < 4 && e && e !== bar; i++) {
+        e.style.setProperty('min-width', '0', 'important');
+        e.style.setProperty('flex', '1 1 0', 'important');
+        e = e.parentElement;
+      }
+      sb.style.setProperty('flex', '1 1 0', 'important');
+      sb.style.setProperty('min-width', '0', 'important');
+      sb.style.setProperty('width', 'auto', 'important');
+      // 宽度兜底：flex 链上有知乎写死的 704px/220px 不肯收缩时，直接按视觉右缘钳制
+      // （下一拍再量——DOM 移动/样式生效需要一帧，首次测量可能还是旧位置，tick 会重算）
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const b = sb.getBoundingClientRect();
+          const overflow = Math.round(b.right - (SW - 12));
+          if (overflow > 4) {
+            sb.style.setProperty('max-width', Math.max(Math.round(b.width - overflow), 60) + 'px', 'important');
+          }
+        });
+      });
+      const inp = sb.querySelector('input');
+      if (inp) inp.style.setProperty('min-width', '0', 'important');
+      // ⚠️ 最终兜底：上面 left/width 的理论计算受动态布局影响可能仍溢出——
+      //    同帧实测视觉右缘，超出 SW−12 就把 width 钳小（内联样式立即生效、可同步读）。
+      const now = sb.getBoundingClientRect();
+      const overflowNow = Math.round(now.right - (SW - 12));
+      if (overflowNow > 4) {
+        const curW = Math.round(now.width);
+        sb.style.setProperty('width', Math.max(curW - overflowNow, 60) + 'px', 'important');
+      }
+    }
+  }
+
   // ---- 圈子页（/ring-feeds）：成员头像行换行 ----
   // 实测：圈子卡片里「成员/圈友」一行是 flex nowrap（css-1fhfghv），每个成员 84px 宽、
   // 桌面一行放 N 个；窄列（278px 可用）下 3 个就超列、加号按钮一路排到 746px（屏幕外）。
@@ -1743,7 +1838,7 @@
     if (SW !== lastTickSW) { lastTickSW = SW; clearScanMemo(); }
     // 周期性全量重扫：见「扫描记忆化」一节，抵消「看过的元素后续变大就漏掉」的代价
     if (++sweepCount % SWEEP_EVERY === 0) clearScanMemo();
-    hideSideRails(); capFixed(); capWide(); fitColumnPreview(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); wrapRingMemberRows(); hideQuestionDataRail();
+    hideSideRails(); capFixed(); capWide(); fitColumnPreview(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); reflowHeader(); wrapRingMemberRows(); hideQuestionDataRail();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
     hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns); fitIdeaBox();
@@ -1765,7 +1860,7 @@
   //    实测单次开销：publishButtons 0.1ms、guard 查询 0.06ms。
   //    tick 里原有的那一遍全部保留，作为「周期性全量重扫」的兜底。
   const obs = new MutationObserver(() => {
-    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); hideQuestionDataRail();
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); reflowHeader(); hideQuestionDataRail();
     const btns = publishButtons();       // 一次查询给下面两个 pass 共用（与 tick 里的做法一致）
     fitPublishButton(btns); matchComposerAvatar(btns);
     schedule();

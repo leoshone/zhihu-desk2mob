@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.4.21
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.5.0
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-start
@@ -41,6 +41,11 @@
     // 量出的 0.97998）→ **1.00（当前）**——用户 2026-09-30 决定取整到 1.00，即回到名义字号。
     // **靠收窄列宽实现，不改任何 font-size**：列窄了 zoom 就同比变大，列仍恰好铺满屏幕。
     textScale: 1.0,
+    // 调试口子：强制列宽（px）。0 = 自动（真机默认）。
+    // 用途：桌面 Chrome/模拟器里 visualViewport 与真机口径不同（emulation 的
+    // scale 恒为 1，curScreenW 会被算成整个视口宽），自动校准会把 SW 定成视口宽、
+    // 失去「窄列」语境。audit 脚本设 forceSW=358 即可在桌面环境复现真机布局。
+    forceSW: 0,
     // 反缩放：限制「手工缩小」——捏合缩到小于「恰好铺满」时拉回铺满，
     // 不允许把页面缩成半屏小字（用户要求）。只挡缩小，放大不受影响。
     limitZoomOut: true,
@@ -139,7 +144,8 @@
     const visW = vv ? vv.width : window.innerWidth;   // 可见范围内的布局 px
     const s = (vv && vv.scale) || 1;
     curScreenW = Math.round(visW * s);                // 屏幕可用 CSS 宽度（用户捏合时不变量）
-    const wantSW = Math.max(SW_MIN, Math.round(curScreenW / CFG.textScale));
+    const wantSW = CFG.forceSW > 0 ? CFG.forceSW
+      : Math.max(SW_MIN, Math.round(curScreenW / CFG.textScale));
     if (Math.abs(wantSW - SW) >= 1) {
       SW = wantSW;
       document.documentElement.style.setProperty('--z2m-w', SW + 'px');
@@ -263,6 +269,28 @@
      JS 那一步保留：用来兜住动态插入、或没有这些类名的其它栏。
      注：display:none 只是不渲染，网络请求仍会发出（要彻底不拉需要阻断请求，本脚本不做）。 */
   .GlobalSideBar, .Question-sideColumn, [class*="SideBar"] { display: none !important; }
+  /* ---- 新版桌面首页的「左侧栏」（2026-11 改版，方案 A：隐藏不搬运）----
+     结构（实测，反缩放后 358px 列宽坐标系）：内容壳 div.css-syn8px 下依次是
+       div.css-uf7ueu [0,58,40,全高]   ← 左侧栏收起态竖条（40px 宽，一列图标）
+       aside.css-txb60n [40,58,58,全高] ← 左侧栏展开面板（58px）
+       div.css-12c3wuv [98,58,0,全高]   ← 两栏之间的 0 宽隔离壳
+       div.css-t9zu9r [98,58,1104,全高] ← 内容区（内含 main.App-main）
+     类名全是 emotion hash（随构建变化），不能直接写选择器 —— 按**几何特征**在 JS 里
+     识别（hideLeftNav）：「内容壳的直接子级、全高、宽 <= 64px 的非 main 元素」。
+     ⚠️ 入口不丢失：左栏的全部入口（首页/关注/热榜/圈子/专栏…）在新顶部导航
+        LeanAppHeaderBar 与内容区 tab 里都有，隐藏属于去重而非砍功能（用户 2026-11-19 确认方案 A）。 */
+  /* 新版顶部导航壳：旧 .AppHeader 规则对它不命中，按旧规则同款处理
+     （static、满宽、内部可横滚）。类名 LeanAppHeaderBar 稳定（语义类名）。 */
+  .LeanAppHeaderBar {
+    position: static !important;
+    width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+    height: auto !important;
+  }
+  .LeanAppHeaderBar > div, .LeanAppHeaderBar nav {
+    max-width: 100% !important; min-width: 0 !important; width: auto !important;
+    overflow-x: auto !important; scrollbar-width: none !important;
+  }
+  .LeanAppHeaderBar > div::-webkit-scrollbar, .LeanAppHeaderBar nav::-webkit-scrollbar { display: none !important; }
   /* 专栏页的右侧栏内容：知乎把「关于作者 / 大家都在搜」这两张卡片放在文章的右栏，
      窄屏下会流到正文下方（实测 62..358）——用户要求与侧栏一样去掉。类名稳定、无副作用。
      ⚠️ 不要顺手隐藏其它塌陷盒子：专栏页左边缘那条「逐字竖排」的是**文章标题**
@@ -774,6 +802,33 @@
      修法：导航壳里的 portal 层直接隐藏 —— 内容区本来就有完整的同款 tab 条（y≈543），
      吸顶条纯属桌面冗余；同时此规则不影响 nav 自身（:has 限定只命中含 .PageHeader 的壳）。 */
   .AppHeader .css-1ndlr1n:has(.PageHeader) { display: none !important; }
+
+  /* ---- 个人主页：新版（2026-11 改版）吸顶 tab 条 portal 隐藏 ----
+     旧规则（上面那条）依赖 .css-1ndlr1n hash，改版后失效。新版结构（实测）：
+     portal 的 tab 条是 .ProfileMain-contents > .ProfileMain-tabsWrap > ul.Tabs，
+     rect [146,62,656,50] —— 挂在顶部 header 区、且窄列下被裁到 145px 只剩一两个 tab；
+     内容区本来有完整同款（.ProfileMain-header > ul.Tabs，[40,494,278] 正常单列）。
+     按「.ProfileMain-contents 这个 portal 壳」隐藏：该类名只在吸顶 portal 出现
+     （内容区那份的父链是 .ProfileMain-header，不带 -contents），类名稳定语义化。 */
+  .ProfileMain-contents { display: none !important; }
+  /* ---- 问题页：按钮行左侧的「竖排数据窄条」隐藏（2026-11 改版）----
+     实测：新版问题头按钮行（.css-1xc87cl）左侧有一个 24.5px 宽的窄壳（.css-gfmh54），
+     里面竖排塞着「好问题」星标、「37 条评论」、「3691 关注」、「1.1 亿浏览」——桌面版它是
+     图标窄条设计；窄列下 24px 宽装不下任何文字，全部逐字竖排并与右侧按钮行重叠
+     （截图可见「3691 关…1.1 万…注/浏览」糊成一片）。
+     隐藏依据：这些数据/功能在移动端都有更好的入口——「关注问题」按钮就在右侧、
+     评论数在各回答底部、浏览数价值低。旧版（v1.4.18 前）无此元素。
+     ⚠️ 类名是 emotion hash：按结构定位（按钮行 .css-1xc87cl 也是 hash）——
+     两者都用「QuestionPage 下 24~26px 宽 + 含 3 个以上按钮/数据子项的 flex 壳」
+     在 JS 里识别，见 hideQuestionDataRail()。 */
+  /* ---- 个人主页：内容区 tab 条（.ProfileMain-header > ul.Tabs）横向可滚 ----
+     实测：tab 项 nowrap 排到 x=480+（列宽 358），ul 自身 overflow-x:scroll 但父壳
+     .ProfileMain-header 是 block 不裁 —— tab 项溢出到列外。给壳收窄 + ul 允许滚，
+     与顶部导航同一处理口径。 */
+  .ProfileMain-header { max-width: 100% !important; overflow-x: auto !important; scrollbar-width: none !important; }
+  .ProfileMain-header::-webkit-scrollbar { display: none !important; }
+  .ProfileMain-header ul.Tabs { overflow-x: auto !important; scrollbar-width: none !important; }
+  .ProfileMain-header ul.Tabs::-webkit-scrollbar { display: none !important; }
   `;
   (document.head || document.documentElement).appendChild(st);
 
@@ -1370,13 +1425,129 @@
     });
   }
 
+  // ---- 新版桌面首页「左侧栏」隐藏（2026-11 改版）----
+  // 类名是 emotion hash，按几何特征识别：内容壳（.App-main 的祖先那一层 flex 行）里
+  // 「全高、宽 <= 64px、非内容」的元素 = 左侧栏竖条/展开面板/隔离壳，一律 display:none。
+  // 内容区（css-t9zu9r，宽 1104）不受影响；隐藏后它自然左移占满整列。
+  // 为什么不用 CSS：hash 类名无法选择器化；为什么不用「宽度写死」：不同屏宽 hash 壳宽一致（40/58px），
+  // 64px 阈值留了余量且不会误伤（内容区宽度 > 300）。
+  const leftNavDone = new WeakSet();
+  function hideLeftNav() {
+    const main = document.querySelector('main.App-main');
+    if (!main) return;
+    // 找内容壳：main 往上第 3 层左右是那层 flex 行（css-syn8px）；直接用「main 的祖先中
+    // 拥有 >= 3 个子元素且是 flex 的最近祖先」定位，避开 hash 类名。
+    let shell = main.parentElement;
+    while (shell && shell !== document.body) {
+      const cs = getComputedStyle(shell);
+      if (cs.display.includes('flex') && shell.children.length >= 3) break;
+      shell = shell.parentElement;
+    }
+    if (!shell || shell === document.body) return;
+    [...shell.children].forEach(c => {
+      if (leftNavDone.has(c)) return;
+      leftNavDone.add(c);
+      const r = c.getBoundingClientRect();
+      const cs = getComputedStyle(c);
+      if (cs.display === 'none') return;
+      // 左栏特征：竖条 40px / 展开面板 58px / 隔离壳 0px —— 全部 <= 64px 且全高
+      const isRail = r.width <= 64 && r.height >= 300;
+      if (isRail && !c.contains(main)) {
+        c.style.setProperty('display', 'none', 'important');
+        return;
+      }
+      // 内容区壳（css-t9zu9r，实测 1104px 桌面写死宽）：收回满宽，否则 zoom 后横向溢出被裁
+      if (!c.contains(main)) return;
+      c.style.setProperty('width', 'auto', 'important');
+      c.style.setProperty('max-width', '100%', 'important');
+      // main 的直接父壳（css-12c3wuv，hash 类名）：它是 css-t9zu9r(flex row) 的子项，
+      // 在窄列里会被 flex-shrink 压到 38px（people/search 页实测，main 跟着 38px、
+      // 文字全部逐字竖排）。必须允许它占满、允许收缩到容器宽。
+      const mainParent = main.parentElement;
+      if (mainParent && mainParent !== c) {
+        mainParent.style.setProperty('flex', '1 1 auto', 'important');
+        mainParent.style.setProperty('min-width', '0', 'important');
+        mainParent.style.setProperty('width', 'auto', 'important');
+        mainParent.style.setProperty('max-width', '100%', 'important');
+        // 新版「内容壳内右栏」（people/search 页实测 ASIDE.css-14mwtba 320px、flex:0 0 auto）：
+        // flex row 里它拒绝收缩，把 main 父壳挤剩 38px。识别：mainParent 的兄弟中
+        // 「不含 main、全高（>=300）、宽 > 200」的元素 = 桌面右栏，隐藏（与旧 hideSideRails
+        // 的「内容在前、栏在后」假设一致；知乎新旧版式都遵守）。
+        [...mainParent.parentElement.children].forEach(sib => {
+          if (sib === mainParent || sib.contains(main) || main.contains(sib)) return;
+          const r2 = sib.getBoundingClientRect();
+          if (r2.height >= 300 && r2.width > 200) sib.style.setProperty('display', 'none', 'important');
+        });
+      }
+      // 内容壳内部的列容器也要解除桌面写死宽（如 .Topstory-mainColumn 784px / flex:0 0 auto）
+      c.querySelectorAll('.Topstory-mainColumn, .Topstory-container').forEach(el => {
+        el.style.setProperty('width', 'auto', 'important');
+        el.style.setProperty('max-width', '100%', 'important');
+        el.style.setProperty('flex', '1 1 auto', 'important');
+        el.style.setProperty('margin', '0', 'important');
+      });
+    });
+  }
+
+  // ---- 问题页：竖排数据窄条隐藏（见 CSS 段说明）----
+  const qRailDone = new WeakSet();
+  function hideQuestionDataRail() {
+    const qp = document.querySelector('.QuestionPage');
+    if (!qp) return;
+    // 按钮行：QuestionPage 下第一个「含 FollowButton 的 flex 行」的直接父即问题头
+    const follow = qp.querySelector('.FollowButton');
+    if (!follow) return;
+    let row = follow.parentElement;           // QuestionButtonGroup(display:contents)
+    while (row && row !== qp) {
+      if (getComputedStyle(row).display !== 'contents' && row.children.length >= 2) break;
+      row = row.parentElement;
+    }
+    if (!row || row === qp) return;
+    [...row.children].forEach(c => {
+      if (qRailDone.has(c)) return;
+      qRailDone.add(c);
+      if (c.querySelector('.FollowButton')) return;   // 不动按钮容器
+      const r = c.getBoundingClientRect();
+      // 窄条特征：宽 <= 40px 但含多个子项（桌面竖条设计）
+      if (r.width <= 40 && r.width > 0 && c.children.length >= 1 && c.querySelector('button, [class*="Comment"], span')) {
+        c.style.setProperty('display', 'none', 'important');
+      }
+    });
+  }
+
+  // ---- 圈子页（/ring-feeds）：成员头像行换行 ----
+  // 实测：圈子卡片里「成员/圈友」一行是 flex nowrap（css-1fhfghv），每个成员 84px 宽、
+  // 桌面一行放 N 个；窄列（278px 可用）下 3 个就超列、加号按钮一路排到 746px（屏幕外）。
+  // 识别不依赖 hash：flex + nowrap + 子项里含「知乎图标 svg.ZDI--PlusFill16 或成员链接」
+  // 且总宽超容器的行，允许换行。范围限 ring 页（页面有 .Topstory-mainColumnCard + Pin 特征）。
+  // ⚠️ 只在「行内容确有溢出」时动手（scrollWidth > clientWidth+4），不碰正常按钮行。
+  const ringRowsDone = new WeakSet();
+  function wrapRingMemberRows() {
+    if (!document.querySelector('.Topstory-mainColumnCard')) return;
+    document.querySelectorAll('.Topstory-mainColumnCard div').forEach(row => {
+      if (ringRowsDone.has(row)) return;
+      ringRowsDone.add(row);
+      const cs = getComputedStyle(row);
+      if (cs.display !== 'flex' || cs.flexWrap !== 'nowrap') return;
+      if (row.children.length < 3) return;
+      if (row.scrollWidth <= row.clientWidth + 4) return;
+      // 成员行特征：绝大多数子项含链接/图标（头像卡），行宽远超容器。
+      // 不用宽度相近判断：实测行内子项宽度不齐（首个 60px、其余 84px），similar 判定会漏。
+      const kids = [...row.children];
+      const withIcon = kids.filter(k => k.tagName === 'A' || k.querySelector('svg')).length;
+      if (withIcon < kids.length - 2 || kids.length < 4) return;
+      row.style.setProperty('flex-wrap', 'wrap', 'important');
+      row.style.setProperty('row-gap', '8px', 'important');
+    });
+  }
+
   let timer = null;
   let lastTickSW = -1;        // 上一拍的 SW；变了说明阈值全变，记忆作废（applyZoom 会改 SW，见那里的注释）
   function tick() {
     if (SW !== lastTickSW) { lastTickSW = SW; clearScanMemo(); }
     // 周期性全量重扫：见「扫描记忆化」一节，抵消「看过的元素后续变大就漏掉」的代价
     if (++sweepCount % SWEEP_EVERY === 0) clearScanMemo();
-    hideSideRails(); capFixed(); capWide(); fitColumnPreview();
+    hideSideRails(); capFixed(); capWide(); fitColumnPreview(); hideLeftNav(); wrapRingMemberRows(); hideQuestionDataRail();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
     hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns); fitIdeaBox();
@@ -1398,7 +1569,7 @@
   //    实测单次开销：publishButtons 0.1ms、guard 查询 0.06ms。
   //    tick 里原有的那一遍全部保留，作为「周期性全量重扫」的兜底。
   const obs = new MutationObserver(() => {
-    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox();
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox(); hideLeftNav(); hideQuestionDataRail();
     const btns = publishButtons();       // 一次查询给下面两个 pass 共用（与 tick 里的做法一致）
     fitPublishButton(btns); matchComposerAvatar(btns);
     schedule();

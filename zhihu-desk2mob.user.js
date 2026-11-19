@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.6.7
+// @version      1.6.8
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -1711,101 +1711,49 @@
     });
   }
 
-  // ---- 顶部导航重排（2026-11-19 用户反馈）----
-  // 「Logo 往左靠、头像移到热榜后面（屏幕内）、搜索框挤进屏幕、注意间距」
-  // 实测布局（358 列）：Logo@40..104（左留白 40 太大）、tabs@138..304（gap 32 偏大）、
-  // SearchBar@304..524（220px 超出屏幕只露 54px）、头像区@358..572（完全在屏幕外）。
-  // 重排方案：
-  //   1. Logo margin-left 12px（与全站留白一致）
-  //   2. tabs gap 32 → 10px
-  //   3. 头像区（消息/私信/创作中心/头像 4 个 48px 按钮）只保留头像按钮——入口冗余
-  //      （消息/私信在站内信图标可达、创作中心在内容区导航有），排到 tabs 后
-  //   4. SearchBar 到头像后面、宽度收进屏幕剩余空间
-  // ⚠️ 结构陷阱：SearchBar 外层容器链（css-1pbgcc2 flex-basis 704px → css-rtxb0v →
-  //    css-7corvk overflow clip）每层都要 min-width:0 才能让 SearchBar 收缩；
-  //    头像按钮在其自己的容器 css-1ww4ngr（358..572），只藏按钮不移容器——容器也要收。
-  const headerDone = new WeakSet();
+  // ---- 顶部：只隐藏搜索框（2026-11-19 用户拍板「在原有搜索框基础上把搜索框去掉」）----
+  // v1.6.5~1.6.7 折腾史：重排 logo/tabs/头像/DOM 搬迁/绝对定位/闭环校准全试过，
+  // 把原生布局改得面目全非。最终版（v1.6.8）：**保持知乎原生顶部布局完全不动**
+  // （logo、tabs、消息/私信/创作中心、头像都是原生的），只把超宽溢出的 SearchBar
+  // 隐藏掉。原生头像区（消息/私信/创作中心/头像）在 header 最右侧，搜索框隐藏后
+  // flex 布局自动收紧；头像区加 overflow hidden 防溢出，头像按钮保留可见。
   function reflowHeader() {
     const bar = document.querySelector('.LeanAppHeaderBar');
     if (!bar) return;
-    const shell = bar.firstElementChild;                    // css-1dj87r3 flex 行
-    if (!shell) return;
-    const logo = shell.querySelector(':scope > a');
-    if (!logo) return;
-    // ⚠️ 不记忆化：SearchBar 的绝对定位值依赖头像的实时位置，首拍时头像还在旧位置
-    //    （flex 重排后 avatar 移动），必须每拍重读重写。样式写入幂等、开销可忽略。
-    // 1) Logo 左缘对齐正文（正文留白 16px）。实测 logo 视觉 left=40（shell pad16 +
-    //    内层还有 24px 无法追溯的来源）——用视觉位置闭环校准：读一次 left，差多少补多少。
-    shell.style.setProperty('padding-left', '16px', 'important');
-    {
-      // 先归零，等一帧渲染后读视觉位置再补偿（同帧读会拿到旧 margin 的位置）
-      logo.style.setProperty('margin-left', '0px', 'important');
-      requestAnimationFrame(() => {
-        const lb = logo.getBoundingClientRect();
-        const drift = Math.round(lb.left - 16);
-        if (Math.abs(drift) > 2) logo.style.setProperty('margin-left', (-drift) + 'px', 'important');
-      });
-    }
-    // 2) tabs gap 压缩 + tabs 容器（css-1pbgcc2）自带 padding-left 40 去掉——
-    //    否则 tabs 起点 138、把头像/搜索框挤到屏幕外（间距预算见 reflowHeader 头注释）
-    const nav = bar.querySelector('nav');
-    if (nav) nav.style.setProperty('column-gap', '10px', 'important');
-    const tabsWrap2 = nav ? nav.parentElement : null;
-    if (tabsWrap2) {
-      tabsWrap2.style.setProperty('padding-left', '12px', 'important');
-      tabsWrap2.style.setProperty('padding-right', '0', 'important');
-      // css-1pbgcc2 自身的子项间距（nav/头像/SearchBar 之间）也要压——默认 22px+
-      tabsWrap2.style.setProperty('column-gap', '10px', 'important');
-    }
-    // 3) 头像区：只留头像按钮（消息/私信/创作中心入口冗余）
-    const avBtns = bar.querySelectorAll('button[class*="css-f8uegh"], a[class*="css-f8uegh"]');
-    avBtns.forEach(b => b.style.setProperty('display', 'none', 'important'));
-    // 4) 去掉搜索框（2026-11-19 用户拍板）：SearchBar 深嵌套在 704px flex 链里，
-    //    v1.6.5 试过 absolute 定位/DOM 移动 flex 收缩，均因知乎 hash 布局互相牵扯
-    //    （zoom 缩放、包含块偏移、clip 链）无法稳定收进 358px——干脆隐藏。
-    //    用户找内容的入口：首页顶部热榜词条横滑、搜索页 tab。头像移到 tabs 后自然排。
     const sb = bar.querySelector('.SearchBar');
-    const av = bar.querySelector('button[class*="AppHeader-profile"]');
     if (sb) {
-      const sbWrap = sb.parentElement;
       sb.style.setProperty('display', 'none', 'important');
+      const sbWrap = sb.parentElement;
       if (sbWrap) sbWrap.style.setProperty('display', 'none', 'important');
-      // 头像搬到 tabs 后面（flex 尾部自然排布，间距 10px）
-      const anchor = sbWrap ? sbWrap.parentElement : null;
-      const nav = bar.querySelector('nav');
-      if (anchor && av && nav && av.parentElement !== shell) {
-        // ⚠️ 不用 __z2mMoved 标记：reload 命中 bfcache 时 DOM 连同 JS 属性一起恢复，
-        //    标记残留导致搬迁永远跳过。改为按「当前位置」判断（幂等）。
-        av.style.setProperty('flex', '0 0 auto', 'important');
-        av.style.setProperty('margin-left', 'auto', 'important');   // 推到 shell 行尾：右缘对齐正文右缘
-        av.style.setProperty('margin-right', '16px', 'important');
-        // 视觉闭环校准：头像右缘应贴 358-16=342（与 logo 同源的残留偏差一并修正）
-        requestAnimationFrame(() => {
-          const ab = av.getBoundingClientRect();
-          const drift = Math.round(ab.right - (SW - 16));
-          if (Math.abs(drift) > 2) {
-            const cur = parseFloat(getComputedStyle(av).marginRight) || 16;
-            av.style.setProperty('margin-right', (cur + drift) + 'px', 'important');
+    }
+    const avWrap = bar.querySelector('[class*="css-1ww4ngr"]');
+    if (avWrap) {
+      // 头像区（消息/私信/创作中心/头像 4×48px）在 358 内放不下——隐藏前三个冗余入口
+      //（v1.6.6 用户认可的组合），只留头像按钮，flex 收缩后头像进屏。
+      const btns = avWrap.querySelectorAll('button[class*="css-f8uegh"], a[class*="css-f8uegh"]');
+      btns.forEach(b => b.style.setProperty('display', 'none', 'important'));
+      avWrap.style.setProperty('min-width', '0', 'important');
+      avWrap.style.setProperty('overflow', 'hidden', 'important');
+      // 原生容器链不收缩（css-1pbgcc2 flex-basis 704px），头像区留在屏幕外——
+      // 用 relative 负偏移拉回屏幕右缘（比 absolute 稳，不脱离文档流）
+      avWrap.style.setProperty('position', 'relative', 'important');
+      // 偏移量动态算：视觉右缘目标 358-16=342
+      // 双帧循环校准（首帧布局未稳，偏移只生效一半）
+      requestAnimationFrame(() => {
+        const fix = () => {
+          const wb = avWrap.getBoundingClientRect();
+          const drift = Math.round(wb.right - (SW - 16));
+          if (drift > 2) {
+            const cur = parseFloat(avWrap.style.left) || 0;
+            avWrap.style.setProperty('left', (cur - drift) + 'px', 'important');
+            requestAnimationFrame(fix);
           }
-        });
-        // ⚠️ 必须插到 shell 直接子级——放在 css-1pbgcc2（tabs 容器，150px 窄盒）里
-        //    margin-left:auto 只能在 150px 内推、到不了屏幕右缘
-        shell.appendChild(av);
-      }
-      // ⚠️ 清理历史注入的重复头像按钮（多次注入/搬运判定失效时期残留），只留 shell 里那个
-      const dups = [...bar.querySelectorAll('button[class*="AppHeader-profile"]')].filter(b => b.parentElement !== shell);
-      dups.forEach(b => b.remove());
-      // 7corvk（tabs 容器）知乎自带 margin-left 58px——压成 16px，让 tabs 早点开始
-      const s7 = [...shell.children].find(c => (c.className || '').toString().includes('css-7corvk'));
-      if (s7) s7.style.setProperty('margin-left', '28px', 'important');
-      // 隐藏空的搜索容器与重复的内容页 tab（搜索页下方有同样的 tab 行）
-      [...bar.querySelectorAll('div')].forEach(c => {
-        if (c.closest('nav') || c.contains(av)) return;
-        const t = (c.innerText || '');
-        const b = c.getBoundingClientRect();
-        if (b.width > 100 && b.top < 70 && (t.includes('综合') || t.includes('论文'))) {
-          c.style.setProperty('display', 'none', 'important');
-        }
+        };
+        fix();
+      });
+      // 清理历史注入的重复头像（shell 里的残留），原生位置的头像才是正主
+      [...bar.querySelectorAll('button[class*="AppHeader-profile"]')].forEach(b => {
+        if (b.closest('[class*="css-1ww4ngr"]') === null) b.remove();
       });
     }
   }

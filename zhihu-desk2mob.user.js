@@ -1763,6 +1763,26 @@
         if (b.closest('[class*="css-1ww4ngr"]') === null) b.remove();
       });
     }
+    // ---- logo 左移：与内容列左缘对齐（2026-11-20 用户要求「往左边靠靠」）----
+    // 实测：logo 原视觉左缘 100（布局 40 = 横滚容器 padding 40 的布局px × zoom 2.49），
+    // 而内容列（.Topstory-mainColumnCard）视觉左缘 40 —— logo 比正文多缩进 60 视觉px。
+    // 试过改横滚容器 padding-left：布局px 改了、但知乎的 hash 规则在内联 !important
+    // 之外仍以更高优先级命中该 padding（16px 写进去后 logo rect 纹丝不动），放弃。
+    // 有效做法：直接给 logo 负 margin。偏移量动态算（幂等，zoom 变化后自动追平）：
+    //   目标 = 内容列左缘（视觉）；若无内容列则退化为 PAD×zoom。
+    // logo 识别不依赖 hash：指向 www.zhihu.com 首页的 a + 内含 svg（知乎字标）。
+    const Z2 = parseFloat(document.documentElement.style.zoom) || 1;
+    const logo = bar.querySelector('a[href="https://www.zhihu.com"] svg');
+    if (logo) {
+      const la = logo.closest('a');
+      const card = document.querySelector('.Topstory-mainColumnCard');
+      const targetL = card ? card.getBoundingClientRect().left : PAD * Z2;
+      const deltaL = targetL - la.getBoundingClientRect().left;   // 视觉 px
+      if (Math.abs(deltaL) >= 2) {
+        const curM = parseFloat(la.style.marginLeft) || 0;
+        la.style.setProperty('margin-left', (curM + deltaL / Z2) + 'px', 'important');
+      }
+    }
   }
 
   // ---- 圈子页（/ring-feeds）：成员头像行换行 ----  }

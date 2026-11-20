@@ -1438,6 +1438,37 @@
         const cur = parseFloat(shell.style.marginTop) || 0;
         shell.style.setProperty('margin-top', (cur + delta / Z) + 'px', 'important');
       }
+      // ---- v1.8.4（2026-11-20 用户要求）：下方「提问题/写回答/写文章/发视频」4 项
+      //      原本 2×2 换行占两行 —— 收成一行、图标与文字同步缩小。
+      //      识别：WriteArea 内「flex + flex-wrap、直接子项 4 个且都含 img」的行
+      //      （hash css-19tvx7b）。结构：每项是 flex div，内含 png 图标 + 裸文本节点。
+      //      ⚠️ 图标缩小用 width/height !important 压不住（知乎 img 规则优先级更高，
+      //      实测 24px 写进去 rect 仍 50+）——改用元素级 zoom 0.55（与全局 zoom 叠乘，
+      //      实测 53×80 → 33×33 稳定生效）。文字 16→13px。
+      const qaRow = [...area.querySelectorAll('div')].find(d => {
+        const cs = getComputedStyle(d);
+        const kids = [...d.children];
+        return cs.display === 'flex' && kids.length === 4 && kids.every(k => k.querySelector('img'));
+      });
+      if (qaRow) {
+        qaRow.style.setProperty('flex-wrap', 'nowrap', 'important');
+        qaRow.style.setProperty('justify-content', 'space-between', 'important');
+        qaRow.style.setProperty('padding', '0 8px', 'important');
+        [...qaRow.children].forEach(item => {
+          item.style.setProperty('flex', '1 1 0', 'important');
+          item.style.setProperty('padding', '6px 4px', 'important');
+          item.style.setProperty('font-size', '13px', 'important');
+          item.style.setProperty('line-height', '1.2', 'important');
+          item.style.setProperty('gap', '6px', 'important');
+          const img = item.querySelector('img');
+          if (img) {
+            img.style.setProperty('width', '24px', 'important');
+            img.style.setProperty('height', '24px', 'important');
+            img.style.setProperty('object-fit', 'contain', 'important');
+            img.style.setProperty('zoom', '0.55', 'important');
+          }
+        });
+      }
     }
     ideaBtnDone = btn;
   }

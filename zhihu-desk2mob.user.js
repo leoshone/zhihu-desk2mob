@@ -956,20 +956,38 @@
   // 干扰了它的滚动/交叉判断），absolute top:0 相对列表壳 → 栏停在问题块下方，与「写回答/
   // 关注问题」按钮和「查看全部 N 个回答」重叠（截图复现）。
   // 修法（脚本兜底）：该栏强制 fixed 吸底 + 白底 + 分隔线 + 高 z-index（原生 absolute 态
-  // 无背景，改 fixed 后正文会透出来，必须补底色）。inline 样式优先级高于知乎 JS 的类切换，
-  // 滚动全程稳定吸底——与用户期望「本来就应该在页面底部浮动」一致。
+  // 无背景，改 fixed 后正文会透出来，必须补底色）。
+  // ⚠️ **必须每拍重写，不能记忆化跳过**（v1.8.6 初版踩坑）：知乎滚动监听会**持续改写**
+  // 该栏的 inline bottom（滚动监听把它往视口外推，实测 bottom 被写成 -4097px、栏「消失」
+  // ——用户反馈「向上滑动浮动栏就不见了」）。每拍重写 bottom:0/top:auto 压回去；
+  // 其余静态属性（背景/边框/z-index）仍记忆化只写一次。
   let stickyBarDone = null;
+  let stickyBarHooked = null;   // 已挂 scroll 监听的栏（SPA 重建后换节点要重挂）
   function fixStickyBar() {
     const s = document.querySelector('.ContentItem-actions.Sticky');
     if (!s) { stickyBarDone = null; return; }
-    if (stickyBarDone === s) return;
-    stickyBarDone = s;
     s.style.setProperty('position', 'fixed', 'important');
     s.style.setProperty('bottom', '0px', 'important');
     s.style.setProperty('top', 'auto', 'important');
+    if (stickyBarDone === s) return;
+    stickyBarDone = s;
     s.style.setProperty('background', '#ffffff', 'important');
     s.style.setProperty('z-index', '50', 'important');
     s.style.setProperty('border-top', '1px solid #e6e6e6', 'important');
+    // ⚠️ 知乎滚动监听会在**每次滚动**时移除我们写的 bottom（实测 inline bottom 被
+    //    remove、栏随 scrollY 飞出视口——「向上滑动浮动栏就不见了」的直接原因）。
+    //    tick/observer 都救不了：纯滚动不触发 MutationObserver，tick 又有 300ms 去抖
+    //    （每次 DOM 变动还会重置）。唯一可靠时机 = scroll 事件本身：挂在 window 上，
+    //    每帧重写定位三件套（真机连续滚 4k/6k/8k/10k 验证全程吸底）。
+    if (stickyBarHooked !== s) {
+      stickyBarHooked = s;
+      window.addEventListener('scroll', () => {
+        if (!s.isConnected) return;
+        s.style.setProperty('position', 'fixed', 'important');
+        s.style.setProperty('bottom', '0px', 'important');
+        s.style.setProperty('top', 'auto', 'important');
+      }, { passive: true });
+    }
   }
 
   // ============================================================

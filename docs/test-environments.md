@@ -59,4 +59,4 @@
 ## 历史踩坑记录
 
 详细案例（bfcache 恢复 DOM 属性、端口冲突、browser ws 需 GUID 等）见
-[`docs/project-conventions.md`](project-conventions.md) 的「桌面调试环境」一节。
+[`AGENTS.md`](../AGENTS.md) 的「已知陷阱」一节。

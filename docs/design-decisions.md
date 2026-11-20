@@ -3,7 +3,7 @@
 > 本文件合并了原 `docs/` 下 17 份按版本散落的方案文档，**内容全文保留**（仅去重目录性的
 > 重复段落），按「功能域」重组章节。每节标注涉及的版本与原始文件名（git 历史可查）。
 >
-> 配套文档：project-conventions.md（接手须知）、
+> 配套文档：[AGENTS.md](../AGENTS.md)（项目规范）、
 > [`test-environments.md`](test-environments.md)（三种测试环境）。
 
 ## 目录

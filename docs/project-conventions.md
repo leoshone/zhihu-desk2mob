@@ -11,7 +11,7 @@
 | 真机 | Xiaomi 2211133C（codename `fuxi`），1080×2400，CSS 视口 393×873 |
 | 浏览器 | Kiwi + 暴力猴（扩展 ID `fcickoepngcnapddnnmjpkmpekmfmpaa`） |
 | 调试 | `adb` 在 PATH；CDP 转发 `tcp:9222`（**每轮 shell 会丢**，`scripts/cdp.js` 加载时自建） |
-| 桌面调试（2026-11-20 增） | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连宿主机，**不经 adb**）；暴力猴 2.50（扩展 ID `jinjaccalgkegednnccohejagnlnfdag`）；DevTools 设备模拟 393×873 dpr3 + `?z2m-force=1` |
+| 桌面调试（2026-11-20 增） | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连宿主机，**不经 adb**）；暴力猴 2.50（扩展 ID `jinjaccalgkegednnccohejagnlnfdag`）；DevTools 设备模拟 393×873 dpr3 + `?z2m-force=1`。三种测试环境对照与各环境陷阱见 [`test-environments.md`](test-environments.md) |
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计**不生效**（`innerWidth ≤ 600` 时直接返回） |
 | Node | 18+（用到全局 `WebSocket`） |
 

@@ -175,3 +175,9 @@ node scripts/check-injected.js "zhihu.com/question"
 
 CDP 工具库本体在 `scripts/lib/cdp.js`。本目录的 `cdp.js` 只是一行转发，
 以保证全仓库只有一份实现。
+
+## 测试环境（3 种）
+
+本文档默认面向**真机**。全部三种测试环境（桌面浏览器 Turbo / 模拟器 MuMu+Kiwi / 真机
+小米13+Quetta）的接入方式、适用场景与各自陷阱，见
+[`../docs/test-environments.md`](../docs/test-environments.md)。

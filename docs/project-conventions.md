@@ -2,7 +2,7 @@
 
 这份文档是**换机／换人接手时需要知道的项目决策**，不重复技能与 README 已写的内容：
 环境与工具方法论见 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有，原项目内技能 kiwi-violentmonkey-cdp 已于 2026-11 迁入该仓库），
-测试怎么跑见 [`scripts/README.md`](../scripts/README.md)，各版本根因见 [`docs/`](.)。
+测试怎么跑见 [`scripts/README.md`](../scripts/README.md)，各版本根因见 [design-decisions.md](design-decisions.md)。
 
 ## 环境（实测）
 
@@ -25,7 +25,7 @@
    —— 见 `scripts/README.md`）。`adb forward tcp:9222 …` 由 `scripts/cdp.js` 加载时自建。
 6. 要发版：`gh auth login`（走设备码网页流程）→ `gh auth setup-git` → 按下面「发布流程」。
 7. **只在本地、不入库**的东西：`.workbuddy/memory/`（本机 agent 记忆）、`_tmp/`（一次性探针）、
-   `scripts/shots/`（测试截图）。换机后这些不会跟过来，但**结论都已沉淀进 `docs/`**；
+   `scripts/shots/`（测试截图）。换机后这些不会跟过来，但**结论都已沉淀进 `docs/design-decisions.md`**；
    常用诊断探针也已收进 `scripts/`（见其 README 的探针表）。
    **例外**：`.workbuddy/skills/`（项目级技能）**是入库的** —— 技能随仓库分发，
    `scripts/` 的测试靠它读 CDP 工具库，故不能删。
@@ -50,17 +50,17 @@
 ## 反缩放契约（v1.1.0 起）
 
 - `html{zoom} = visW / SW`（`visW` = `visualViewport.width`），目标是**内容恰好铺满**（`fitRatio = 1`），
-  **不是** `1 / scale`。详见 [`v1.0.9-fix-counter-zoom-fit.md`](v1.0.9-fix-counter-zoom-fit.md)。
+  **不是** `1 / scale`。详见 [design-decisions.md §4](design-decisions.md)。
 - 捏合：**放大不干预**；**缩小夹在「恰好铺满」这个下限上**（`CFG.limitZoomOut`）。
   判据 `zoom × scale < curScreenW / SW` —— 因为「铺满时的视觉尺寸」= `屏幕可用宽 / 列宽`，与 scale 无关。
 - **浏览器允许的捏合下限 = 屏幕可用宽 ÷ `innerWidth`**（本机 358 / 891 = 0.401，两页实测逐档一致）。
   所以别再把「问答页缩不下去、专栏页能缩」当成浏览器差异 —— 那是脚本**有没有在捏合后重算 zoom**，
   且旧实现不稳定（取决于 `window.resize` 是否恰好触发）。详见
-  [`v1.1.0-limit-zoom-out.md`](v1.1.0-limit-zoom-out.md)（含与 v1.0.9 §5 的取舍关系）。
+  [design-decisions.md §4.2](design-decisions.md)（含与 v1.0.9 §5 的取舍关系）。
 - **屏上大小 = 名义字号 × (屏幕可用宽 ÷ 列宽)**：单列布局里唯一的旋钮是列宽，不能只调
   `html{zoom}`（那会让列宽于屏幕、被 `overflow-x:hidden` 裁掉右边）。
   `CFG.textScale` 就是这个换算因子（1 = 字号就是名义值），实现见
-  [`v1.1.1-text-scale.md`](v1.1.1-text-scale.md)。
+  [design-decisions.md §5.1](design-decisions.md)。
   **当前值 `1.0`（正文 16px，即名义字号）**，2026-09-30 由用户决定取整到 `1.0`。
   定值沿革：`0.90976`（v1.0.9 铺满原始大小，14.56px）→ **`0.98`**（v1.1.1：先试 `1.1` 的
   17.6px 觉得太大、`0.90976` 的 14.56px 觉得太小，用户手动捏合到 `zoom × scale = 0.97998`
@@ -82,7 +82,7 @@
   **按深度写的选择器（`App-main > * > *`）打不到**。新页面若要一并铺满，先量留白链再写选择器。
 - 做法：先从一块卡片**沿父链上溯**打印每层的 rect / padding / margin / 背景色（同类结构对照探针
   可参考 `scripts/probe-rightrail.js`），**先在真机上试注入候选 CSS、量准并截图看过，再写回脚本**。
-  实证见 [`v1.2.0-full-bleed.md`](v1.2.0-full-bleed.md) §2~§3。
+  实证见 [design-decisions.md §6.1](design-decisions.md)。
 
 ## 操作栏换行（v1.3.9 误删，v1.4.0 恢复）
 
@@ -387,7 +387,7 @@
 2. ~~写「写想法」卡片里的「同步到圈子」是竖排残留（自 1.0.0 起）~~ —— **已于 v1.2.0 解决**：
    它塌成 0 宽（`rect {x:298, w:0, h:95}`）、7 个汉字逐字竖排，是**「发到圈子」的功能开关**。
    用户 2026-09-30 决定**去掉**，现由 `CFG.hideCircleSync` 隐藏（按文案定位，见
-   [`v1.2.0-full-bleed.md`](v1.2.0-full-bleed.md) §4）。
+   [design-decisions.md §6.1](design-decisions.md)）。
 3. v1.0.1 / v1.0.2 的改进未包含（见上方「版本策略」）。
 4. **专栏页顶部比问答页多一层常驻 62px 吸顶文章头**（`ColumnPageHeader*`，稳定类名；
    问答页没有）。实测两页常驻顶部条加起来：专栏页 `y=0..124`、问答页 `y=0..62`。
@@ -406,7 +406,7 @@
    （`visW × scale` 不变）被 return 掉，于是停在「内容比屏幕宽 25%」。
    试过两种修法（延后 200ms；延后 + 若仍在最小比例就再等一拍）**均无效，已回退**。
    真机连续捏合不经过那个中间态；即便出现，用户再捏一下就恢复。
-   机理与取舍见 [`v1.1.1-text-scale.md`](v1.1.1-text-scale.md) §3。
+   机理与取舍见 [design-decisions.md §5.1 §3](design-decisions.md)。
    ⚠️ **2026-10-01 复核：在当前真机环境下它是「稳定复现」，不是间歇** —— 连跑三次数据完全一致
    （`fitRatio 1.4431` / `scale 0.5` / `before 0.9987` / `after 1.4412`），而且用 `--installed`
    跑旧版（v1.4.2）**同样复现、数据一字不差** ⇒ **与脚本版本无关**，是「模拟捏合」这套方式

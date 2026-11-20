@@ -1407,36 +1407,59 @@
         }
       }
     }
-    // ---- v1.8.3（2026-11-20 用户要求）：图标行左移 + 「发想法」上移到图标行同一行 ----
-    // 结构（真机实测）：图标行 = .WriteArea 下「flex、子项全是 button」的那一行
-    // （hash css-4cffwv，含 6 个 49px 图标钮）；按钮壳（css-19jss6）被上一段挪到图标行
-    // 之后独立成行。改动：① 图标钮间距 24→16px（行左缘 160→视觉上明显左移，
-    // 给右侧腾出按钮空间）；② 按钮壳 flex-end 右对齐、负 margin-top 上移到与图标行
-    // 同一水平线；按钮高 50→40 压成同一行高。对齐量按 rect 误差 ÷ zoom 幂等收敛
-    // （margin 是布局px、rect 是视觉px——同 reflowHeader 的坐标系教训），
-    // 最多 3 轮、|误差|<3 视觉px 停，zoom 变化后 observer 下一拍自动追平。
+    // ---- v1.8.5（2026-11-20 用户要求）：图标行与「发想法」合并为一行 ----
+    // v1.8.3 的「按钮壳负 margin-top 上移」对齐不稳（发想法与 6 图标始终差半个行高，
+    // 用户反馈「没水平对齐」）。用户指出正确思路：知乎原版图标行与按钮壳本来就是
+    // 紧邻的两块，把两者放进同一个 flex 父行（space-between）自然同排，不必挪上下位置。
+    // 实现：共同父（iconRow 的父容器，块级）改 flex + space-between + center；
+    //   ① 图标钮整体 zoom 0.7 缩小（width !important 压不住知乎规则，元素级 zoom 才有效
+    //     —— 同 v1.8.4 img 的教训），间距 16→8，6 个图标收进按钮左侧不重叠；
+    //   ② 图标行容器 overflow visible（默认 auto 会裁掉缩放后溢出的第 6 个图标）；
+    //   ③ 按钮壳清掉 v1.8.3 的负 margin-top，高 40 布局px、右对齐、与图标行垂直居中。
+    // 识别不依赖 hash：图标行 = 「flex、子项全是 button」的那一行（真机实测唯一命中，
+    // 就是图标钮的直接父——它的外层 css-4cffwv 只有一个孩子，不会被命中）。
     const Z = parseFloat(document.documentElement.style.zoom) || 1;
     const iconRow = [...area.querySelectorAll('div')].find(d => {
-      if (d.tagName !== 'DIV') return false;
       const cs = getComputedStyle(d);
       const kids = [...d.children];
       return cs.display === 'flex' && kids.length >= 4 && kids.every(k => k.tagName === 'BUTTON');
     });
     if (iconRow && shell && shell !== area) {
-      // ① 图标钮间距收窄（原 24px 侧边距 → 16px）
-      [...iconRow.children].forEach(c => c.style.setProperty('margin-right', '16px', 'important'));
-      // ② 按钮壳变成「与图标行同行」的右对齐层
-      shell.style.setProperty('display', 'flex', 'important');
-      shell.style.setProperty('justify-content', 'flex-end', 'important');
-      shell.style.setProperty('height', 'auto', 'important');
-      shell.style.setProperty('margin-top', '0px', 'important');
-      btn.style.setProperty('height', '40px', 'important');
-      // ③ 幂等对齐：按钮 top == 图标行 top（视觉 px）
-      for (let k = 0; k < 3; k++) {
-        const delta = iconRow.getBoundingClientRect().top - btn.getBoundingClientRect().top;
-        if (Math.abs(delta) < 3) break;
-        const cur = parseFloat(shell.style.marginTop) || 0;
-        shell.style.setProperty('margin-top', (cur + delta / Z) + 'px', 'important');
+      // 层级（真机实测）：图标钮 → 图标行(iconRow) → 行壳 → 共同父 grand（grand 同时含
+      // 输入框行/图标行壳/按钮壳）。用户方案：grand 改 flex space-between，图标行与
+      // 按钮壳自然同排——比 v1.8.3 的负 margin 上移稳（那次始终差半个行高）。
+      const rowParent = iconRow.parentElement;
+      const grand = rowParent && rowParent.parentElement;
+      if (grand && grand !== area) {
+        grand.style.setProperty('display', 'flex', 'important');
+        grand.style.setProperty('justify-content', 'space-between', 'important');
+        grand.style.setProperty('align-items', 'center', 'important');
+        // ① 图标行整体 zoom 0.7 缩小（width !important 压不住知乎规则，元素级 zoom 才有效
+        //    —— 同 v1.8.4 img 的教训；zoom 写在图标行上、不逐项写——逐项写会因 zoom
+        //    的布局起点行为产生左缘偏移）；间距 16→8。
+        iconRow.style.setProperty('zoom', '0.7', 'important');
+        [...iconRow.children].forEach(k => k.style.setProperty('margin-right', '8px', 'important'));
+        // ② 行壳不裁第 6 个图标（默认 auto 会裁 zoom 后仍溢出的部分）
+        rowParent.style.setProperty('overflow', 'visible', 'important');
+        rowParent.style.setProperty('flex', '0 1 auto', 'important');
+        // ③ 按钮壳：高 40 布局px、右对齐、清掉 v1.8.3 的负 margin
+        shell.style.setProperty('flex', '0 0 auto', 'important');
+        shell.style.setProperty('height', '40px', 'important');
+        shell.style.setProperty('margin-top', '0px', 'important');
+        shell.style.setProperty('align-items', 'center', 'important');
+        btn.style.setProperty('height', '40px', 'important');
+        btn.style.setProperty('min-height', '0', 'important');
+        btn.style.setProperty('padding-top', '4px', 'important');
+        btn.style.setProperty('padding-bottom', '4px', 'important');
+        // 幂等校准：按钮垂直中心 == 图标行垂直中心（视觉 px，÷zoom 换算 margin）
+        for (let k = 0; k < 3; k++) {
+          const ir = iconRow.children[0].getBoundingClientRect();
+          const br = btn.getBoundingClientRect();
+          const delta = (ir.top + ir.bottom) / 2 - (br.top + br.bottom) / 2;
+          if (Math.abs(delta) < 4) break;
+          const cur = parseFloat(shell.style.marginTop) || 0;
+          shell.style.setProperty('margin-top', (cur + delta / Z) + 'px', 'important');
+        }
       }
       // ---- v1.8.4（2026-11-20 用户要求）：下方「提问题/写回答/写文章/发视频」4 项
       //      原本 2×2 换行占两行 —— 收成一行、图标与文字同步缩小。

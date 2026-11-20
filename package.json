@@ -1,5 +1,0 @@
-{
-  "name": "zhihu-desk2mob",
-  "private": true,
-  "description": "脚本本体与 scripts/ 测试均零依赖：Node 18+ 内置全局 WebSocket，无需 npm install"
-}

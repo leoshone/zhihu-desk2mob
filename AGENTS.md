@@ -7,7 +7,6 @@ zhihu-desk2mob：把知乎桌面版网页重排为手机单列的油猴脚本。
 
 ```
 zhihu-desk2mob.user.js      脚本本体（唯一交付物）
-package.json                声明零依赖（Node 18+ 内置 WebSocket，无需 npm install）
 docs/design-decisions.md    ADR 设计决策汇编（17 份历史方案合并，按功能域 13 章）
 docs/test-environments.md   三种测试环境对照（Turbo / MuMu+Kiwi / 真机 Quetta）
 docs/history/               归档（原 code-review-v1.0.5.md）
@@ -25,7 +24,7 @@ scripts/                    CDP 真机/模拟器测试与诊断探针（见 scri
 | 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
 | CDP | `tcp:9222`（真机/模拟器走 adb forward，每轮 shell 会丢、`scripts/lib/cdp.js` 自建；Turbo 直连） |
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计不生效（`innerWidth ≤ 600` 直接返回） |
-| Node | 18+（内置全局 `WebSocket`） |
+| Node | 18+（用到内置全局 `WebSocket`）；**项目零依赖**，无需 npm install |
 
 三种测试环境的接入方式、适用场景与各自陷阱见 [docs/test-environments.md](docs/test-environments.md)。
 

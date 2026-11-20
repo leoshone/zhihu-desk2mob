@@ -9,7 +9,6 @@ zhihu-desk2mob：把知乎桌面版网页重排为手机单列的油猴脚本。
 zhihu-desk2mob.user.js      脚本本体（唯一交付物）
 docs/design-decisions.md    ADR 设计决策汇编（17 份历史方案合并，按功能域 13 章）
 docs/test-environments.md   三种测试环境对照（Turbo / MuMu+Kiwi / 真机 Quetta）
-docs/history/               归档（原 code-review-v1.0.5.md）
 test/                       CDP 真机/模拟器测试与诊断探针（见 test/README.md）
   └ lib/cdp.js              CDP 工具库（唯一实现）
 ```

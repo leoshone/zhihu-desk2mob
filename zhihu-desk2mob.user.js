@@ -950,6 +950,28 @@
     });
   }
 
+  // ---- 问答页吸底操作栏（.ContentItem-actions.Sticky）恒定吸底（2026-11-20 用户反馈）----
+  // 现象：知乎原生逻辑应让这栏在「首次进页/滚动」时 fixed 吸底、滚过某节点切 absolute 停回
+  // 原文。真机实测类恒为 is-absolute is-bottom（知乎 JS 的切换在此环境未触发——推测 zoom
+  // 干扰了它的滚动/交叉判断），absolute top:0 相对列表壳 → 栏停在问题块下方，与「写回答/
+  // 关注问题」按钮和「查看全部 N 个回答」重叠（截图复现）。
+  // 修法（脚本兜底）：该栏强制 fixed 吸底 + 白底 + 分隔线 + 高 z-index（原生 absolute 态
+  // 无背景，改 fixed 后正文会透出来，必须补底色）。inline 样式优先级高于知乎 JS 的类切换，
+  // 滚动全程稳定吸底——与用户期望「本来就应该在页面底部浮动」一致。
+  let stickyBarDone = null;
+  function fixStickyBar() {
+    const s = document.querySelector('.ContentItem-actions.Sticky');
+    if (!s) { stickyBarDone = null; return; }
+    if (stickyBarDone === s) return;
+    stickyBarDone = s;
+    s.style.setProperty('position', 'fixed', 'important');
+    s.style.setProperty('bottom', '0px', 'important');
+    s.style.setProperty('top', 'auto', 'important');
+    s.style.setProperty('background', '#ffffff', 'important');
+    s.style.setProperty('z-index', '50', 'important');
+    s.style.setProperty('border-top', '1px solid #e6e6e6', 'important');
+  }
+
   // ============================================================
   // 评论区弹层（.Modal-content）：返回键关闭 + 溢出定位修正
   // ------------------------------------------------------------
@@ -1931,7 +1953,7 @@
     if (SW !== lastTickSW) { lastTickSW = SW; clearScanMemo(); }
     // 周期性全量重扫：见「扫描记忆化」一节，抵消「看过的元素后续变大就漏掉」的代价
     if (++sweepCount % SWEEP_EVERY === 0) clearScanMemo();
-    hideSideRails(); capFixed(); capWide(); fitColumnPreview(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); reflowHeader(); wrapRingMemberRows(); hideQuestionDataRail();
+    hideSideRails(); capFixed(); capWide(); fitColumnPreview(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); reflowHeader(); wrapRingMemberRows(); hideQuestionDataRail(); fixStickyBar();
     // 全量按钮扫描实测 ~1ms，一次查询给两个 pass 共用，不各扫一遍
     const btns = publishButtons();
     hideIdeaOption(); hideCircleSync(); fitIdeaButton(); fixImageViewer(); fitPublishButton(btns); matchComposerAvatar(btns); fitIdeaBox();
@@ -1953,7 +1975,7 @@
   //    实测单次开销：publishButtons 0.1ms、guard 查询 0.06ms。
   //    tick 里原有的那一遍全部保留，作为「周期性全量重扫」的兜底。
   const obs = new MutationObserver(() => {
-    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); reflowHeader(); hideQuestionDataRail();
+    syncCommentModal(); hideCircleSync(); fitIdeaButton(); hideIdeaOption(); fixImageViewer(); fitColumnPreview(); fitIdeaBox(); hideLeftNav(); hideEdgeStrays(); normalizePadding(); fitQuickEntries(); fitUserStats(); reflowHeader(); hideQuestionDataRail(); fixStickyBar();
     const btns = publishButtons();       // 一次查询给下面两个 pass 共用（与 tick 里的做法一致）
     fitPublishButton(btns); matchComposerAvatar(btns);
     schedule();

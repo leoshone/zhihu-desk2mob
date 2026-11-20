@@ -1,7 +1,7 @@
 # 代码与文档审查 · zhihu-desk2mob v1.0.5
 
 审查范围：`src/zhihu-desk2mob.user.js`（467 行）、`docs/` 三份方案文档、`README.md`、
-`scripts/` 四个测试 + 工具、技能 `kiwi-violentmonkey-cdp`（2026-11 已迁移至 leoshone/Skills 仓库）。
+`test/` 四个测试 + 工具、技能 `kiwi-violentmonkey-cdp`（2026-11 已迁移至 leoshone/Skills 仓库）。
 结论优先按严重度排列，每条给定位与依据。**带「实测」的都是真机取证，不是读代码推测。**
 
 ---
@@ -81,7 +81,7 @@ z2m-style: 已移除          htmlZoom: "3.83256"（未还原）
 也没有还原 zoom**。影响两处：
 
 - **H3 之外**：谁把它当「关掉脚本」用，页面会处于「桌面布局 + 4 倍放大」的坏状态。
-- **诊断结论**：`scripts/probe-publishbtn.js --off` 就是拿它当「无脚本 CSS」基线的，
+- **诊断结论**：`test/probe-publishbtn.js --off` 就是拿它当「无脚本 CSS」基线的，
   那组数据（视口 269、按钮完全出屏）**不是有效的无脚本对照**。
   该次结论没有依赖它们（「不是本次改动引入」是靠同一轮内的改前/改后对照得出的），
   但工具本身的方法不成立，`ARTIFACTS.md` 里对它的描述（「判定按钮越界是否由脚本造成」）

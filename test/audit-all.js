@@ -1,7 +1,7 @@
 // audit-all.js — 全页面走查：逐页导航 → 注入 → 布局断言。
 // 每页断言：main 满宽（left≈0）、无横向溢出元素（right > SW+2 的可见元素数）、
 // 左侧栏 rails 隐藏、hasStyle。输出 JSON 摘要，不截图（视觉比对用 audit-kiwi 单页跑）。
-// 用法: node scripts/audit-all.js
+// 用法: node test/audit-all.js
 'use strict';
 const fs = require('fs');
 const path = require('path');

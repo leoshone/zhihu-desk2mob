@@ -54,7 +54,7 @@ Kiwi 桌面模式把布局视口锁在远比屏幕宽的值（本机实测 `inne
 
 > **调 `textScale` 的代价**：它越大 → 列越窄 → 每行汉字越少、页面越长，且固定尺寸的 UI（头像、按钮）
 > 相对更挤。真机实测每行汉字数：`0.91` 约 24 字、`0.98` 约 22 字、`1.1` 约 20 字。
-> 值可以照自己的手感定：**用手捏合到满意，再用 `scripts/probe-scale.js` 把那个大小量出来**
+> 值可以照自己的手感定：**用手捏合到满意，再用 `test/probe-scale.js` 把那个大小量出来**
 > （v1.1.1 的 `0.98` 就是这么定的）。当前默认 `1.0` 是取整到「名义字号」，未按捏合定值 ——
 > 它比 `0.98` 略大（16px vs 15.7px），列也更窄一档。
 
@@ -83,12 +83,12 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | --- | --- |
 | `zhihu-desk2mob.user.js` | 脚本本体（单文件，无构建） |
 | `docs/` | 各版本的修复方案文档 + [测试环境总览](docs/test-environments.md)：根因分析、实测数据、方案取舍（见下方索引） |
-| `scripts/` | 真机回归测试 + 诊断探针（见 [scripts/README.md](scripts/README.md)）；`scripts/lib/cdp.js` 为 CDP 工具库本体 |
+| `test/` | 真机回归测试 + 诊断探针（见 [test/README.md](test/README.md)）；`test/lib/cdp.js` 为 CDP 工具库本体 |
 
 ### 配套方法论（外部仓库）
 
 CDP 驱动真机浏览器（装／更新脚本、注入、取证）的**通用方法论**已沉淀到独立仓库：
-[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有，需 git 凭据）。含：INTERNAL crx profile 搭建、CDP 驱动要点、环境陷阱表、Python 驱动模板。本仓库的 `scripts/lib/cdp.js` 是其中 Kiwi/真机路径的 Node 实现。
+[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有，需 git 凭据）。含：INTERNAL crx profile 搭建、CDP 驱动要点、环境陷阱表、Python 驱动模板。本仓库的 `test/lib/cdp.js` 是其中 Kiwi/真机路径的 Node 实现。
 
 ### docs 索引
 
@@ -107,5 +107,5 @@ CDP 驱动真机浏览器（装／更新脚本、注入、取证）的**通用�
 > 与上面的审查报告里，后者已被 `6331027` 回滚、Release 与 tag 已删除。
 
 
-`scripts/` 里的测试要驱动真机，依赖 CDP 工具库 `scripts/lib/cdp.js`（项目内，单一实现）。
+`test/` 里的测试要驱动真机，依赖 CDP 工具库 `test/lib/cdp.js`（项目内，单一实现）。
 方法论与陷阱速查见 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)。

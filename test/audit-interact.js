@@ -1,6 +1,6 @@
 // audit-interact.js — 交互走查 v2：点击关键按钮（评论/收起/展开全文/图片查看器），
 // 每步断言布局 + 截图。matcher 用 includes（避免正则转义问题）。
-// 用法: node scripts/audit-interact.js
+// 用法: node test/audit-interact.js
 'use strict';
 const fs = require('fs');
 const path = require('path');

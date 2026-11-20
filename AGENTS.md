@@ -10,7 +10,7 @@ zhihu-desk2mob.user.js      脚本本体（唯一交付物）
 docs/design-decisions.md    ADR 设计决策汇编（17 份历史方案合并，按功能域 13 章）
 docs/test-environments.md   三种测试环境对照（Turbo / MuMu+Kiwi / 真机 Quetta）
 docs/history/               归档（原 code-review-v1.0.5.md）
-scripts/                    CDP 真机/模拟器测试与诊断探针（见 scripts/README.md）
+test/                       CDP 真机/模拟器测试与诊断探针（见 test/README.md）
   └ lib/cdp.js              CDP 工具库（唯一实现）
 ```
 
@@ -22,7 +22,7 @@ scripts/                    CDP 真机/模拟器测试与诊断探针（见 scri
 | 真机浏览器 | Quetta（Chrome 148）+ 暴力猴 |
 | 模拟器 | MuMu（`adb connect 127.0.0.1:16384`）+ Kiwi（Chrome 137）+ 暴力猴（`fcickoepngcnapddnnmjpkmpekmfmpaa`） |
 | 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
-| CDP | `tcp:9222`（真机/模拟器走 adb forward，每轮 shell 会丢、`scripts/lib/cdp.js` 自建；Turbo 直连） |
+| CDP | `tcp:9222`（真机/模拟器走 adb forward，每轮 shell 会丢、`test/lib/cdp.js` 自建；Turbo 直连） |
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计不生效（`innerWidth ≤ 600` 直接返回） |
 | Node | 18+（用到内置全局 `WebSocket`）；**项目零依赖**，无需 npm install |
 
@@ -30,7 +30,7 @@ scripts/                    CDP 真机/模拟器测试与诊断探针（见 scri
 
 ## 工作流（改脚本必经）
 
-1. **改完 CSS 第一件事**：`node scripts/check-injected.js`——整套 CSS 在脚本的 JS 模板串里，
+1. **改完 CSS 第一件事**：`node test/check-injected.js`——整套 CSS 在脚本的 JS 模板串里，
    注释混进反引号会提前闭合使样式全失效，而 `node --check` 可能照样通过（已踩三次）。
 2. 验证范围按**改动波及面**定：只动一处 CSS/文案 ⇒ 跑受影响的那套测试；动公共层
    （zoom、`--z2m-w`、全局扫描 pass）或发版终验 ⇒ 跑全套。小改动不必全套（用户明确要求）。
@@ -70,7 +70,7 @@ scripts/                    CDP 真机/模拟器测试与诊断探针（见 scri
 ## 调试顺序
 
 1. 判断是否回归：是 → `git log -S "<规则原文>"` 定位，别猜。
-2. `scripts/probe-*.js` 定位现象出自哪个容器，别先猜 CSS。
+2. `test/probe-*.js` 定位现象出自哪个容器，别先猜 CSS。
 3. 改脚本 → `--installed` 跑对应测试。
 4. 视觉改动抓屏确认。
 - **优先怀疑脚本自己的通用规则误伤**（历史上「莫名其妙」的坏版式全是脚本造成的，不是知乎）。
@@ -113,5 +113,5 @@ scripts/                    CDP 真机/模拟器测试与诊断探针（见 scri
 
 - 设计决策沿革（为什么这么写、试过哪些无效方案）：[docs/design-decisions.md](docs/design-decisions.md)
 - 测试环境细节：[docs/test-environments.md](docs/test-environments.md)
-- 测试与探针清单：[scripts/README.md](scripts/README.md)
+- 测试与探针清单：[test/README.md](test/README.md)
 - CDP 驱动方法论（外部私有仓库）：[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)

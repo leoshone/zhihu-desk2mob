@@ -1,7 +1,7 @@
 // audit-real.js — 真实走查（暴力猴已装 v1.5.0）：不注入、不模拟视口，
 // 纯观察 Kiwi 原生桌面模式 + 暴力猴脚本的实际效果。
 // 逐页导航（SPA 内部直接 navigate 会整页加载，暴力猴会重新注入），断言 + 截图。
-// 用法: node scripts/audit-real.js [页名]   无参数 = 全部页
+// 用法: node test/audit-real.js [页名]   无参数 = 全部页
 'use strict';
 const fs = require('fs');
 const path = require('path');

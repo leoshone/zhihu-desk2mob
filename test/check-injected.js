@@ -10,7 +10,7 @@
 // 静态检查做不可靠（模板串内有故意的嵌套模板串），所以这里做运行时体检：
 // 重载页面后直接查 #z2m-style 是否存在 —— 改完 CSS 先跑这个，几秒钟出结果。
 //
-// 用法：node scripts/check-injected.js [url子串]
+// 用法：node test/check-injected.js [url子串]
 'use strict';
 const cdp = require('./lib/cdp.js');
 

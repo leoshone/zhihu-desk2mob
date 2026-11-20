@@ -24,9 +24,9 @@ CDP 端口转发**每轮 shell 都会丢失**，所以 `cdp.js` 在加载时会�
 
 ## 运行
 
-**在本目录（`scripts/`）下运行** —— 测试的截图写的是相对路径 `shots/`（即 `scripts/shots/`），
+**在本目录（`test/`）下运行** —— 测试的截图写的是相对路径 `shots/`（即 `test/shots/`），
 从仓库根跑会因为该目录不存在而在**末尾**报错（断言其实已经跑完，但看不到结果行）。
-`scripts/shots/` 是运行期产物、已被 `.gitignore` 排除，不存在就先 `mkdir -p scripts/shots`。
+`test/shots/` 是运行期产物、已被 `.gitignore` 排除，不存在就先 `mkdir -p scripts/shots`。
 
 真机上先各开一个页面（测试会自行复制新标签页，但需要一个「样板标签页」来确定 URL）：
 
@@ -93,7 +93,7 @@ node test-reco-carousel.js --installed  # 文章页：底部「推荐阅读」�
 静态检查做不可靠 —— 模板串内有**故意的**嵌套模板串（`${CFG.x ? \`…\` : \`\`}`），所以走运行时体检：
 
 ```bash
-node scripts/check-injected.js "zhihu.com/question"
+node test/check-injected.js "zhihu.com/question"
 ```
 
 它会重载页面、直接查 `#z2m-style` 是否存在、样式表有多少条规则（当前约 56 条）。
@@ -173,7 +173,7 @@ node scripts/check-injected.js "zhihu.com/question"
 
 ## 依赖
 
-CDP 工具库本体在 `scripts/lib/cdp.js`。本目录的 `cdp.js` 只是一行转发，
+CDP 工具库本体在 `test/lib/cdp.js`。本目录的 `cdp.js` 只是一行转发，
 以保证全仓库只有一份实现。
 
 ## 测试环境（3 种）

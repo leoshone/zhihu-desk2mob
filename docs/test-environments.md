@@ -18,7 +18,7 @@
 | 速度 | 秒级往返（截图/注入/重载都快） | 中（经 adb，受限模拟器性能） | 慢（USB 往返） |
 
 **推荐流程**：改动 → ① Turbo 快速迭代确认布局 → ② MuMu Kiwi 过一遍安卓内核 → ③ 真机抽验关键页。
-小改动不必三级全跑（见 scripts/README.md「跑几套」一节）。
+小改动不必三级全跑（见 test/README.md「跑几套」一节）。
 
 ## 各环境操作要点
 
@@ -35,7 +35,7 @@
 
 1. `adb connect 127.0.0.1:16384`（MuMu 端口；真机则 USB）
 2. `adb forward tcp:9222 localabstract:chrome_devtools_remote`（`cdp.js` 会自建）
-3. 走查：`node scripts/audit-real.js`（8 页断言+截图，暴力猴已装模式）
+3. 走查：`node test/audit-real.js`（8 页断言+截图，暴力猴已装模式）
 4. 坑：
    - Kiwi 内核旧（137），「模拟器正常」不等于真机正常（内核差异案例见 conventions 文档）
    - 多 display 陷阱：`am stack list` 看 displayId，`input -d <id> tap` 必须带 `-d`
@@ -45,16 +45,16 @@
 
 1. USB 调试 + `adb forward tcp:9222 localabstract:chrome_devtools_remote`
 2. 最终裁决环境：`test-counterzoom` 等捏合类测试**只信真机结果**（模拟捏合在 CDP 下不可靠，
-   见 scripts/README.md counterzoom 注）
+   见 test/README.md counterzoom 注）
 3. 长会话后 `Page.captureScreenshot` 可能不可靠，改用 `adb exec-out screencap -p`
 4. renderer 挂死（`document.body` 为 null）：`adb shell am force-stop <浏览器包名>` 重启
 
 ## 通用工具
 
-- CDP 工具库：`scripts/lib/cdp.js`（零依赖，Node 18+ 内置 WebSocket）
-- 注入体检：`node scripts/check-injected.js "zhihu.com"`（改完 CSS 第一件事）
-- 8 页走查：`node scripts/audit-real.js`（真机/模拟器通用，暴力猴已装模式）
-- 全部测试与探针清单见 [scripts/README.md](README.md)
+- CDP 工具库：`test/lib/cdp.js`（零依赖，Node 18+ 内置 WebSocket）
+- 注入体检：`node test/check-injected.js "zhihu.com"`（改完 CSS 第一件事）
+- 8 页走查：`node test/audit-real.js`（真机/模拟器通用，暴力猴已装模式）
+- 全部测试与探针清单见 [test/README.md](README.md)
 
 ## 历史踩坑记录
 

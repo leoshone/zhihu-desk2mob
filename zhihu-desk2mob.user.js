@@ -436,7 +436,7 @@
           会把「邀请回答」拉到贴着「写回答」（实测间距 [16, 0]），这就是「右边两个挤在一起」的由来。
           改用容器 column-gap + space-between 均匀分布。
      实测（列宽 358）：三个按钮 0..96 / 124..220 / 247..358，间距 **28 / 27**，**左空 0、右空 0**。
-     回归：scripts/test-question-actions.js */
+     回归：test/test-question-actions.js */
   .QuestionHeader-footer-inner {
     flex-direction: row !important; flex-wrap: wrap !important; align-items: flex-start !important;
     padding: 0 !important; margin-right: 0 !important;
@@ -616,7 +616,7 @@
      （A/B 实测 mt=0/-5.4、mt=5/-0.4、mt=6.3/+0.9，取 5）。N=2 时高 45px、宽约 81px。
      实测（真机 v1.4.7，3 行，列宽 326）：图片 190x105 -> 132x73，标题列宽 76 -> 134px，
      条目高 137 -> 135px，30 条里 metrics 与摘要重叠数 0（改前为 28）。
-     回归：scripts/test-hot-thumb.js（改前/改后对照，含 ::after 尺寸断言） */
+     回归：test/test-hot-thumb.js（改前/改后对照，含 ::after 尺寸断言） */
   ${CFG.hotThumbLines > 0 ? `
   .HotItem-img {
     height: calc(var(--z2m-line) * ${CFG.hotThumbLines} - 11px) !important;
@@ -965,7 +965,7 @@
   //   · 打开弹层不压入任何历史记录，而进入回答页时 history.length 常为 1，
   //     此时按返回会直接离开知乎，而不是关闭弹层。
   //   · 卡片高度取决于已加载的评论条数，所以垂直溢出并非每次都能复现 ——
-  //     该分支已用受控夹具单测覆盖（scripts/test-modal-layout.js）。
+  //     该分支已用受控夹具单测覆盖（test/test-modal-layout.js）。
   // 因此这里：① 打开时压入一条哨兵历史，返回键 popstate 时关闭弹层；
   //           ② 只在「卡片越界」时把容器改为顶部对齐、把卡片收进屏幕。
   // ============================================================
@@ -1841,7 +1841,7 @@
   // 注意：这是**半清理** —— 摘掉样式表、断开观察器、清定时器、还原反缩放，
   // 但**不撤销各 pass 写入的内联样式**（display:none / max-width / flex / 头像尺寸等仍在）。
   // 因此不要拿它当「关掉脚本」的对照基线做 A/B 诊断，
-  // 详见 AGENTS.md 的「工作流」与 scripts/README.md 的探针表注。
+  // 详见 AGENTS.md 的「工作流」与 test/README.md 的探针表注。
   window.__z2mStop = () => {
     obs.disconnect(); clearTimeout(timer); clearTimeout(zoomFixTimer); clearInterval(poll); st.remove();
     curZ = 1; document.documentElement.style.removeProperty('zoom');

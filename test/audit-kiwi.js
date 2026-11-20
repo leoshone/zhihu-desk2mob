@@ -1,6 +1,6 @@
 // audit-kiwi.js — MuMu Kiwi 页面走查：模拟「桌面版网站」视口 + UA，
 // 复用已有知乎标签页导航，注入最新版脚本后输出诊断 + 截图。
-// 用法: node scripts/audit-kiwi.js <url> <shotName.png> [waitMs] [scrollY]
+// 用法: node test/audit-kiwi.js <url> <shotName.png> [waitMs] [scrollY]
 // ⚠️ 实测坑：Chrome137 (Kiwi) 上 Page.addScriptToEvaluateOnNewDocument 不生效，
 //    必须在 navigate 之后直接 Runtime.evaluate 脚本体（脚本自身有 __z2mStop 幂等保护）。
 'use strict';

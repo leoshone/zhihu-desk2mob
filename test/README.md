@@ -167,7 +167,7 @@ node test/check-injected.js "zhihu.com/question"
 **通用的**两个探针（`probe-element.js` 按文案定位元素并 dump 结构、`inspect.js` 判定屏幕顶层
 叠加层/切标签/截图）原先放在 `.workbuddy/skills/kiwi-violentmonkey-cdp/` 技能目录；
 2026-11 该技能已迁移到独立仓库
-[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（私有），
+[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（公有），
 项目内的技能目录已删除。需要这两个探针时从该仓库取，本目录不放副本 —— 曾因副本漂移导致
 「本地跑的是旧版」而白查一轮。
 

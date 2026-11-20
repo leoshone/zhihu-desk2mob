@@ -112,4 +112,4 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 - 设计决策沿革（为什么这么写、试过哪些无效方案）：[docs/design-decisions.md](docs/design-decisions.md)
 - 测试环境细节：[test/README.md](test/README.md)
 - 测试与探针清单：[test/README.md](test/README.md)
-- CDP 驱动方法论（外部私有仓库）：[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)
+- CDP 驱动方法论（外部仓库，公有）：[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)

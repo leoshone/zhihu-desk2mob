@@ -1740,19 +1740,23 @@
       // 原生容器链不收缩（css-1pbgcc2 flex-basis 704px），头像区留在屏幕外——
       // 用 relative 负偏移拉回屏幕右缘（比 absolute 稳，不脱离文档流）
       avWrap.style.setProperty('position', 'relative', 'important');
-      // 偏移量动态算：目标右缘 = SW-16（rect 坐标系下可见区宽恰为 SW）。
-      // v1.8.0 之前是「rAF 双帧循环、只在 drift>2 时向左拉」——只会单向修正，
-      // 真机加载期布局视口一路变化（980→1077→…）且 zoom 反复重算，循环在某个瞬态帧
-      // 把偏移拉过头（实测 -748px）后条件不再满足、提前退出，头像永远留在屏幕左侧外
-      // （虚拟机/PC 时序不同没复现）。改成幂等双向：自然位置 = 当前 rect 去掉现有
-      // left 偏移，每次 tick 按当前几何一步算准；zoom/SW 变化后下一拍自动追平，
-      // |修正|<1px 时不写样式（防抖动 + 防 MutationObserver 自触发循环）。
+      // 偏移量动态算。⚠️ 两处坐标系极易混（都踩过）：
+      //   · getBoundingClientRect / html 视觉宽 = **视觉 px**（布局 px × zoom）；
+      //   · style.left 的 1px 位移 = **布局 px**，作用于 rect 时被放大 zoom 倍。
+      //   旧代码目标写 SW-16（=377 布局px）却拿 rect（视觉px）比——模拟器 zoom 小、
+      //   两套坐标差距小「碰巧能用」；真机 zoom≈2.49，头像被定位到视觉 377（屏幕
+      //   左侧 1/3 处）盖住「关注」标签；更早版本 `left -= drift` 每帧过量修正
+      //   zoom 倍且只向左拉，实测发散到 left:-748px、头像整个出屏（本仓库最初要修的 bug）。
+      //   v1.8.2：目标 = html 视觉宽 − PAD×zoom（与内容列右缘视觉对齐，实测 940），
+      //   误差（视觉px）÷ zoom 换算成 style px 一步修准（幂等双向，自纠任何残留值）；
+      //   |误差|<2 视觉px 不写，防抖动 + 防 MutationObserver 自触发循环。
+      const cur = parseFloat(avWrap.style.left) || 0;
       const wb = avWrap.getBoundingClientRect();
-      const naturalRight = wb.right - (parseFloat(avWrap.style.left) || 0);
-      const wantLeft = (SW - 16) - naturalRight;
-      const curLeft = parseFloat(avWrap.style.left) || 0;
-      if (Math.abs(wantLeft - curLeft) >= 1) {
-        avWrap.style.setProperty('left', wantLeft + 'px', 'important');
+      const Z = parseFloat(document.documentElement.style.zoom) || 1;
+      const visW = document.documentElement.getBoundingClientRect().width;
+      const deltaRect = (visW - PAD * Z) - wb.right;        // 还差多少视觉 px
+      if (Math.abs(deltaRect) >= 2) {
+        avWrap.style.setProperty('left', (cur + deltaRect / Z) + 'px', 'important');
       }
       // 清理历史注入的重复头像（shell 里的残留），原生位置的头像才是正主
       [...bar.querySelectorAll('button[class*="AppHeader-profile"]')].forEach(b => {

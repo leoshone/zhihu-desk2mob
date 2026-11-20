@@ -4,7 +4,7 @@
 > 重复段落），按「功能域」重组章节。每节标注涉及的版本与原始文件名（git 历史可查）。
 >
 > 配套文档：[AGENTS.md](../AGENTS.md)（项目规范）、
-> [`test-environments.md`](test-environments.md)（三种测试环境）。
+三种测试环境见 [`test/README.md`](../test/README.md)。
 
 ## 目录
 

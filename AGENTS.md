@@ -8,7 +8,6 @@ zhihu-desk2mob：把知乎桌面版网页重排为手机单列的油猴脚本。
 ```
 zhihu-desk2mob.user.js      脚本本体（唯一交付物）
 docs/design-decisions.md    ADR 设计决策汇编（17 份历史方案合并，按功能域 13 章）
-docs/test-environments.md   三种测试环境对照（Turbo / MuMu+Kiwi / 真机 Quetta）
 test/                       CDP 真机/模拟器测试与诊断探针（见 test/README.md）
   └ lib/cdp.js              CDP 工具库（唯一实现）
 ```
@@ -25,7 +24,7 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计不生效（`innerWidth ≤ 600` 直接返回） |
 | Node | 18+（用到内置全局 `WebSocket`）；**项目零依赖**，无需 npm install |
 
-三种测试环境的接入方式、适用场景与各自陷阱见 [docs/test-environments.md](docs/test-environments.md)。
+三种测试环境的接入方式、适用场景与各自陷阱见 [test/README.md](test/README.md)。
 
 ## 工作流（改脚本必经）
 
@@ -111,6 +110,6 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 ## 更多背景
 
 - 设计决策沿革（为什么这么写、试过哪些无效方案）：[docs/design-decisions.md](docs/design-decisions.md)
-- 测试环境细节：[docs/test-environments.md](docs/test-environments.md)
+- 测试环境细节：[test/README.md](test/README.md)
 - 测试与探针清单：[test/README.md](test/README.md)
 - CDP 驱动方法论（外部私有仓库）：[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)

@@ -82,7 +82,7 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 | 路径 | 说明 |
 | --- | --- |
 | `zhihu-desk2mob.user.js` | 脚本本体（单文件，无构建） |
-| `docs/` | 各版本的修复方案文档 + [测试环境总览](docs/test-environments.md)：根因分析、实测数据、方案取舍（见下方索引） |
+| `docs/` | 设计决策汇编：根因分析、实测数据、方案取舍（见下方索引） |
 | `test/` | 真机回归测试 + 诊断探针（见 [test/README.md](test/README.md)）；`test/lib/cdp.js` 为 CDP 工具库本体 |
 
 ### 配套方法论（外部仓库）
@@ -95,7 +95,6 @@ CDP 驱动真机浏览器（装／更新脚本、注入、取证）的**通用�
 | 文档 | 内容 |
 | --- | --- |
 | `AGENTS.md` | **项目规范 / Agent 接手须知**：环境、工作流、核心契约、已知陷阱、发布约定 |
-| `docs/test-environments.md` | **三种测试环境总览**：Turbo（桌面快速迭代）/ MuMu Kiwi（安卓内核）/ 真机 Quetta（最终裁决），各自接入方式、适用场景与陷阱 |
 | `design-decisions.md` | **ADR 设计决策汇编**：17 份历史方案合并（评论弹层/发布框/反缩放/字号/块状版式/缩略图/问题页/登录/个人主页/改版适配/留白），含根因分析、实测数据、试过无效的路子 |
 
 > v1.0.6（审查后加固）与 v1.0.8（已回滚）没有单独文档：前者的改动记在对应 Release note

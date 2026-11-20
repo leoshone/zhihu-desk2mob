@@ -1740,20 +1740,20 @@
       // 原生容器链不收缩（css-1pbgcc2 flex-basis 704px），头像区留在屏幕外——
       // 用 relative 负偏移拉回屏幕右缘（比 absolute 稳，不脱离文档流）
       avWrap.style.setProperty('position', 'relative', 'important');
-      // 偏移量动态算：视觉右缘目标 358-16=342
-      // 双帧循环校准（首帧布局未稳，偏移只生效一半）
-      requestAnimationFrame(() => {
-        const fix = () => {
-          const wb = avWrap.getBoundingClientRect();
-          const drift = Math.round(wb.right - (SW - 16));
-          if (drift > 2) {
-            const cur = parseFloat(avWrap.style.left) || 0;
-            avWrap.style.setProperty('left', (cur - drift) + 'px', 'important');
-            requestAnimationFrame(fix);
-          }
-        };
-        fix();
-      });
+      // 偏移量动态算：目标右缘 = SW-16（rect 坐标系下可见区宽恰为 SW）。
+      // v1.8.0 之前是「rAF 双帧循环、只在 drift>2 时向左拉」——只会单向修正，
+      // 真机加载期布局视口一路变化（980→1077→…）且 zoom 反复重算，循环在某个瞬态帧
+      // 把偏移拉过头（实测 -748px）后条件不再满足、提前退出，头像永远留在屏幕左侧外
+      // （虚拟机/PC 时序不同没复现）。改成幂等双向：自然位置 = 当前 rect 去掉现有
+      // left 偏移，每次 tick 按当前几何一步算准；zoom/SW 变化后下一拍自动追平，
+      // |修正|<1px 时不写样式（防抖动 + 防 MutationObserver 自触发循环）。
+      const wb = avWrap.getBoundingClientRect();
+      const naturalRight = wb.right - (parseFloat(avWrap.style.left) || 0);
+      const wantLeft = (SW - 16) - naturalRight;
+      const curLeft = parseFloat(avWrap.style.left) || 0;
+      if (Math.abs(wantLeft - curLeft) >= 1) {
+        avWrap.style.setProperty('left', wantLeft + 'px', 'important');
+      }
       // 清理历史注入的重复头像（shell 里的残留），原生位置的头像才是正主
       [...bar.querySelectorAll('button[class*="AppHeader-profile"]')].forEach(b => {
         if (b.closest('[class*="css-1ww4ngr"]') === null) b.remove();

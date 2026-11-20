@@ -7,3 +7,6 @@ _tmp/
 # 及其他本地会话数据仅保留在本机，不入库、不上传。
 .workbuddy/*
 !.workbuddy/skills/
+
+# Node 依赖（ws 只是调试工具的临时依赖，不该入库）
+node_modules/

@@ -11,6 +11,7 @@
 | 真机 | Xiaomi 2211133C（codename `fuxi`），1080×2400，CSS 视口 393×873 |
 | 浏览器 | Kiwi + 暴力猴（扩展 ID `fcickoepngcnapddnnmjpkmpekmfmpaa`） |
 | 调试 | `adb` 在 PATH；CDP 转发 `tcp:9222`（**每轮 shell 会丢**，`scripts/cdp.js` 加载时自建） |
+| 桌面调试（2026-11-20 增） | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连宿主机，**不经 adb**）；暴力猴 2.50（扩展 ID `jinjaccalgkegednnccohejagnlnfdag`）；DevTools 设备模拟 393×873 dpr3 + `?z2m-force=1` |
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计**不生效**（`innerWidth ≤ 600` 时直接返回） |
 | Node | 18+（用到全局 `WebSocket`） |
 
@@ -213,6 +214,8 @@
 - 每版的 Release note 写清**本版**改了什么即可（一版一事，天然对得上），不必按主题汇总一大段区间。
 - 历史先例仅作参考，不再当规则用：曾经的 minor 是 `1.1.0`（限制双指缩小）、`1.2.0`（块状版式铺满整列）、
   `1.2.4`（`CFG.feedThumbWidth` → `feedThumbLines`，配置项语义变更）、`1.2.8`（问题页页首按钮排布）。
+- ⚠️ **v1.7.1/1.7.2 已回退**（e32b2c7）：写想法卡片重排两次失败，代码退回 1.7.0。
+  版本号 1.7.1/1.7.2 不再使用；要重做该卡片布局，从 1.7.0 的代码起步、**先在 Kiwi 真机验证**。
 - ⚠️ **历史备忘 / 本条为何被推翻**：下面这条旧约定**是 2026-09-30 由 agent 从先例归纳、并自行写成硬规则的**，
   **并非用户要求**（起因只是用户问了句「版本号是不是可以升到 1.3.0 了？」）：
   「一段 patch 序列里若夹带了新行为，就在下一次发布时归并成 minor」。
@@ -354,6 +357,29 @@
 ②「模拟器正常、真机异常」优先怀疑**内核版本差异**（137→148 跨了标准滚动条分界）；
 ③疑似「页面上的线」若 DOM 扫描无果，直接试滚动条假设——它是唯一不在元素树里的绘制物。
 真机 CDP 接入：`adb forward tcp:9223 localabstract:chrome_devtools_remote`，工具 `_tmp/env/qcdp.js`。
+
+## 桌面调试环境（Turbo/Chrome156 + 暴力猴 2.50，2026-11-20 实测）
+
+用宿主机浏览器调试比真机快得多（不经 adb、截图/注入秒级往返）。踩过的坑：
+
+- **browser 级 CDP ws 必须带 GUID**：`ws://host:9222/devtools/browser` 裸路径 404，
+  要从 `/json/version` 的 `webSocketDebuggerUrl` 取完整地址（`scripts/lib/cdp.js` 已修，自动取）。
+- **9222 端口冲突**：宿主机浏览器直开 9222 时，`adb forward tcp:9222` 会把端口抢走。
+  `cdp.js` 已改为「forward 表里已有 tcp:9222 才 forward」，宿主机直连与真机互不干扰。
+- **`@run-at document-start` 注入失效**（Chrome 156 + 暴力猴 2.50）：用测试脚本对照实证——
+  同一内容 `document-end` 注入成功、`document-start` 完全不跑。主脚本已改 `document-body`（v1.6.9）。
+  Kiwi 旧内核（Chrome 137）不受影响。
+- **`Emulation.setDeviceMetricsOverride` 随连接消失**：模拟参数只在 CDP WebSocket 保持期间生效，
+  断开即自动清除——肉眼验证要用常驻进程保持连接，或干脆 `Browser.setWindowBounds` 把窗口缩成手机尺寸。
+- **`__z2mMoved` 类 DOM 属性标记在 bfcache 下会随 DOM 一起恢复**——reload 命中 bfcache 时标记残留、
+  「只搬一次」的逻辑永远跳过。脚本内改按「当前位置是否正确」判断（幂等），不依赖 DOM 属性。
+- **脚本自带视口守卫会「吞掉」桌面模拟**：`innerWidth≤600` 时脚本按设计退出（Kiwi 真机免跑）。
+  桌面 DevTools 模拟手机视口会命中守卫——用 `?z2m-force=1` URL 参数绕过（v1.7.0）。
+- **写想法卡片的表情/输入组件在模拟环境持续「加载失败」**：知乎接口在模拟网络下加载不出，
+  非脚本问题；验证该卡片布局需 Kiwi 真机。
+- ⚠️ **改写想法卡片布局的两次失败记录（v1.7.1/1.7.2，已回退）**：absolute 定位「发想法」按钮
+  跑到 x=1425 屏外（卡片含块链复杂）；快捷入口 `flex:1 1 0 + nowrap` 把每项撑到 364px 爆容器。
+  该卡片布局要改先**在真机 Kiwi 上改**，模拟环境看不到输入框区的真实渲染（接口加载不出）。
 
 ## 已知未修（不要当成新 bug 去追）
 

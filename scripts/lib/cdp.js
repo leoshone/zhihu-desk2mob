@@ -9,7 +9,12 @@ const http = require('http');
 const { execSync } = require('child_process');
 
 const ADB_FORWARD = () => {
-  try { execSync('adb forward tcp:9222 localabstract:chrome_devtools_remote', { stdio: 'ignore' }); } catch (e) {}
+  // 9222 已有监听时不再 adb forward——可能是宿主机浏览器（Turbo 等）直接开的 9222，
+  // 盲目 forward 会把它顶掉（2026-11-20 实测：连 Turbo 时 forward 反而把端口抢走）。
+  try {
+    const out = execSync('adb forward --list', { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
+    if (out.includes('tcp:9222')) return;                    // 已有 forward，保持
+  } catch (e) {}                                             // adb 不在 PATH 或无设备 → 走宿主机直连
 };
 ADB_FORWARD();
 
@@ -51,7 +56,19 @@ function connectWs(url, timeout = 6000) {
   });
 }
 
-async function browserApi() { return connectWs('ws://127.0.0.1:9222/devtools/browser'); }
+async function browserApi() {
+  // browser 级 ws 必须带 GUID（不带会 404，Chrome 140+ 实测）——从 /json/version 取
+  try {
+    const v = await new Promise((res, rej) => {
+      const req = require('http').get('http://127.0.0.1:9222/json/version', r => {
+        let d = ''; r.on('data', c => d += c); r.on('end', () => res(JSON.parse(d)));
+      });
+      req.on('error', rej);
+    });
+    if (v && v.webSocketDebuggerUrl) return connectWs(v.webSocketDebuggerUrl);
+  } catch (e) {}
+  return connectWs('ws://127.0.0.1:9222/devtools/browser');
+}
 async function getTargets(api) { return (await api.send('Target.getTargets')).targetInfos || []; }
 
 // 找到第一个匹配 url 子串的 page 标签；无子串时取第一个 page

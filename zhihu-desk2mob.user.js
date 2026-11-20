@@ -1869,6 +1869,32 @@
         la.style.setProperty('margin-left', (curM + deltaL / Z2) + 'px', 'important');
       }
     }
+    // ---- tabs（关注/推荐/热榜）在 logo 与头像之间居中（2026-11-20 用户反馈左右空白不一）----
+    // 实测：tabs 原左缘 344 视觉，logo 右缘 199、头像左缘 855 —— 左空隙 145、右 97，偏右。
+    // 做法：nav 外层的定位盒（nav.parentElement.parentElement，css-7corvk，自带 margin-left
+    // 58布局px）清掉原 margin 后按「logo右缘..头像左缘」中点幂等居中（÷zoom 换算）。
+    // 原生 margin 是知乎 hash 规则给的（58px），内联 !important 可覆盖（与 padding 不同，实测有效）。
+    const nav = bar.querySelector('nav');
+    const avBtn = bar.querySelector('button[class*="AppHeader-profile"]');
+    if (nav && avBtn) {
+      const box = nav.parentElement.parentElement;
+      if (box && box !== bar) {
+        if (box.style.marginLeft === '') box.style.setProperty('margin-left', '0px', 'important');  // 先清原生偏移
+        for (let k = 0; k < 4; k++) {
+          const nr = nav.getBoundingClientRect();
+          const delta = ((laRight0(nav, bar) ) - (nr.left + nr.right) / 2);
+          if (Math.abs(delta) < 4) break;
+          box.style.setProperty('margin-left', (parseFloat(box.style.marginLeft) + delta / Z2) + 'px', 'important');
+        }
+      }
+    }
+    function laRight0(navEl, barEl) {
+      const lo = barEl.querySelector('a[href="https://www.zhihu.com"] svg');
+      const av = barEl.querySelector('button[class*="AppHeader-profile"]');
+      const l = lo ? lo.closest('a').getBoundingClientRect().right : navEl.getBoundingClientRect().left;
+      const r = av ? av.getBoundingClientRect().left : navEl.getBoundingClientRect().right;
+      return (l + r) / 2;
+    }
   }
 
   // ---- 圈子页（/ring-feeds）：成员头像行换行 ----  }

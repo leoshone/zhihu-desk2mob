@@ -1407,6 +1407,38 @@
         }
       }
     }
+    // ---- v1.8.3（2026-11-20 用户要求）：图标行左移 + 「发想法」上移到图标行同一行 ----
+    // 结构（真机实测）：图标行 = .WriteArea 下「flex、子项全是 button」的那一行
+    // （hash css-4cffwv，含 6 个 49px 图标钮）；按钮壳（css-19jss6）被上一段挪到图标行
+    // 之后独立成行。改动：① 图标钮间距 24→16px（行左缘 160→视觉上明显左移，
+    // 给右侧腾出按钮空间）；② 按钮壳 flex-end 右对齐、负 margin-top 上移到与图标行
+    // 同一水平线；按钮高 50→40 压成同一行高。对齐量按 rect 误差 ÷ zoom 幂等收敛
+    // （margin 是布局px、rect 是视觉px——同 reflowHeader 的坐标系教训），
+    // 最多 3 轮、|误差|<3 视觉px 停，zoom 变化后 observer 下一拍自动追平。
+    const Z = parseFloat(document.documentElement.style.zoom) || 1;
+    const iconRow = [...area.querySelectorAll('div')].find(d => {
+      if (d.tagName !== 'DIV') return false;
+      const cs = getComputedStyle(d);
+      const kids = [...d.children];
+      return cs.display === 'flex' && kids.length >= 4 && kids.every(k => k.tagName === 'BUTTON');
+    });
+    if (iconRow && shell && shell !== area) {
+      // ① 图标钮间距收窄（原 24px 侧边距 → 16px）
+      [...iconRow.children].forEach(c => c.style.setProperty('margin-right', '16px', 'important'));
+      // ② 按钮壳变成「与图标行同行」的右对齐层
+      shell.style.setProperty('display', 'flex', 'important');
+      shell.style.setProperty('justify-content', 'flex-end', 'important');
+      shell.style.setProperty('height', 'auto', 'important');
+      shell.style.setProperty('margin-top', '0px', 'important');
+      btn.style.setProperty('height', '40px', 'important');
+      // ③ 幂等对齐：按钮 top == 图标行 top（视觉 px）
+      for (let k = 0; k < 3; k++) {
+        const delta = iconRow.getBoundingClientRect().top - btn.getBoundingClientRect().top;
+        if (Math.abs(delta) < 3) break;
+        const cur = parseFloat(shell.style.marginTop) || 0;
+        shell.style.setProperty('margin-top', (cur + delta / Z) + 'px', 'important');
+      }
+    }
     ideaBtnDone = btn;
   }
 

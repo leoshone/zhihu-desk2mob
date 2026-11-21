@@ -56,6 +56,10 @@
     commentBack: true,
     // 评论弹层：修正定位（卡片顶部对齐 + 宽度收进屏幕）
     fixCommentLayout: true,
+    // 内联评论区（2026-11 改版后窄列点「N 条评论」不再弹层、而是就地展开在文档流深处，
+    // 且知乎不做任何滚动定位 ⇒ 评论落在视口外一整屏开外，用户看到「点了没反应」）：
+    // 检测到内联评论区新展开且顶部在视口外时，把它滚到屏幕内。设 false 不干预。
+    inlineCommentReveal: true,
     // 评论区发布框：隐藏「同时发布到想法」选项（radio 图标 + 文案）
     hideIdeaOption: true,
     // 首页「写想法」卡片：隐藏塌成 0 宽的竖排「同步到圈子」残留（它是「发到圈子」的开关；
@@ -1122,6 +1126,60 @@
       dropGuard();
     }
     if (open) fixCommentModal();
+    revealInlineComments();
+  }
+
+  // ---- 内联评论区定位（2026-11 改版）----
+  // 现象（AVD Kiwi + 真机同构环境实测，2026-11-21）：窄列下点「N 条评论」知乎不再打开
+  // fixed 弹层，而是把 .Comments-container **就地展开**在该回答的文档流里（顶部在按钮下方
+  // 一整屏开外，本机实测文档坐标 ≈4744、视口高 1700、点击后 scrollY 纹丝不动），
+  // 且全程不调用任何滚动 API（hook scrollIntoView/scrollTo/scroll 事件均零触发）——
+  // 桌面宽屏上没这个问题，因为宽屏走的是 fixed 弹层（modal 路径，上面 4 个函数管它）。
+  // 用户看到的就是「点了 119 条评论，屏幕没任何变化」。
+  // 修法：检测「内联评论区刚出现且顶部在视口外」→ scrollIntoView 带回屏幕内。
+  // zoom 环境下 scrollIntoView 的落点已实测可靠（浏览器内部做了 zoom 补偿，
+  // 实测评论区稳稳落在视口顶部附近 94px 处，截图肉眼确认完整可见）。
+  // 触发挂 syncCommentModal（MutationObserver 同步回调 + 800ms 兜底轮询都跑它），
+  // 状态机防重复滚动：只在「不存在 → 存在」的边沿触发一次，滚动到一半又被检测会重入。
+  let inlineWas = false;          // 上一拍内联评论区是否存在
+  let inlineRevealTimer = null;   // 展开后的滚动宽限窗（内容异步加载会让位置漂移）
+  function revealInlineComments() {
+    if (!CFG.inlineCommentReveal) return;
+    const c = document.querySelector('.Comments-container');
+    if (!c || c.getBoundingClientRect().height < 40) {
+      // 不存在 / 预渲染但未展开（零尺寸不算「已出现」，否则会吞掉真正的展开边沿）
+      inlineWas = false;
+      clearTimeout(inlineRevealTimer);
+      return;
+    }
+    const justOpened = !inlineWas;
+    inlineWas = true;
+    if (!justOpened) {
+      // 已处理过本次展开：宽限窗内允许跟随重滚（异步加载导致位置漂移），窗外不再动
+      return;
+    }
+    const r = c.getBoundingClientRect();
+    const vh = window.innerHeight;
+    // 已在屏内（或部分可见超过 1/3）就不动——尊重用户手动滚动
+    if (r.top >= 0 && r.top < vh) return;
+    if (r.top < 0 && r.bottom > vh / 3) return;
+    scrollSoon(c);
+    // 评论是异步加载的（实测首次展开后 6.5s 内容才稳定），期间位置会漂移；
+    // 在宽限窗内每次重排都把顶部重新对齐（幂等：已对齐时 no-op）
+    clearTimeout(inlineRevealTimer);
+    let tries = 0;
+    const follow = () => {
+      if (!document.querySelector('.Comments-container')) return;   // 被收起/弹层接管
+      const rr = c.getBoundingClientRect();
+      if (rr.top > 60 || rr.top < -80) { scrollSoon(c); }
+      if (++tries < 20) inlineRevealTimer = setTimeout(follow, 500);
+    };
+    inlineRevealTimer = setTimeout(follow, 700);
+  }
+  function scrollSoon(el) {
+    try { el.scrollIntoView({ block: 'start' }); } catch (e) {
+      try { el.scrollIntoView(); } catch (e2) {}
+    }
   }
 
   // 返回键：消费哨兵 → 关闭弹层，而不是离开问答页

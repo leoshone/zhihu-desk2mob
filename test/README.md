@@ -8,8 +8,9 @@
 | 项 | 说明 |
 | --- | --- |
 | 手机 | 已开启 USB 调试并 `adb devices` 可见 |
-| 浏览器 | Kiwi（或其它支持 Chrome 扩展的安卓浏览器）+ 暴力猴（Violentmonkey） |
+| 浏览器 | Kiwi（或其它支持 Chrome 扩展的安卓浏览器）+ 暴力猴（Violentmonkey），**且处于启用状态**（被 Chrome 权限提升禁用时 confirm 页不弹、安装必败——检查与恢复见 [ENVIRONMENT.md](ENVIRONMENT.md) ②） |
 | 视口 | 手机端该站点需开启「桌面版网站」开关，否则脚本按设计不生效 |
+| 登录态 | 知乎桌面版匿名访问被强跳登录页（2026-11 起策略），模拟器/新设备需复制登录态（[ENVIRONMENT.md](ENVIRONMENT.md) ⑤） |
 | 本机 | Node 18+（用到全局 `WebSocket`），`adb` 在 PATH 中 |
 | 脚本 | `zhihu-desk2mob.user.js` 已装进暴力猴（测 `--installed` 模式时必须） |
 
@@ -182,20 +183,25 @@ CDP 工具库本体在 `test/lib/cdp.js`。本目录的 `cdp.js` 只是一行转
 各有适用场景与陷阱。**公共前提**：目标浏览器装好暴力猴，且站点开启「桌面版网站」开关
 （或 URL 带 `?z2m-force=1` 强制生效，见下）。
 
+> ⚠️ **从零搭环境 / 环境排障**（暴力猴启用检查与恢复、Kiwi 桌面模式开启、知乎登录态
+> 复制、CDP 端口冲突等）已独立成册：[ENVIRONMENT.md](ENVIRONMENT.md)——本节只讲
+> 「环境已就绪后的定位差异与各自陷阱」。
+
 ## 三种环境对照表
 
-| | ① 桌面浏览器（Turbo） | ② 安卓模拟器（MuMu → Kiwi） | ③ 真机（小米13 → Quetta） |
+| | ① 桌面浏览器（Turbo） | ② 安卓模拟器（AVD/MuMu → Kiwi） | ③ 真机（小米13 → Quetta） |
 | --- | --- | --- | --- |
 | **定位** | **快速迭代**：改完立即看效果 | 中间验证：接近真机的安卓内核 | **最终裁决**：真实用户环境 |
 | 浏览器 | Turbo（`D:\Software\Turbo\turbo.exe`，Chrome 156） | Kiwi（Chrome 137） | Quetta（Chrome 148） |
-| 暴力猴 | 2.50，扩展 ID `jinjaccalgkegednnccohejagnlnfdag` | 已装（同 Kiwi profile） | 已装 |
-| CDP 接入 | **直连宿主机**：`127.0.0.1:9222`（启动参数 `--remote-debugging-port=9222`），不经 adb | MuMu：`adb connect 127.0.0.1:16384` → `adb forward tcp:9222 localabstract:chrome_devtools_remote`（**每轮 shell 会丢**，`cdp.js` 加载时自建） | USB 调试 → `adb forward tcp:9222 localabstract:chrome_devtools_remote`（同左） |
+| 暴力猴 | 2.50 | 已装（扩展 ID 各环境不同，按名字匹配） | 已装 |
+| CDP 接入 | **直连宿主机**：`127.0.0.1:9222`（启动参数 `--remote-debugging-port=9222`），不经 adb | `adb forward tcp:9223 localabstract:chrome_devtools_remote`（**每轮 shell 会丢**，`cdp.js` 加载时自建；走 9223 避免与桌面 Turbo 抢 9222） | USB 调试 → `adb forward tcp:9222 ...`（同左） |
 | 视口 | DevTools 模拟：`Emulation.setDeviceMetricsOverride`（393×873 dpr3 mobile）+ 窗口缩成手机尺寸 | Kiwi 开「桌面版网站」，视口 891 由浏览器缩放 | 真机桌面模式，视口 891 |
 | 脚本生效 | 需 URL 带 **`?z2m-force=1`**（模拟视口命中 `innerWidth≤600` 守卫） | 「桌面版网站」开关即触发（真移动视口不命中守卫） | 同左 |
-| 已知陷阱 | ① `@run-at document-start` 注入失效（Chrome156+暴力猴2.50），须 `document-body`；② Emulation 随 CDP 断开自动清除，肉眼验证需常驻连接；③ 表情/输入组件接口在模拟网络下「加载失败」（非脚本问题） | Chrome 137 与真机 148 有内核差异（如滚动条机制），「模拟器正常、真机异常」优先怀疑内核差异；新内核 `Page.addScriptToEvaluateOnNewDocument` 不生效，注入须在 navigate 后 `Runtime.evaluate` | 最真实；`test-counterzoom` 等「模拟捏合」类测试的 FAIL 只在真机可信 |
+| 知乎登录态 | Turbo 自带（带 CDP 复制源） | 需从 Turbo 复制（见 ENVIRONMENT.md ⑤） | 用户真机自带 |
+| 已知陷阱 | ① `@run-at document-start` 注入失效（Chrome156+暴力猴2.50），须 `document-body`；② Emulation 随 CDP 断开自动清除，肉眼验证需常驻连接；③ 表情/输入组件接口在模拟网络下「加载失败」（非脚本问题）；④ CLI 会话里启动的浏览器随会话退出被杀，用计划任务脱离会话启动 | Chrome 137 与真机 148 有内核差异（如滚动条机制），「模拟器正常、真机异常」优先怀疑内核差异；新内核 `Page.addScriptToEvaluateOnNewDocument` 不生效，注入须在 navigate 后 `Runtime.evaluate` | 最真实；`test-counterzoom` 等「模拟捏合」类测试的 FAIL 只在真机可信 |
 | 速度 | 秒级往返（截图/注入/重载都快） | 中（经 adb，受限模拟器性能） | 慢（USB 往返） |
 
-**推荐流程**：改动 → ① Turbo 快速迭代确认布局 → ② MuMu Kiwi 过一遍安卓内核 → ③ 真机抽验关键页。
+**推荐流程**：改动 → ① Turbo 快速迭代确认布局 → ② AVD/MuMu Kiwi 过一遍安卓内核 → ③ 真机抽验关键页。
 小改动不必三级全跑（见本文「跑几套」一节）。
 
 ## 各环境操作要点
@@ -209,12 +215,13 @@ CDP 工具库本体在 `test/lib/cdp.js`。本目录的 `cdp.js` 只是一行转
 4. 肉眼验证窗口效果时注意：`Emulation` 参数随 CDP 断开消失，需常驻连接；或直接把窗口缩窄
 5. 自动化装机脚本：`_tmp-shots/turbo-setup.js`（本地服务 + 地址安装 + confirm 自动点击一条龙）
 
-### ② MuMu 模拟器（Kiwi）
+### ② AVD / MuMu 模拟器（Kiwi）
 
-1. `adb connect 127.0.0.1:16384`（MuMu 端口；真机则 USB）
-2. `adb forward tcp:9222 localabstract:chrome_devtools_remote`（`cdp.js` 会自建）
-3. 走查：`node audit-real.js`（在 test/ 目录内）（8 页断言+截图，暴力猴已装模式）
-4. 坑：
+1. `adb connect 127.0.0.1:16384`（MuMu 端口；AVD 走 emulator-5554 自动可见）
+2. `adb forward tcp:9223 localabstract:chrome_devtools_remote`（9222 留给桌面 Turbo；`cdp.js` 会自建）
+3. 环境搭建五步（CDP/暴力猴/脚本/桌面模式/登录态）：[ENVIRONMENT.md](ENVIRONMENT.md)
+4. 走查：`node audit-real.js`（在 test/ 目录内）（8 页断言+截图，暴力猴已装模式）
+5. 坑：
    - Kiwi 内核旧（137），「模拟器正常」不等于真机正常（内核差异案例见 conventions 文档）
    - 多 display 陷阱：`am stack list` 看 displayId，`input -d <id> tap` 必须带 `-d`
    - 截图用窗口抓图（PrintWindow），全屏 `screencap` 在有遮挡时误导

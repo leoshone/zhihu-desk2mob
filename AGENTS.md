@@ -18,13 +18,15 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 | --- | --- |
 | 真机 | Xiaomi 2211133C（`fuxi`），1080×2400，CSS 视口 393×873 |
 | 真机浏览器 | Quetta（Chrome 148）+ 暴力猴 |
-| 模拟器 | MuMu（`adb connect 127.0.0.1:16384`）+ Kiwi（Chrome 137）+ 暴力猴（`fcickoepngcnapddnnmjpkmpekmfmpaa`） |
-| 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
-| CDP | `tcp:9222`（真机/模拟器走 adb forward，每轮 shell 会丢、`test/lib/cdp.js` 自建；Turbo 直连） |
-| 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计不生效（`innerWidth ≤ 600` 直接返回） |
+| 模拟器 | AVD TestPhone（`emulator-5554`）+ Kiwi（Chrome 137）+ 暴力猴（`fcickoepngcnapddnnmjpkmpekmfmpaa`）；MuMu（`adb connect 127.0.0.1:16384`，本机启动渲染器超时不可依赖） |
+| 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**；CLI 会话里启动会被杀，用计划任务）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
+| CDP | Turbo 占 `tcp:9222` 直连；真机/AVD 走 adb forward（AVD 用 **9223** 避免冲突），每轮 shell 会丢、`test/lib/cdp.js` 自建 |
+| 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计不生效（`innerWidth ≤ 600` 直接返回）；**桌面版匿名访问被知乎强跳登录页（2026-11 起策略），模拟器需复制登录态** |
 | Node | 18+（用到内置全局 `WebSocket`）；**项目零依赖**，无需 npm install |
 
-三种测试环境的接入方式、适用场景与各自陷阱见 [test/README.md](test/README.md)。
+三种测试环境的接入方式、适用场景与各自陷阱见 [test/README.md](test/README.md)；
+**从零搭环境/排障**（暴力猴启用检查与恢复、桌面模式开启、登录态复制）见
+[test/ENVIRONMENT.md](test/ENVIRONMENT.md)。
 
 ## 工作流（改脚本必经）
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.8.7
+// @version      1.8.8
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -1133,46 +1133,52 @@
   // 现象（AVD Kiwi + 真机同构环境实测，2026-11-21）：窄列下点「N 条评论」知乎不再打开
   // fixed 弹层，而是把 .Comments-container **就地展开**在该回答的文档流里（顶部在按钮下方
   // 一整屏开外，本机实测文档坐标 ≈4744、视口高 1700、点击后 scrollY 纹丝不动），
-  // 且全程不调用任何滚动 API（hook scrollIntoView/scrollTo/scroll 事件均零触发）——
-  // 桌面宽屏上没这个问题，因为宽屏走的是 fixed 弹层（modal 路径，上面 4 个函数管它）。
-  // 用户看到的就是「点了 119 条评论，屏幕没任何变化」。
-  // 修法：检测「内联评论区刚出现且顶部在视口外」→ scrollIntoView 带回屏幕内。
+  // 且全程不调用任何滚动 API——桌面宽屏上没这个问题，因为宽屏走的是 fixed 弹层。
+  // 用户看到的就是「点了 N 条评论，屏幕没任何变化」。
+  //
+  // ⚠️ v1.8.8 重写触发机制（真机回归：初始点开 OK，上滑后再点就「弹不出」）：
+  //   旧版是「边沿触发」——只在容器从无到有的那一拍滚一次。真机实测至少三种路径
+  //   会错过这个边沿：①知乎复用同一容器节点（无「无→有」转换）；②虚拟列表重渲染
+  //   使观察时机错位；③容器在 detached 子树里组装后再挂载。边沿一旦错过，
+  //   inlineWas 永远为 true，之后怎么点都不滚——这正是「时灵时不灵」的来源。
+  //   新版改为「点击意图锚定」：点「N 条评论」按钮的瞬间记下（点击时刻 + 所在
+  //   回答卡片），宽限窗内每拍检查目标评论区，主体在视口外就滚入并跟随漂移。
+  //   不依赖任何 DOM 转换瞬间，也天然支持「回答 A 的评论开着、直接点回答 B 的
+  //   评论按钮」的切换场景（B 的容器按 B 的卡片定位）。
   // zoom 环境下 scrollIntoView 的落点已实测可靠（浏览器内部做了 zoom 补偿，
-  // 实测评论区稳稳落在视口顶部附近 94px 处，截图肉眼确认完整可见）。
-  // 触发挂 syncCommentModal（MutationObserver 同步回调 + 800ms 兜底轮询都跑它），
-  // 状态机防重复滚动：只在「不存在 → 存在」的边沿触发一次，滚动到一半又被检测会重入。
-  let inlineWas = false;          // 上一拍内联评论区是否存在
-  let inlineRevealTimer = null;   // 展开后的滚动宽限窗（内容异步加载会让位置漂移）
+  // 评论区稳稳落在视口顶部附近 94px 处）。
+  let pendingReveal = null;      // { item: 点击按钮所在的 .ContentItem, until: 时间戳 }
+  let inlineRevealTimer = null;  // 展开后的跟随定时器（评论异步加载会让位置漂移）
   function revealInlineComments() {
-    if (!CFG.inlineCommentReveal) return;
-    const c = document.querySelector('.Comments-container');
-    if (!c || c.getBoundingClientRect().height < 40) {
-      // 不存在 / 预渲染但未展开（零尺寸不算「已出现」，否则会吞掉真正的展开边沿）
-      inlineWas = false;
-      clearTimeout(inlineRevealTimer);
-      return;
+    if (!CFG.inlineCommentReveal || !pendingReveal) return;
+    if (Date.now() > pendingReveal.until) { pendingReveal = null; return; }
+    // 优先在「被点按钮所在的回答卡片」里找目标容器；找不到再全局兜底
+    let c = null;
+    if (pendingReveal.item && pendingReveal.item.isConnected) {
+      c = pendingReveal.item.querySelector('.Comments-container');
     }
-    const justOpened = !inlineWas;
-    inlineWas = true;
-    if (!justOpened) {
-      // 已处理过本次展开：宽限窗内允许跟随重滚（异步加载导致位置漂移），窗外不再动
-      return;
-    }
+    if (!c) c = document.querySelector('.Comments-container');
+    if (!c) return;                       // 还没展开（异步），等下一拍
     const r = c.getBoundingClientRect();
     const vh = window.innerHeight;
-    // 已在屏内（或部分可见超过 1/3）就不动——尊重用户手动滚动
-    if (r.top >= 0 && r.top < vh) return;
-    if (r.top < 0 && r.bottom > vh / 3) return;
+    // 主体已在屏内（顶部落在视口上半段）就不动——尊重用户手动滚动
+    if (r.top >= -vh * 0.1 && r.top < vh * 0.5) return;
     scrollSoon(c);
-    // 评论是异步加载的（实测首次展开后 6.5s 内容才稳定），期间位置会漂移；
-    // 在宽限窗内每次重排都把顶部重新对齐（幂等：已对齐时 no-op）
+    // 评论是异步加载的（实测首次展开后 ~6.5s 内容才稳定），期间位置会漂移；
+    // 宽限窗内持续把「主体跑到视口外」的评论区拉回（幂等：已对齐时 no-op）
     clearTimeout(inlineRevealTimer);
     let tries = 0;
     const follow = () => {
-      if (!document.querySelector('.Comments-container')) return;   // 被收起/弹层接管
-      const rr = c.getBoundingClientRect();
-      if (rr.top > 60 || rr.top < -80) { scrollSoon(c); }
-      if (++tries < 20) inlineRevealTimer = setTimeout(follow, 500);
+      if (!pendingReveal || Date.now() > pendingReveal.until) return;
+      let cc = null;
+      if (pendingReveal.item && pendingReveal.item.isConnected) {
+        cc = pendingReveal.item.querySelector('.Comments-container');
+      }
+      if (!cc) cc = document.querySelector('.Comments-container');
+      if (!cc) return;                    // 被收起
+      const rr = cc.getBoundingClientRect();
+      if (rr.top > vh * 0.5) { scrollSoon(cc); }   // 主体又落到视口下方 → 拉回
+      if (++tries < 16) inlineRevealTimer = setTimeout(follow, 500);
     };
     inlineRevealTimer = setTimeout(follow, 700);
   }
@@ -1181,6 +1187,25 @@
       try { el.scrollIntoView(); } catch (e2) {}
     }
   }
+  // 点击意图采集（capture 阶段，知乎自己的 handler 之前/之后都行——只读不改）。
+  // 点「N 条评论」→ 记录意图；点「收起评论」→ 清除意图（收起不该触发滚动）。
+  // ⚠️ 文案带 U+200B 前缀，正则直接匹配子串即可，不要 trim 后全等。
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    const t = (b.textContent || '').replace(/[\u200b\u200c\u200d\ufeff]/g, '');
+    if (/收起评论/.test(t)) {
+      pendingReveal = null;
+      clearTimeout(inlineRevealTimer);
+      return;
+    }
+    if (/[0-9][^]*条评论|条评论/.test(t) && /[0-9]/.test(t)) {
+      pendingReveal = {
+        item: b.closest('.ContentItem') || null,
+        until: Date.now() + 8000,       // 覆盖评论异步加载的 ~6.5s 漂移期
+      };
+    }
+  }, true);
 
   // 返回键：消费哨兵 → 关闭弹层，而不是离开问答页
   window.addEventListener('popstate', () => {

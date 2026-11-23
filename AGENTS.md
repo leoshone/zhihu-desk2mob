@@ -3,16 +3,10 @@
 zhihu-desk2mob：把知乎桌面版网页重排为手机单列的油猴脚本。
 单文件交付（`zhihu-desk2mob.user.js`）、零依赖、无构建。仓库内一切工具与文档都为它服务。
 
-> 面向普通用户的说明（是什么/怎么装）在 [README.md](README.md)；本文只写 AI/开发者
-> 接手本项目需要知道的东西。文档分工：README=用户、AGENTS.md=AI 约束与工作流、
-> docs/design-decisions.md=设计沿革、test/README.md=测试、test/ENVIRONMENT.md=环境搭建。
 
 ## 新环境准备（换电脑必做，先于一切开发/测试）
 
-本项目依赖 **4 个项目级 skill**（跨项目通用方法，沉淀在独立仓库
-[leoshone/skills](https://github.com/leoshone/skills)）。换电脑 / 新会话接手时，
-AI 应先确认这些 skill 已就位（WorkBuddy 项目级路径：`{workspace}/.workbuddy/skills/`；
-本机另有全局库 `D:\AiSpaces\AiUse\SKM\skills`）：
+换电脑 / 新会话接手时，AI 必须先将下面4个skill安装到项目级；
 
 | Skill | 用途（本项目何时用到） |
 | --- | --- |
@@ -21,16 +15,14 @@ AI 应先确认这些 skill 已就位（WorkBuddy 项目级路径：`{workspace}
 | [browser-extension-install](https://github.com/leoshone/skills/tree/main/browser-extension-install) | 给 Chromium 系浏览器装暴力猴等扩展（搭环境时） |
 | [violentmonkey-script-install](https://github.com/leoshone/skills/tree/main/violentmonkey-script-install) | CDP 自动安装/更新用户脚本（装/更新本项目脚本到各环境浏览器，日常高频） |
 
-本地已有副本（`D:\AiSpaces\Work\<日期>\leoshone-skills\`，git 仓库可整仓 clone：
-`https://github.com/leoshone/skills.git`）。**开始开发或测试前先确认装好**——
-历史教训：AVD 启动反复闪退排查半天，答案就在 avd-boot skill 里。
-
 ## 项目结构
 
 ```
 zhihu-desk2mob.user.js      脚本本体（唯一交付物）
 docs/design-decisions.md    ADR 设计决策汇编（17 份历史方案合并，按功能域 13 章）
 test/                       CDP 真机/模拟器测试与诊断探针（见 test/README.md）
+  └ README.md               测试说明
+  └ ENVIRONMENT.md          环境搭建。
   └ lib/cdp.js              CDP 工具库（唯一实现）
 ```
 
@@ -38,8 +30,7 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 
 | 项 | 值 |
 | --- | --- |
-| 真机 | Xiaomi 2211133C（`fuxi`），1080×2400，CSS 视口 393×873 |
-| 真机浏览器 | Quetta（Chrome 148）+ 暴力猴 |
+| 真机 | Xiaomi 2211133C（`fuxi`），1080×2400，CSS 视口 393×873  + Quetta（Chrome 148）+ 暴力猴|
 | 模拟器 | AVD TestPhone（`emulator-5554`）+ Kiwi（Chrome 137）+ 暴力猴（`fcickoepngcnapddnnmjpkmpekmfmpaa`）；MuMu（`adb connect 127.0.0.1:16384`，本机启动渲染器超时不可依赖） |
 | 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
 | CDP | Turbo 占 `tcp:9222` 直连；真机/AVD 走 adb forward（AVD 用 **9223** 避免冲突），每轮 shell 会丢、`test/lib/cdp.js` 自建 |
@@ -133,22 +124,8 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 ## 已知未修（不要当成新 bug 去追）
 
 1. 弹层原生「关闭」按钮仍在屏幕外（`right:-60px`），退出由返回手势承担。
-2. v1.0.1 / v1.0.2 的改进未包含（另一条分支，代码只在 git 历史）。
-3. 专栏页比问答页多一层常驻 62px 吸顶文章头，可能压住「滚到顶部对齐」的内容（截图复现不稳，未动手）。
-4. `test-idea-option` 的「调出发布框」不稳（固定偏移扫滚动 + focus 判据有缺陷）——已如实报错，
+2. 专栏页比问答页多一层常驻 62px 吸顶文章头，可能压住「滚到顶部对齐」的内容（截图复现不稳，未动手）。
+3. `test-idea-option` 的「调出发布框」不稳（固定偏移扫滚动 + focus 判据有缺陷）——已如实报错，
    要恢复判别力需改定位方式。与列宽无关。
-5. `test-counterzoom` 的 ②③ 稳定失败、①② 间歇失败（均为既有问题、与版本无关，判据见上）。
-6. 顶部导航右侧热榜词条/搜索框被裁一截（横滑容器初始位置，可滑到）——可接受，不修。
-
-## 待办（优先）
-
-弹层溢出判断与 zoom 耦合：`fixCommentModal()` 用双方 rect（CSS px）比大小，而容器高按布局 px 定
-→ 反缩放一变结论就翻转、修正时灵时不灵。要做：判断改成与 zoom 无关（可见视口高比，或布局坐标下比），
-确认弹层顶部不被遮挡。改完跑 `test-comment-back --installed` + `test-modal-layout`。
-
-## 更多背景
-
-- 设计决策沿革（为什么这么写、试过哪些无效方案）：[docs/design-decisions.md](docs/design-decisions.md)
-- 测试环境细节与陷阱：[test/README.md](test/README.md)
-- 测试与探针清单：[test/README.md](test/README.md)
-- 通用 skill 沉淀（跨项目）：[leoshone/skills](https://github.com/leoshone/skills)
+4. `test-counterzoom` 的 ②③ 稳定失败、①② 间歇失败（均为既有问题、与版本无关，判据见上）。
+5. 顶部导航右侧热榜词条/搜索框被裁一截（横滑容器初始位置，可滑到）——可接受，不修。

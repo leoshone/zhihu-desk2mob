@@ -2185,4 +2185,6 @@
   };
   window.__z2mTick = tick;
   window.__z2mSync = syncCommentModal;
+  // 测试口子：单测直接调 holder 钳制（test-holder-pin.js 构造吹大场景后调它断言钳制效果）
+  window.__z2mPinHolder = pinStickyHolder;
 })();

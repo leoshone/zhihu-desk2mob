@@ -129,3 +129,16 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
    要恢复判别力需改定位方式。与列宽无关。
 4. `test-counterzoom` 的 ②③ 稳定失败、①② 间歇失败（均为既有问题、与版本无关，判据见上）。
 5. 顶部导航右侧热榜词条/搜索框被裁一截（横滑容器初始位置，可滑到）——可接受，不修。
+6. `test-actions-wrap` 最后一条「最右按钮都在列宽内」在当前知乎构建上稳定 FAIL
+   （v1.9.2 前 stash 对照同样失败，既有问题；与吸底/holder 修正无关）。
+
+## 吸底栏/holder 专项（详见 docs/design-decisions.md §13）
+
+- `.ContentItem-actions.Sticky`（吸底操作栏）与 `.Sticky--holder`（占位壳）是知乎
+  sticky JS 的地盘，zoom 干扰其判断后由脚本接管：**栏恒定 fixed 吸底 + holder 高度
+  恒等于栏高**（`__z2mPinHolder`，三路同步：scroll 钩子/每拍/400ms interval）。
+- 改这两处必跑：`test-holder-pin.js`（docH 无脉冲）+ `test-comment-back.js`
+  （点评论滚动路径）。诊断探针：`probe-flicker{,2}.js`（栏闪烁）、`probe-gap.js`（holder 脉冲）。
+- 两个已实锤的知乎正反馈形态：类的 `slideInUp` 动画重放（v1.9.2）、holder height
+  逐级吹大 ×~2.5≈1/zoom（v1.8.9/v1.9.3）——**同一反馈环的稳态/脉冲两形态**，
+  修「稳态」不等于修了「脉冲」，滚动期问题必须挂 scroll 渲染前同步。

@@ -54,6 +54,7 @@ node test-column-thumb.js --installed    # 专栏广场：推荐卡片右侧图 
 node test-ring-comment.js --installed    # 圈子：PinItem 图文网格缩略图不再溢出方框格子、盖住「评论」动作栏
 node test-idea-box.js    --installed    # 圈子：底部「与圈友分享」浮动框在页面上居中（框内图标/文案保持默认）+ 收窄不顶屏幕两边 + 下移
 node test-reco-carousel.js --installed  # 文章页：底部「推荐阅读」标题与第一张卡片都和正文一样留左白、不顶边，其余卡片右滑可见
+node test-holder-pin.js   --installed    # 回答页：Sticky--holder 正反馈钳制——模拟知乎逐级吹大，docH 全程无脉冲（v1.9.3）
 ```
 
 > 两条注意：

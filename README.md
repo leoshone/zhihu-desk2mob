@@ -87,8 +87,8 @@ https://raw.githubusercontent.com/leoshone/zhihu-desk2mob/main/zhihu-desk2mob.us
 
 ### 配套方法论（外部仓库）
 
-CDP 驱动真机浏览器（装／更新脚本、注入、取证）的**通用方法论**已沉淀到独立仓库：
-[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)（公有）。含：INTERNAL crx profile 搭建、CDP 驱动要点、环境陷阱表、Python 驱动模板。本仓库的 `test/lib/cdp.js` 是其中 Kiwi/真机路径的 Node 实现。
+CDP 驱动浏览器（装／更新脚本、扩展安装、AVD 启动等）的**通用方法论**已沉淀到独立仓库：
+[leoshone/skills](https://github.com/leoshone/skills)（公有），含 4 个 skill：avd-boot（模拟器启动）、avd-install-apk、browser-extension-install（装扩展）、violentmonkey-script-install（装用户脚本）。
 
 ### docs 索引
 
@@ -98,4 +98,4 @@ CDP 驱动真机浏览器（装／更新脚本、注入、取证）的**通用�
 | `design-decisions.md` | **ADR 设计决策汇编**：17 份历史方案合并（评论弹层/发布框/反缩放/字号/块状版式/缩略图/问题页/登录/个人主页/改版适配/留白），含根因分析、实测数据、试过无效的路子 |
 
 `test/` 里的测试要驱动真机，依赖 CDP 工具库 `test/lib/cdp.js`（项目内，单一实现）。
-方法论与陷阱速查见 [leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)。
+通用方法论与陷阱速查见 [leoshone/skills](https://github.com/leoshone/skills)。

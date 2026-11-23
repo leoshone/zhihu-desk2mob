@@ -3,6 +3,28 @@
 zhihu-desk2mob：把知乎桌面版网页重排为手机单列的油猴脚本。
 单文件交付（`zhihu-desk2mob.user.js`）、零依赖、无构建。仓库内一切工具与文档都为它服务。
 
+> 面向普通用户的说明（是什么/怎么装）在 [README.md](README.md)；本文只写 AI/开发者
+> 接手本项目需要知道的东西。文档分工：README=用户、AGENTS.md=AI 约束与工作流、
+> docs/design-decisions.md=设计沿革、test/README.md=测试、test/ENVIRONMENT.md=环境搭建。
+
+## 新环境准备（换电脑必做，先于一切开发/测试）
+
+本项目依赖 **4 个项目级 skill**（跨项目通用方法，沉淀在独立仓库
+[leoshone/skills](https://github.com/leoshone/skills)）。换电脑 / 新会话接手时，
+AI 应先确认这些 skill 已就位（WorkBuddy 项目级路径：`{workspace}/.workbuddy/skills/`；
+本机另有全局库 `D:\AiSpaces\AiUse\SKM\skills`）：
+
+| Skill | 用途（本项目何时用到） |
+| --- | --- |
+| [avd-boot](https://github.com/leoshone/skills/tree/main/avd-boot) | 启动 AVD 模拟器（中间验证环境）。**必须按它的方法用计划任务脱离会话启动**，直接从 CLI 启动会被连带杀死 |
+| [avd-install-apk](https://github.com/leoshone/skills/tree/main/avd-install-apk) | AVD 上装 Kiwi 等浏览器 APK（搭环境时） |
+| [browser-extension-install](https://github.com/leoshone/skills/tree/main/browser-extension-install) | 给 Chromium 系浏览器装暴力猴等扩展（搭环境时） |
+| [violentmonkey-script-install](https://github.com/leoshone/skills/tree/main/violentmonkey-script-install) | CDP 自动安装/更新用户脚本（装/更新本项目脚本到各环境浏览器，日常高频） |
+
+本地已有副本（`D:\AiSpaces\Work\<日期>\leoshone-skills\`，git 仓库可整仓 clone：
+`https://github.com/leoshone/skills.git`）。**开始开发或测试前先确认装好**——
+历史教训：AVD 启动反复闪退排查半天，答案就在 avd-boot skill 里。
+
 ## 项目结构
 
 ```
@@ -19,14 +41,15 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 | 真机 | Xiaomi 2211133C（`fuxi`），1080×2400，CSS 视口 393×873 |
 | 真机浏览器 | Quetta（Chrome 148）+ 暴力猴 |
 | 模拟器 | AVD TestPhone（`emulator-5554`）+ Kiwi（Chrome 137）+ 暴力猴（`fcickoepngcnapddnnmjpkmpekmfmpaa`）；MuMu（`adb connect 127.0.0.1:16384`，本机启动渲染器超时不可依赖） |
-| 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**；CLI 会话里启动会被杀，用计划任务）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
+| 桌面调试 | Turbo 浏览器（`D:\Software\Turbo\turbo.exe`，Chrome 156，`--remote-debugging-port=9222` 直连，**不经 adb**）；暴力猴 2.50（`jinjaccalgkegednnccohejagnlnfdag`） |
 | CDP | Turbo 占 `tcp:9222` 直连；真机/AVD 走 adb forward（AVD 用 **9223** 避免冲突），每轮 shell 会丢、`test/lib/cdp.js` 自建 |
 | 站点设置 | `zhihu.com` 必须开「桌面版网站」，否则脚本按设计不生效（`innerWidth ≤ 600` 直接返回）；**桌面版匿名访问被知乎强跳登录页（2026-11 起策略），模拟器需复制登录态** |
 | Node | 18+（用到内置全局 `WebSocket`）；**项目零依赖**，无需 npm install |
 
-三种测试环境的接入方式、适用场景与各自陷阱见 [test/README.md](test/README.md)；
-**从零搭环境/排障**（暴力猴启用检查与恢复、桌面模式开启、登录态复制）见
-[test/ENVIRONMENT.md](test/ENVIRONMENT.md)。
+环境**搭建/排障**（五步就绪判据、暴力猴启用恢复、登录态复制）在
+[test/ENVIRONMENT.md](test/ENVIRONMENT.md)；三种环境的接入差异与陷阱在
+[test/README.md](test/README.md)「测试环境」一节。浏览器/AVD 这类**长驻进程从 CLI
+会话里启动会被连带杀死**——统一按 `avd-boot` skill 的计划任务方式启动。
 
 ## 工作流（改脚本必经）
 
@@ -67,6 +90,15 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 - 凡「加载期需要隐藏/矫正元素」的 pass，必须**同步挂在 MutationObserver 回调里**
   （只挂去抖的 tick 会先显示未处理形态再跳变）。每个 pass 要有廉价前置判断（防拖慢主线程）。
 
+### 外部依赖契约
+
+- **知乎 css-in-js 类名每次构建随机化**（实测 `css-1y3l2hj` → `css-1rd8uzu`）——
+  CSS 规则按类名选择会静默失效。要稳定定位只能按**结构关系**（如 `.PageHeader` 的
+  positioned 祖先）+ JS 每拍幂等重写（知乎重渲染会清内联样式）。
+- **`test/lib/cdp.js` 是全仓库唯一 CDP 实现**，`test/cdp.js` 只是一行转发。
+  skills 仓库里还有一份通用版 `cdp.js`（多了代理环境变量清理，跨项目用）——
+  两者**不互相同步**，各自演进；本项目测试只用项目内这份。
+
 ## 调试顺序
 
 1. 判断是否回归：是 → `git log -S "<规则原文>"` 定位，别猜。
@@ -92,6 +124,11 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
   逻辑失效；改按「当前位置是否正确」判断（幂等）。
 - **写想法卡片的输入组件在桌面模拟环境「加载失败」**（知乎接口问题，非脚本）——
   该卡片的布局改动要在 Kiwi 真机验证（v1.7.1/1.7.2 两次失败已回退，教训记录）。
+- **Node 全局 WebSocket 读代理环境变量走代理**，对 `127.0.0.1` 的 CDP ws 握手会失败
+  （实测 "non-101 status code"）——本机 v2rayN 等代理环境必踩；skills 仓库通用版 cdp.js
+  已内置清理，排查连接问题时先查代理变量。
+- **PowerShell `Start-Process` 会因 `https_proxy`/`HTTPS_PROXY` 大小写重复键直接抛异常**
+  （环境字典冲突）——启动外部进程用计划任务或 cmd `start` 绕开。
 
 ## 已知未修（不要当成新 bug 去追）
 
@@ -112,6 +149,6 @@ test/                       CDP 真机/模拟器测试与诊断探针（见 test
 ## 更多背景
 
 - 设计决策沿革（为什么这么写、试过哪些无效方案）：[docs/design-decisions.md](docs/design-decisions.md)
-- 测试环境细节：[test/README.md](test/README.md)
+- 测试环境细节与陷阱：[test/README.md](test/README.md)
 - 测试与探针清单：[test/README.md](test/README.md)
-- CDP 驱动方法论（外部仓库，公有）：[leoshone/Skills → browser-extension-e2e](https://github.com/leoshone/Skills/tree/main/browser-extension-e2e)
+- 通用 skill 沉淀（跨项目）：[leoshone/skills](https://github.com/leoshone/skills)

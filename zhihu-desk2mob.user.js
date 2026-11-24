@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.9.11
+// @version      1.9.13
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -1227,6 +1227,14 @@
     } else if (!open && modalWasOpen) {
       modalWasOpen = false;
       dropGuard();
+      // v1.9.12：从「回复线程弹层」关闭时恢复滚动锚点。这类弹层（内联评论 →「查看全部
+      // N 条回复」打开）关闭后知乎把视口留在回答正文深处——用户看到「跳过了评论页，
+      // 直接回到问答正文」。恢复到点「查看全部回复」前的滚动位置 = 回到评论列表所在处。
+      if (preThreadScroll && Date.now() < preThreadScroll.until) {
+        const anchor = preThreadScroll;
+        preThreadScroll = null;
+        setTimeout(() => { try { window.scrollTo(0, anchor.y); } catch (e) {} }, 120);
+      }
     }
     // v1.9.10：线程哨兵动态补压。「查看全部回复」有两条入口路径：
     //   A. 弹层列表 → 线程：点时弹层已开，capture 点击监听即时压 z2mThread ✓；
@@ -1269,6 +1277,9 @@
   // 评论区稳稳落在视口顶部附近 94px 处）。
   let pendingReveal = null;      // { item: 点击按钮所在的 .ContentItem, until: 时间戳 }
   let inlineRevealTimer = null;  // 展开后的跟随定时器（评论异步加载会让位置漂移）
+  // v1.9.12：内联评论 →「查看全部回复」独立弹层的滚动锚点（声明提前避免 TDZ，
+  // 赋值在下方 capture 点击监听、消费在 syncCommentModal 的弹层关闭边沿）
+  let preThreadScroll = null;    // { y: 进弹层前 scrollY, until: 有效期 }
   function revealInlineComments() {
     if (!CFG.inlineCommentReveal || !pendingReveal) return;
     if (Date.now() > pendingReveal.until) { pendingReveal = null; return; }
@@ -1350,13 +1361,16 @@
   function threadViewEls() {
     const box = modalEl();
     if (!box) return null;
-    const threads = [], hidden = [];
+    const threads = [];
     let listV = null;
     for (const v of [...box.children]) {
       const display = getComputedStyle(v).display;
-      if (isListView(v) && display !== 'none') { listV = v; continue; }
-      if (isThreadView(v)) { threads.push(v); if (display === 'none') hidden.push(v); }
+      // ⚠️ 列表视图判据不看 display——线程态下列表视图**必然是 display:none**（被知乎藏起），
+      // v1.9.9 曾写「可见才认」，导致线程态下 listV 恒 null、返回键永远走关闭分支（v1.9.11 修）。
+      if (isListView(v)) { listV = v; continue; }
+      if (isThreadView(v)) threads.push(v);
     }
+    // 线程态 = 至少一个可见线程视图（列表可能可见[列表态]也可能隐藏[线程态]，都合法）
     if (!listV || !threads.some(t => getComputedStyle(t).display !== 'none')) return null;
     return { listV, threads };
   }
@@ -1368,18 +1382,29 @@
     for (const t of els.threads) t.style.display = 'none';
     return true;
   }
-  // 点「查看全部 N 条回复」→ 压线程哨兵；并先藏掉上一轮残留的可见线程尸体（防叠加遮挡）
+  // 点「查看全部 N 条回复」→ 压线程哨兵；并先藏掉上一轮残留的可见线程尸体（防叠加遮挡）。
+  // v1.9.12 补：此点击还可能是「内联评论 → 独立回复页弹层」入口（点时弹层不存在，
+  // 点击后知乎新开一个只有线程视图的弹层）。此时要记录「进弹层前的滚动锚点」——
+  // 这类弹层关闭后（无论返回键还是关闭按钮），知乎会把视口留在回答正文深处，
+  // 用户看到「跳过了评论页」。关闭时恢复到该锚点。（变量声明在 pendingReveal 处，避免 TDZ）
   document.addEventListener('click', (e) => {
     const b = e.target && e.target.closest ? e.target.closest('button') : null;
     if (!b) return;
     const t = (b.textContent || '').replace(/[\u200b\u200c\u200d\ufeff]/g, '');
-    if (!/查看全部\s*[\d,]*\s*条回复/.test(t) || !modalEl()) return;
-    const box = modalEl();
-    for (const v of [...box.children]) {
-      if (isThreadView(v) && getComputedStyle(v).display !== 'none') v.style.display = 'none';
+    if (!/查看全部\s*[\d,]*\s*条回复/.test(t)) return;
+    if (modalEl()) {
+      // 弹层内入口：藏掉上一轮残留的可见线程尸体（防叠加遮挡）+ 压线程哨兵
+      const box = modalEl();
+      for (const v of [...box.children]) {
+        if (isThreadView(v) && getComputedStyle(v).display !== 'none') v.style.display = 'none';
+      }
+      try { history.pushState({ z2mThread: 1 }, '', location.href); } catch (err) {}
+    } else {
+      // 内联入口：记录滚动锚点（弹层将由此点击打开）
+      preThreadScroll = { y: Math.round(scrollY), until: Date.now() + 60000 };
     }
-    try { history.pushState({ z2mThread: 1 }, '', location.href); } catch (err) {}
   }, true);
+  // 弹层关闭后恢复滚动锚点（挂在 syncCommentModal 的关→边沿，见下方 popstate/dropGuard 联动）
 
   // 返回键：消费哨兵 → 关闭弹层，而不是离开问答页
   window.addEventListener('popstate', () => {

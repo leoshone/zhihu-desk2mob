@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.9.15
-// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
+// @version      1.9.16
+// @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**；v1.9.16 重写评论「回复线程」的返回键语义——不再用 display 手术模拟视图切换（真机上会把知乎自己的切换钉死，导致「第二次点查看全部回复点不动」），改为返回时点知乎自带的 ‹ 原生回列表，并保证历史哨兵恒为一层（弹出即补压）——「从回复页返回却跳过评论页直接回问答页」的错位问题一并消失。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
 // @run-at       document-body
@@ -19,6 +19,11 @@
   const forceOn = /[?&]z2m-force=1/.test(location.search);
   if ((window.innerWidth || 0) <= 600 && !forceOn) return;
   if (window.__z2mStop) { try { window.__z2mStop(); } catch (e) {} }
+  // 实例卫兵：脚本被**热注入/热更新**时，旧实例的 document/window 监听（click/popstate）
+  // 已注册的摘不掉，会和新实例抢着处理同一次返回 —— 现场表现为「弹层被关掉 / 哨兵多压一层」
+  // 这类完全对不上的错乱（调试时反复踩到）。每次启动递增计数，旧实例的监听一律 no-op。
+  const MY_INST = (window.__z2mInst = (window.__z2mInst || 0) + 1);
+  const alive = () => window.__z2mInst === MY_INST;
 
   // 窄列宽度（CSS px）。**屏幕上的实际大小 = 名义字号 × (屏幕可用宽 ÷ SW)** ——
   // 列越窄，同一个字号在屏上就越大，而列**仍然恰好铺满屏幕**（zoom = visW / SW 会同比变大，
@@ -1110,7 +1115,25 @@
   let selfPop = false;       // 标记「由脚本主动 history.back()」，用于区分用户返回
   let modalWasOpen = false;  // 上一拍的弹层开关状态
 
-  function modalEl() { return document.querySelector(MODAL_SEL); }
+  // ⚠️ v1.9.16：`.Modal-content` 在页面上**恒存在一份隐藏预渲染副本**（真机实测：
+  //   内联评论展开时，DOM 里那个 .Modal-content 的卡片 opacity:0 / translateY(20px)，
+  //   屏幕上根本看不见）。旧版 modalEl() 直接 querySelector 第一个，于是「以为弹层开着」
+  //   —— 返回键被当成「关弹层」白白吃掉一次，用户看到「按了返回没反应」。
+  //   这里必须要求**真的可见**：checkVisibility（含 opacity/visibility）+ 尺寸下限。
+  function modalVisible(mc) {
+    if (!mc) return false;
+    const r = mc.getBoundingClientRect();
+    if (r.width < 120 || r.height < 120) return false;
+    if (mc.checkVisibility) {
+      try { return mc.checkVisibility({ opacityProperty: true, visibilityProperty: true }); } catch (e) {}
+    }
+    return true;
+  }
+  function modalEl() {
+    for (const mc of document.querySelectorAll(MODAL_SEL)) if (modalVisible(mc)) return mc;
+    return null;
+  }
+
 
   // 定位弹层的三层结构：卡片(Modal-content) / 容器(承载它的固定定位遮罩) / 是否需要修正
   function locateModal() {
@@ -1160,8 +1183,14 @@
   }
 
   // 压入一条哨兵历史：返回键会先消费它，而不是直接离开知乎
+  // 「栈顶是否已经有哨兵」以 history.state 为唯一真相（不用本地布尔值）：
+  // 刷新后本地变量归零、栈里的哨兵却还在，用布尔值会**多压一层** → 又回到残留层错位。
+  function sentinelOnTop() {
+    const st = history.state;
+    return !!(st && (st.z2mComment === 1 || st.z2mThread === 1));
+  }
   function pushGuard() {
-    if (guardPushed) return;
+    if (sentinelOnTop()) { guardPushed = true; return; }
     try {
       history.pushState({ z2mComment: 1 }, '', location.href);
       guardPushed = true;
@@ -1199,18 +1228,39 @@
     setTimeout(recheck, 150);
   }
 
-  // 关闭弹层：优先点知乎自己的「关闭」按钮（.click() 不受命中测试限制，
-  // 该按钮即使被放在屏幕外也能生效）；否则补一发 Escape。
+  // 按「真实指针序列」点一个控件。
+  // ⚠️ 知乎大量可点控件是 div/span（**没有 .click()**），而 React 的事件委托挂在根节点，
+  //    只 dispatch('click') 常常毫无反应（真机实测：线程返回箭头、弹层关闭按钮）。
+  //    这里统一按 pointerdown → mousedown → pointerup → mouseup → click 派发；
+  //    原生 <button> 额外补一次 .click()（走浏览器默认激活行为，最稳）。
+  function clickLikeUser(el) {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const o = {
+      bubbles: true, cancelable: true, view: window,
+      clientX: Math.round(r.left + r.width / 2), clientY: Math.round(r.top + r.height / 2),
+    };
+    try {
+      if (el.tagName === 'BUTTON' && typeof el.click === 'function') el.click();
+      el.dispatchEvent(new PointerEvent('pointerdown', o));
+      el.dispatchEvent(new MouseEvent('mousedown', o));
+      el.dispatchEvent(new PointerEvent('pointerup', o));
+      el.dispatchEvent(new MouseEvent('mouseup', o));
+      el.dispatchEvent(new MouseEvent('click', o));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // 关闭弹层：点知乎自己的「关闭」按钮；不行再补 Escape。
   function closeCommentModal() {
     const found = locateModal();
     if (!found) return;
     const scope = found.layer || found.mc;
     const btn = scope.querySelector(CLOSE_SEL) || document.querySelector(CLOSE_SEL);
-    if (btn) { try { btn.click(); } catch (e) {} }
-    else { sendEscape(); }
+    if (btn) clickLikeUser(btn); else sendEscape();
     // 兜底：一拍之后若仍开着，再补一发 Escape
     setTimeout(() => {
-      if (document.querySelector(MODAL_SEL)) sendEscape();
+      if (modalEl()) sendEscape();
     }, 350);
   }
 
@@ -1241,23 +1291,10 @@
         setTimeout(() => { try { window.scrollTo(0, anchor.y); } catch (e) {} }, 120);
       }
     }
-    // v1.9.10：线程哨兵动态补压。「查看全部回复」有两条入口路径：
-    //   A. 弹层列表 → 线程：点时弹层已开，capture 点击监听即时压 z2mThread ✓；
-    //   B. 内联评论 → 线程弹层（点内联区的「查看全部回复」，知乎直接开一个线程态弹层）：
-    //      点时 modalEl() 尚为 null，capture 不压；弹层开后 syncCommentModal 只压 z2mComment。
-    //      B 路径下返回键弹出 z2mComment，线程视图无列表可切 → 关弹层露出内联评论列表 ✓。
-    // 补压条件（v1.9.11 收紧）：仅当「弹层开 + 线程可见 + 栈顶既非 z2mThread 也非 z2mComment」
-    // 才补压（= 知乎直接以线程态开弹层且还没有任何哨兵的当拍）。⚠️ 不能在每拍持续补：
-    // 若线程可见就压，back 切回列表后的下一拍 tick 会看到「线程已藏」不再压 ✓，但
-    // back 与 tick 之间存在竞争窗口——多压的 z2mThread 会残留栈中，用户下一次返回
-    // 先弹掉残留层（视图已是列表态 → threadViewEls null）→ 走关闭分支把弹层关掉 =
-    // 「第二次返回直接退出评论」的错乱行为。
-    if (open && threadViewEls()) {
-      const cur = history.state;
-      if (!cur || (cur.z2mThread !== 1 && cur.z2mComment !== 1)) {
-        try { history.pushState({ z2mThread: 1 }, '', location.href); } catch (e) {}
-      }
-    }
+    // v1.9.16：线程视图（弹层内**或内联**）也算「一层 UI」——只要它可见就必须有哨兵。
+    // 兜住两种没有点击捕获的路径：①脚本注入前线程就已开着；②知乎自己从别处打开线程。
+    // pushGuard 幂等（栈顶已有哨兵就不压），所以每拍调用不会多压层。
+    if (CFG.commentBack && threadBackArrow()) pushGuard();
     if (open) fixCommentModal();
     revealInlineComments();
   }
@@ -1327,6 +1364,7 @@
   // 点「N 条评论」→ 记录意图；点「收起评论」→ 清除意图（收起不该触发滚动）。
   // ⚠️ 文案带 U+200B 前缀，正则直接匹配子串即可，不要 trim 后全等。
   document.addEventListener('click', (e) => {
+    if (!alive()) return;
     const b = e.target && e.target.closest ? e.target.closest('button') : null;
     if (!b) return;
     const t = (b.textContent || '').replace(/[\u200b\u200c\u200d\ufeff]/g, '');
@@ -1343,109 +1381,109 @@
     }
   }, true);
 
-  // ---- 评论回复线程视图的返回键（v1.9.7 建立，v1.9.9 修「再点点不动」）----
-  // 现象：弹层内点「查看全部 N 条回复」→ 知乎在**同一个弹层**里把内容切换成「回复线程视图」，
-  // **知乎不压任何历史记录**。此时按返回键：栈顶还是弹层哨兵 z2mComment → 脚本直接关掉
-  // 整个弹层——用户看到「返回键回不到刚才的评论页」（真机复现）。
-  // v1.9.7 修复：点「查看全部 N 条回复」时补压一层线程哨兵 {z2mThread:1}；返回键弹出它时
-  // 只把视图切回列表（弹层保持），再次返回才关弹层。
+  // ---- 评论回复线程视图：返回键语义（v1.9.16 重写）----
+  // 知乎怎么显示线程（真机实测 2026-11-24，问题页 / 答案页）：
+  //   · 点「查看全部 N 条回复」→ 知乎在 .Modal-content **末尾追加**一个线程视图节点
+  //     （列表视图 css-feetku 原地不动，新线程 css-tpyajk 追加在后面；有时知乎自己会把列表
+  //     设成 display:none，有时两个都留着靠滚动定位 —— **这是知乎的自由，我们一律不碰**）；
+  //   · 线程页头部是「‹ 评论回复」，那颗 ‹（svg.ZDI--ArrowLeftSmall24，包在 cursor:pointer
+  //     的 div 里）就是知乎自己的返回：点它 → 滚动回原位、线程节点收起，**全程不动 history**。
+  //   · ⚠️ .Modal-content 在页面上**恒存在一份隐藏预渲染副本**（卡片 opacity:0），
+  //     所以「有 .Modal-content」≠「弹层开着」，判据必须带可见性（见 modalEl/checkVisibility）。
   //
-  // v1.9.9（用户反馈 2026-11-24：切回列表后**再点同一按钮没反应**）——真机全景检查发现
-  // 弹层 children 里堆了 **8 个视图节点**：知乎每次点「查看全部回复」都**新建**一个线程视图
-  // 插进弹层，旧的隐藏但**不删除**；往返几轮后 = 多个 display:none 的线程尸体 + **多个
-  // flex 可见的线程视图叠在一起**。v1.9.7 的 threadViewEls 只处理「一个线程+一个列表」，
-  // 切回列表时把某个 none 的尸体误当列表点亮，真正的可见线程（可能 2+ 个）没被全藏 →
-  // 视觉上「点了没变化」。且按钮点击是有效的（React 重渲染线程到新节点），只是被尸体挡住。
-  // v1.9.9 改为**集合式清扫**：
-  //   · 列表视图 = 弹层里「含『N 条评论』标题文本」的唯一子视图（每弹层恒一份）；
-  //   · 线程视图 = 其余「文本以『评论回复』开头」的子视图（无论可见与否）；
-  //   · 切回 = 列表显示 + **全部**线程视图隐藏（清尸不删节点，避免扰动 React）；
-  //   · 进线程时顺手把上一轮的可见线程尸体藏掉（防叠加）。
-  const isListView = (v) => /条评论/.test((v.textContent || '').slice(0, 200));
-  const isThreadView = (v) => (v.textContent || '').replace(/[\u200b]/g, '').startsWith('评论回复');
-  function threadViewEls() {
-    const box = modalEl();
-    if (!box) return null;
-    const threads = [];
-    let listV = null;
-    for (const v of [...box.children]) {
-      const display = getComputedStyle(v).display;
-      // ⚠️ 列表视图判据不看 display——线程态下列表视图**必然是 display:none**（被知乎藏起），
-      // v1.9.9 曾写「可见才认」，导致线程态下 listV 恒 null、返回键永远走关闭分支（v1.9.11 修）。
-      if (isListView(v)) { listV = v; continue; }
-      if (isThreadView(v)) threads.push(v);
+  // ⚠️ v1.9.7~v1.9.15 八版全败的根因（真机实锤，别再走回头路）：
+  //   旧版用「display 手术」模拟切换（列表写 flex、线程写 none），再用「每进一次线程压一层
+  //   z2mThread 哨兵」逐层返回。真机上双输：
+  //     ① 内联 display 钉死后，知乎自己的切换改不动这些节点 —— 第二次点「查看全部回复」，
+  //        知乎复用了被我们藏掉的节点（或我们又把刚建的线程藏掉），界面纹丝不动
+  //        = 用户说的「第二次点不动」；
+  //     ② 每轮进出压一层哨兵，残留层越堆越多；返回时弹出的是**上一轮的残留层**，判据错位，
+  //        落进「关弹层」分支 = 用户说的「跳过评论页直接回问答页」。
+  //   （现场证据：用户页 .Modal-content 里躺着 4 个 inline display:none 的线程尸体 + 1 个
+  //     可见线程 + 列表 inline flex；history.state 顶层是 z2mThread 而画面是列表 —— 典型错位。）
+  // v1.9.16 新模型：
+  //   · **不再碰 display**，列表/线程切换完全交给知乎；
+  //   · 哨兵**恒为一层**：弹层打开压一层 {z2mComment}；返回键弹出后按当前 UI 决定，需要继续
+  //     守弹层就**立刻补压**（re-arm）。栈里永远不会出现第二层哨兵 → 没有残留可错位；
+  //   · 返回键语义 = 撤销当前 UI 的一层（只看**当前画面**，不看弹出的那层是哪种哨兵）：
+  //       线程视图可见 → 点知乎自己的 ‹（原生回到列表）→ 弹层还在就补压哨兵继续守；
+  //       列表视图     → 关弹层（不再补压）；内联线程 → 收起并把视口带回原评论区。
+  //   · 旧版本遗留的多层哨兵在启动时静默排空（drainSentinels），一次性清账。
+  function threadBackArrow() {
+    // 只认「可见」的箭头：线程收起时知乎把节点 display:none，svg 的 rect 为 0
+    for (const svg of document.querySelectorAll('svg[class*="ArrowLeft"]')) {
+      const r = svg.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8) continue;
+      const head = svg.parentElement && svg.parentElement.parentElement;
+      const t = (head ? head.textContent : '').replace(/[\u200b]/g, '').trim();
+      if (!/^评论回复/.test(t)) continue;   // 头部那行必须就是「评论回复」
+      return svg;
     }
-    // 线程态 = 至少一个可见线程视图（列表可能可见[列表态]也可能隐藏[线程态]，都合法）
-    if (!listV || !threads.some(t => getComputedStyle(t).display !== 'none')) return null;
-    return { listV, threads };
+    return null;
   }
-  function backToCommentList() {
-    const els = threadViewEls();
-    if (!els) return false;
-    // 列表点亮 + 全部线程视图（含尸体）隐藏；display 值抄知乎列表视图原值（flex）
-    els.listV.style.display = 'flex';
-    for (const t of els.threads) t.style.display = 'none';
-    return true;
+  // 点知乎自己的返回箭头。⚠️ 它是个 cursor:pointer 的 div（没有 .click()），React 的监听
+  // 挂在根节点上，因此必须按真实指针序列派发。真机/现场实测：派发后滚动容器回 0、线程收起。
+  function leaveThreadView() {
+    const svg = threadBackArrow();
+    if (!svg) return false;
+    let el = svg;
+    while (el && el !== document.body
+           && !(el.tagName === 'BUTTON' || el.getAttribute('role') === 'button'
+                || getComputedStyle(el).cursor === 'pointer')) el = el.parentElement;
+    return clickLikeUser((el && el !== document.body) ? el : svg);
   }
-  // 点「查看全部 N 条回复」→ 压线程哨兵；并先藏掉上一轮残留的可见线程尸体（防叠加遮挡）。
-  // v1.9.12 补：此点击还可能是「内联评论 → 独立回复页弹层」入口（点时弹层不存在，
-  // 点击后知乎新开一个只有线程视图的弹层）。此时要记录「进弹层前的滚动锚点」——
-  // 这类弹层关闭后（无论返回键还是关闭按钮），知乎会把视口留在回答正文深处，
-  // 用户看到「跳过了评论页」。关闭时恢复到该锚点。（变量声明在 pendingReveal 处，避免 TDZ）
+  // 补压哨兵（re-arm）：让「栈顶恒有一条哨兵」这个不变式重新成立（幂等，见 pushGuard）
+  function rearmGuard() { pushGuard(); }
+  // 静默排空残留哨兵。仅用于清理**旧版本**留下的层（新版恒为一层、不会产生残留）：
+  // 每 150ms 退一层，落到非 z2m 条目即停，最多 10 层防失控。
+  function drainSentinels(depth) {
+    const n = depth || 0;
+    if (n >= 10) return;
+    const cur = history.state;
+    if (cur && (cur.z2mThread === 1 || cur.z2mComment === 1)) {
+      backOnce();
+      setTimeout(() => drainSentinels(n + 1), 150);
+    }
+  }
+  // 点「查看全部 N 条回复」：只记录「内联入口」的滚动锚点，**不再压哨兵、不再碰 display**。
+  // v1.9.12 的锚点用途：内联评论 → 独立回复页弹层（点时弹层不存在，点击后知乎新开一个
+  // 只有线程视图的弹层）关闭后，知乎会把视口留在回答正文深处，用户看到「跳过评论页」。
+  // 变量声明在 pendingReveal 处（避免 TDZ），消费在 syncCommentModal 的关闭边沿。
   document.addEventListener('click', (e) => {
+    if (!alive()) return;
     const b = e.target && e.target.closest ? e.target.closest('button') : null;
     if (!b) return;
     const t = (b.textContent || '').replace(/[\u200b\u200c\u200d\ufeff]/g, '');
     if (!/查看全部\s*[\d,]*\s*条回复/.test(t)) return;
-    if (modalEl()) {
-      // 弹层内入口：藏掉上一轮残留的可见线程尸体（防叠加遮挡）+ 压线程哨兵
-      const box = modalEl();
-      for (const v of [...box.children]) {
-        if (isThreadView(v) && getComputedStyle(v).display !== 'none') v.style.display = 'none';
-      }
-      try { history.pushState({ z2mThread: 1 }, '', location.href); } catch (err) {}
-    } else {
-      // 内联入口：记录滚动锚点（弹层将由此点击打开）
-      preThreadScroll = { y: Math.round(scrollY), until: Date.now() + 60000 };
-    }
+    // 进线程视图 = 多出一层 UI。**内联入口也要有哨兵**（这一页的评论是就地展开的，
+    // 没有弹层），否则返回键会直接把用户带离页面。pushGuard 幂等：栈顶已有就不再加。
+    if (!modalEl()) preThreadScroll = { y: Math.round(scrollY), until: Date.now() + 60000 };
+    if (CFG.commentBack) pushGuard();
   }, true);
-  // 弹层关闭后恢复滚动锚点（挂在 syncCommentModal 的关→边沿，见下方 popstate/dropGuard 联动）
 
-  // 返回键：消费哨兵 → 关闭弹层，而不是离开问答页
-  // v1.9.15：切回列表成功后**静默排空残留 z2mThread 层**。
-  // 真机实锤（用户标签栈里堆了 7 层残留）：「进线程压 T、返回弹 T」模型下，若栈里已有
-  // 历史残留 T 层，返回弹出的可能是**残留层而非本次层**——本次 T 层变成新残留，永远
-  // 清不掉；且残留层被弹光的瞬间（落到 C），再按返回就误关弹层。
-  // 解法：切回列表成功后，启动 drain 循环——栈顶还是 z2mThread 就 backOnce 静默退
-  // （每 150ms 一层，最多 10 层），落到 z2mComment/非哨兵条目即停。drain 期间用户再按
-  // 返回会与 drain 竞争：drain 的 back 触发 popstate 带 selfPop，被 handler 头部吞掉，
-  // 不影响用户侧语义（此刻视图已是列表，guardPushed=true 指向 C，下次返回正常关弹层）。
-  function drainThreadSentinels() {
-    let n = 0;
-    const step = () => {
-      if (n++ >= 10) return;
-      const cur = history.state;
-      if (cur && cur.z2mThread === 1) { backOnce(); setTimeout(step, 150); }
-    };
-    step();
-  }
+  // 返回键：弹出栈顶哨兵后，按**当前 UI**决定回到哪一层（不看弹出的那层是什么类型）
   window.addEventListener('popstate', () => {
+    if (!alive()) return;
     if (selfPop) { selfPop = false; return; }
-    // 线程哨兵被弹出：弹层开着且在回复线程视图 → 切回列表视图，弹层保持。
-    if (modalEl() && threadViewEls()) {
-      if (backToCommentList()) { drainThreadSentinels(); return; }
-    }
-    // v1.9.14：弹出的是**残留的** z2mThread 层（视图已不在线程态）——循环退掉所有残留
-    // z2m 层直到落到 z2mComment（保留它给「关弹层」用）或非哨兵条目。每层 selfPop 静默退。
-    const cur = history.state;
-    if (cur && cur.z2mThread === 1 && !modalEl()) {
-      backOnce();
-      drainThreadSentinels();
+    if (!CFG.commentBack) return;        // 用户关掉了「返回键关弹层」，一切交还浏览器
+    guardPushed = false;                 // 栈顶哨兵已被用户弹出
+    const leftThread = leaveThreadView();      // ① 线程视图 → 点知乎自己的 ‹ 原生回列表
+    if (modalEl()) {                           // ② 弹层还在：再补一层，返回键继续守弹层
+      if (!leftThread) closeCommentModal();
+      rearmGuard();
       return;
     }
-    if (!guardPushed) return;
-    guardPushed = false;
-    if (modalEl()) closeCommentModal();
+    if (leftThread) {                          // ③ 内联线程：只退这一层（不补压，下次返回正常走）
+      // 内联线程收起后，知乎不会把视口带回原评论区；按点击时记下的锚点拉回去。
+      // （不做的话用户会停在回答正文里 = 他说的「跳过评论页直接回问答页」）
+      if (preThreadScroll && Date.now() < preThreadScroll.until) {
+        const anchor = preThreadScroll;
+        preThreadScroll = null;
+        setTimeout(() => { try { window.scrollTo(0, anchor.y); } catch (e) {} }, 150);
+      }
+      return;
+    }
+    drainSentinels();                          // ④ 弹层已关：清掉旧版本残留哨兵
   });
 
   // ---- 图片查看器（.ImageView）：放大的图片回到屏幕中央 ----
@@ -2340,6 +2378,14 @@
   function start() {
     obs.observe(document.body, { childList: true, subtree: true, attributes: false });
     tick(); syncCommentModal();
+    // v1.9.16：清理旧版本（≤1.9.15 的「每进一次线程压一层 z2mThread」）留在标签历史里的
+    // 残留哨兵。刷新不会清 history，不清账的话用户第一次返回会先弹掉残留层 → 判据错位 →
+    // 出现「跳过评论页直接回问答页」。只在弹层没开时清（开着说明栈顶是本次的合法哨兵）。
+    if (!modalEl() && !threadBackArrow() && history.state
+        && (history.state.z2mThread === 1 || history.state.z2mComment === 1)) {
+      guardPushed = false;
+      drainSentinels();
+    }
     window.addEventListener('resize', () => {
       // 横竖屏切换后 screen.width 会变：重算基准，再让 applyZoom 按新的可用宽校准 SW。
       // 这里可以安全地直接清扫描记忆（start() 在扫描记忆初始化之后才执行），不必等 tick 发现 SW 变化。
@@ -2358,9 +2404,11 @@
   // 因此不要拿它当「关掉脚本」的对照基线做 A/B 诊断，
   // 详见 AGENTS.md 的「工作流」与 test/README.md 的探针表注。
   window.__z2mStop = () => {
+    window.__z2mInst = (window.__z2mInst || 0) + 1;   // 让本实例的 click/popstate 监听失效
     obs.disconnect(); clearTimeout(timer); clearTimeout(zoomFixTimer); clearInterval(poll); st.remove();
     curZ = 1; document.documentElement.style.removeProperty('zoom');
   };
+  window.__z2mVersion = '1.9.16';   // 诊断口子：真机确认在跑的版本
   window.__z2mTick = tick;
   window.__z2mSync = syncCommentModal;
   // 测试口子：单测直接调 holder 钳制（test-holder-pin.js 构造吹大场景后调它断言钳制效果）

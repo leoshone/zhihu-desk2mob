@@ -1,6 +1,8 @@
 // e2e3.js — 问题页完整往返（当前安装版本）：开评论 → 进线程 → 返回 → 再进 → 返回
 'use strict';
+const fs = require('fs');
 const C = require('./cdp-local');
+const SRC = fs.readFileSync(__dirname + '/../zhihu-desk2mob.user.js', 'utf8');
 
 const clean = `const clean = s => (s || '').replace(/[\\u200b\\u200c\\u200d\\ufeff]/g, '').trim();`;
 
@@ -35,7 +37,12 @@ const CLICK = (kind) => `(() => { ${clean}
 
   await api.send('Page.enable', {}, sid);
   await api.send('Page.reload', {}, sid);
-  await C.sleep(9000);
+  await C.sleep(7000);
+  if (process.env.INJECT !== '0') {
+    await C.evalJson(api, SRC, sid);
+    await C.sleep(1200);
+    console.log('注入:', JSON.stringify(await C.evalJson(api, '({v:window.__z2mVersion,inst:window.__z2mInst,hasLog:typeof window.__z2mLog})', sid)));
+  }
   await S('0 重载后');
   console.log('开评论:', await C.evalJson(api, CLICK('cm'), sid));
   await C.sleep(9000);

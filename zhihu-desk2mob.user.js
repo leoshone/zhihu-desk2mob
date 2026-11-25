@@ -1497,22 +1497,26 @@
     guardPushed = false;                 // 栈顶哨兵已被用户弹出
     LOG('popstate modal=' + !!modalEl() + ' arrow=' + !!threadBackArrow());
     const leftThread = leaveThreadView();      // ① 线程视图 → 点知乎自己的 ‹ 原生回列表
-    if (modalEl()) {                           // ② 弹层还在：再补一层，返回键继续守弹层
-      if (!leftThread) closeCommentModal();
-      rearmGuard();
+    if (!leftThread) {
+      // ② 不在线程视图：弹层还开着就关掉（这一层就退完了，不再补哨兵）
+      if (modalEl()) { closeCommentModal(); return; }
+      drainSentinels();
       return;
     }
-    if (leftThread) {                          // ③ 内联线程：只退这一层（不补压，下次返回正常走）
-      // 内联线程收起后，知乎不会把视口带回原评论区；按点击时记下的锚点拉回去。
-      // （不做的话用户会停在回答正文里 = 他说的「跳过评论页直接回问答页」）
+    // ③ 刚点完 ‹：知乎是异步把线程节点摘掉的，**这一拍弹层可能还在**。
+    //    等 150ms 再判：弹层真还在（说明只是线程→列表）才补压哨兵继续守；
+    //    已经整体关掉就不补 —— 否则会「先压一条再撤回」，栈里多一次无谓抖动。
+    setTimeout(() => {
+      if (!alive()) return;
+      if (modalEl() || threadBackArrow()) { rearmGuard(); return; }
+      // 线程收起后落到内联评论列表：把视口带回点击前的评论区位置
       if (preThreadScroll && Date.now() < preThreadScroll.until) {
         const anchor = preThreadScroll;
         preThreadScroll = null;
-        setTimeout(() => { try { window.scrollTo(0, anchor.y); } catch (e) {} }, 150);
+        setTimeout(() => { try { window.scrollTo(0, anchor.y); } catch (e) {} }, 80);
       }
-      return;
-    }
-    drainSentinels();                          // ④ 弹层已关：清掉旧版本残留哨兵
+      drainSentinels();
+    }, 150);
   });
 
   // ---- 图片查看器（.ImageView）：放大的图片回到屏幕中央 ----

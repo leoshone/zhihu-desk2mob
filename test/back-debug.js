@@ -54,10 +54,14 @@ const CLICK_CM = `(() => { ${clean}
   await S('2 线程');
   await C.evalJson(api, 'history.back();1', sid);
   await C.sleep(2500);
-  await S('3 返回');
+  await S('3 返回→列表?');
   await C.evalJson(api, 'history.back();1', sid);
   await C.sleep(2500);
-  await S('4 返回');
+  await S('4 返回→关弹层?');
+  console.log('再返回（应为正常导航/无操作）:');
+  await C.evalJson(api, 'history.back();1', sid);
+  await C.sleep(2500);
+  await S('5 第三次返回');
   api.close();
   process.exit(0);
 })().catch(e => { console.error('ERR', e.message); process.exit(1); });

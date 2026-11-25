@@ -24,6 +24,15 @@
   // 这类完全对不上的错乱（调试时反复踩到）。每次启动递增计数，旧实例的监听一律 no-op。
   const MY_INST = (window.__z2mInst = (window.__z2mInst || 0) + 1);
   const alive = () => window.__z2mInst === MY_INST;
+  // 诊断日志（环形 80 条）：真机上「返回键做了什么」只能靠它取证。
+  // 读法：adb 连 CDP 后 eval `window.__z2mLog`。
+  function LOG(msg) {
+    try {
+      const a = (window.__z2mLog = window.__z2mLog || []);
+      a.push(new Date().toISOString().slice(14, 23) + ' ' + msg);
+      if (a.length > 80) a.shift();
+    } catch (e) {}
+  }
 
   // 窄列宽度（CSS px）。**屏幕上的实际大小 = 名义字号 × (屏幕可用宽 ÷ SW)** ——
   // 列越窄，同一个字号在屏上就越大，而列**仍然恰好铺满屏幕**（zoom = visW / SW 会同比变大，
@@ -1112,6 +1121,7 @@
   const CLOSE_SEL = '[aria-label="关闭"]';
 
   let guardPushed = false;   // 哨兵历史条目是否处于已压入状态
+  let armAt = 0;             // 最近一次压入哨兵的时刻（反向清理的宽限期，见 syncCommentModal）
   let selfPop = false;       // 标记「由脚本主动 history.back()」，用于区分用户返回
   let modalWasOpen = false;  // 上一拍的弹层开关状态
 
@@ -1193,7 +1203,7 @@
     if (sentinelOnTop()) { guardPushed = true; return; }
     try {
       history.pushState({ z2mComment: 1 }, '', location.href);
-      guardPushed = true;
+      guardPushed = true; armAt = Date.now(); LOG('push sentinel');
     } catch (e) { guardPushed = false; }
   }
 
@@ -1209,13 +1219,12 @@
     try { history.back(); } catch (e) { selfPop = false; }
   }
   function dropGuard() {
-    if (!guardPushed) return;
+    // 不依赖本地布尔值：刷新后 guardPushed=false 但栈里可能还有哨兵（旧的 / 上一次会话的）。
+    // 只要**当前条目是哨兵**就退，落到非哨兵条目即停（真实导航绝不撤销）。
     guardPushed = false;
-    // 循环退层：只要栈顶还是 z2m 哨兵就继续退（异步链式，每 150ms 一步）
     const step = () => {
       const cur = history.state;
-      if (cur && (cur.z2mThread === 1 || cur.z2mComment === 1)) backOnce();
-      // 落到非哨兵条目即停（真实导航不撤销）
+      if (cur && (cur.z2mThread === 1 || cur.z2mComment === 1)) { LOG('drop sentinel'); backOnce(); }
     };
     step();
     // back 异步生效：链式复查，最多 10 层防失控
@@ -1295,6 +1304,13 @@
     // 兜住两种没有点击捕获的路径：①脚本注入前线程就已开着；②知乎自己从别处打开线程。
     // pushGuard 幂等（栈顶已有哨兵就不压），所以每拍调用不会多压层。
     if (CFG.commentBack && threadBackArrow()) pushGuard();
+    // 反向清理：既没有弹层、也没有线程视图，栈顶却还挂着哨兵 —— 说明用户是**自己点的 ‹ /
+    // 自己收起的评论区**（不是按返回），哨兵没人消费了。此时主动撤回，否则用户下一次按返回
+    // 会「什么都不发生」（先被这条哨兵吃掉）。手动退层与返回键退层必须收敛到同一个栈形。
+    // 宽限 1.5s：刚压完哨兵时线程/弹层可能还在渲染路上（知乎渲染 + 动画），
+    // 这时候反向清理会把刚压的哨兵立刻退掉 → 返回键又没人守。
+    if (CFG.commentBack && !open && !threadBackArrow() && sentinelOnTop()
+        && Date.now() - armAt > 1500) dropGuard();
     if (open) fixCommentModal();
     revealInlineComments();
   }
@@ -1410,27 +1426,39 @@
   //       列表视图     → 关弹层（不再补压）；内联线程 → 收起并把视口带回原评论区。
   //   · 旧版本遗留的多层哨兵在启动时静默排空（drainSentinels），一次性清账。
   function threadBackArrow() {
-    // 只认「可见」的箭头：线程收起时知乎把节点 display:none，svg 的 rect 为 0
+    // 只认「用户真能看到的」那颗箭头。知乎的线程视图会留**隐藏副本**（同一份内容
+    // opacity:0 / 在视口外），只判 rect 会把副本当成当前线程，点它毫无反应。
+    // 所以：①头部文本必须是「评论回复」；②在视口内的话必须**命中测试命中它自己**
+    // （隐藏副本会被别的东西盖住 / 在视口外）；③视口外的只要求祖先链可见。
+    const vh = window.innerHeight, vw = window.innerWidth;
     for (const svg of document.querySelectorAll('svg[class*="ArrowLeft"]')) {
       const r = svg.getBoundingClientRect();
       if (r.width < 8 || r.height < 8) continue;
       const head = svg.parentElement && svg.parentElement.parentElement;
       const t = (head ? head.textContent : '').replace(/[\u200b]/g, '').trim();
-      if (!/^评论回复/.test(t)) continue;   // 头部那行必须就是「评论回复」
+      if (!/^评论回复/.test(t)) continue;
+      const cx = Math.round(r.left + r.width / 2), cy = Math.round(r.top + r.height / 2);
+      const inView = cx >= 0 && cy >= 0 && cx < vw && cy < vh;
+      if (inView) {
+        const hit = document.elementFromPoint(cx, cy);
+        if (!hit || !(hit === svg || svg.contains(hit))) continue;
+      }
       return svg;
     }
     return null;
   }
-  // 点知乎自己的返回箭头。⚠️ 它是个 cursor:pointer 的 div（没有 .click()），React 的监听
-  // 挂在根节点上，因此必须按真实指针序列派发。真机/现场实测：派发后滚动容器回 0、线程收起。
+  // 点知乎自己的返回箭头。
+  // ⚠️ 实测（2026-11-25，逐层试出来的）：**点 svg 本身毫无反应**，必须点它的父级 SPAN
+  //    （`<span><svg/></span>`，span 与更外层的 div.css-1jm49l2 都是 cursor:pointer）。
+  //    所以从 svg.parentElement 开始往上找第一个可点容器，绝不把 svg 当目标。
   function leaveThreadView() {
     const svg = threadBackArrow();
-    if (!svg) return false;
-    let el = svg;
+    if (!svg) { LOG('leaveThread: no visible arrow'); return false; }
+    let el = svg.parentElement;
     while (el && el !== document.body
            && !(el.tagName === 'BUTTON' || el.getAttribute('role') === 'button'
                 || getComputedStyle(el).cursor === 'pointer')) el = el.parentElement;
-    return clickLikeUser((el && el !== document.body) ? el : svg);
+    return clickLikeUser((el && el !== document.body) ? el : svg.parentElement);
   }
   // 补压哨兵（re-arm）：让「栈顶恒有一条哨兵」这个不变式重新成立（幂等，见 pushGuard）
   function rearmGuard() { pushGuard(); }
@@ -1467,6 +1495,7 @@
     if (selfPop) { selfPop = false; return; }
     if (!CFG.commentBack) return;        // 用户关掉了「返回键关弹层」，一切交还浏览器
     guardPushed = false;                 // 栈顶哨兵已被用户弹出
+    LOG('popstate modal=' + !!modalEl() + ' arrow=' + !!threadBackArrow());
     const leftThread = leaveThreadView();      // ① 线程视图 → 点知乎自己的 ‹ 原生回列表
     if (modalEl()) {                           // ② 弹层还在：再补一层，返回键继续守弹层
       if (!leftThread) closeCommentModal();

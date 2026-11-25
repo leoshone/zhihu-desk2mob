@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.9.23
+// @version      1.9.28
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**；v1.9.17 重写评论「回复线程」的返回键语义——不再用 display 手术模拟视图切换（真机上会把知乎自己的切换钉死，导致「第二次点查看全部回复点不动」），改为返回时点知乎自带的 ‹（实测要打到它的父级 SPAN，点 svg 图标本身无效）原生回列表，历史哨兵恒为一层且用户手动退层时主动撤回——「从回复页返回却跳过评论页直接回问答页」「按了返回没反应」「关掉评论弹层要多按一次返回」「关弹层的关闭动画里连按返回会直接退出问答页」等错位问题一并消失；v1.9.20 起每拍校验「弹层/线程可见 ⇔ 栈顶有哨兵」的不变式（消灭一切补压空窗），且弹层关闭失败时自动放行返回键（宁可关不掉也不吞键卡死）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -1142,6 +1142,7 @@
   let quietClose = 0;        // 关闭动画保护窗的截止时刻（声明提前避免 TDZ，见 popstate/closeCommentModal）
   let lastPopstateAt = 0;    // 最近一次用户手势返回（popstate）的时刻——tick 与之竞争的静默期基准
   let selfPop = false;       // 标记「由脚本主动 history.back()」，用于区分用户返回
+  let selfPopBypass = false; // ×按钮路径：脚本 back 产生的 popstate 仍要走完整分派
   let modalWasOpen = false;  // 上一拍的弹层开关状态
 
   // ⚠️ v1.9.16：`.Modal-content` 在页面上**恒存在一份隐藏预渲染副本**（真机实测：
@@ -1209,6 +1210,72 @@
         card.style.setProperty('align-self', 'stretch', 'important');
       }
     }
+    // ③ 关闭按钮接管：视口外的废弃按钮 relocation 到可见位置并绑自有关闭逻辑
+    relocateCloseButton();
+  }
+
+  // ============ × 关闭按钮接管（v1.9.24，配合 edgeGuard 的返回替代） ============
+  // 知乎 2026-11 版弹层的关闭按钮 [aria-label=关闭] 是废弃控件：挂在弹层容器上但
+  // ①被视口外放置（x≈1010 > 屏宽 980）②没有绑定任何事件（fiber props.onClick 存在
+  // 但依赖合成事件字段，DOM click 无法触发其实际逻辑——真实点击/指针序列/CDP touch
+  // 全部无效）。用户实测在 fresh 渲染态点它弹层正常关闭（走 React 正常委托路径），
+  // 失效只出现在个别渲染态。
+  // 策略：弹层可见时把这个按钮 relocation 到弹层右上角（视口内、可点、可见），
+  // 并绑自有 handler（history.back() 走完整分派）作为「× 关闭」。这个按钮同时也是
+  // 「左缘滑动拦截」（edgeGuard）的视觉锚点——用户左缘滑=返回≈点×，双通道等价。
+  function relocateCloseButton() {
+    const btn = document.querySelector(CLOSE_SEL);
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const inView = r.left >= 0 && r.right <= innerWidth && r.width >= 20 && r.height >= 20;
+    if (inView && btn.__z2mRelocated) return;    // 已就位且在视口内，不重复处理
+    btn.__z2mRelocated = true;
+    const st = btn.style;
+    st.setProperty('position', 'fixed', 'important');
+    st.setProperty('right', '12px', 'important');
+    st.setProperty('top', '12px', 'important');
+    st.setProperty('left', 'auto', 'important');
+    st.setProperty('width', '44px', 'important');
+    st.setProperty('height', '44px', 'important');
+    st.setProperty('min-width', '44px', 'important');
+    st.setProperty('padding', '0', 'important');
+    st.setProperty('margin', '0', 'important');
+    st.setProperty('border-radius', '22px', 'important');
+    st.setProperty('background', 'rgba(0,0,0,0.5)', 'important');
+    st.setProperty('color', '#fff', 'important');
+    st.setProperty('z-index', '2147483647', 'important');
+    st.setProperty('display', 'flex', 'important');
+    st.setProperty('align-items', 'center', 'important');
+    st.setProperty('justify-content', 'center', 'important');
+    const svg = btn.querySelector('svg');
+    if (svg) {
+      svg.style.setProperty('width', '24px', 'important');
+      svg.style.setProperty('height', '24px', 'important');
+      svg.style.setProperty('min-width', '24px', 'important');
+      svg.style.setProperty('min-height', '24px', 'important');
+    }
+    if (!btn.__z2mCloseHandler) {
+      btn.__z2mCloseHandler = true;
+      let lastHit = 0;                            // pointerup+click 双触发节流
+      const h = (e) => {
+        if (!alive()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const now = Date.now();
+        if (now - lastHit < 800) return;
+        lastHit = now;
+        LOG('×-button → back (bypass)');
+        // 走真 popstate（唯一 100% 可靠的关弹层通道）：backOnce 的 selfPop 会吞分派，
+        // 所以设 selfPopBypass 让这次 popstate 继续走完整分派（关弹层/退线程）。
+        selfPopBypass = true;
+        quietClose = 0;                           // bypass 路径不需要桥（popstate 即消费）
+        backOnce();
+      };
+      btn.addEventListener('pointerup', h, { capture: true });
+      btn.addEventListener('click', h, { capture: true });
+      btn.addEventListener('touchend', h, { capture: true });
+    }
+    LOG('close button relocated to viewport');
   }
 
   // 压入一条哨兵历史：返回键会先消费它，而不是直接离开知乎
@@ -1279,32 +1346,27 @@
     } catch (e) { return false; }
   }
 
-  // 关闭弹层：点知乎自己的「关闭」按钮；不行再补 Escape。
-  // ⚠️ v1.9.20 硬规则：**关闭必须确认生效**。真机实测过一种死局：某些渲染态下
-  // 关闭按钮/Escape/遮罩全部失灵，返回键走「关弹层」分支每次都吞掉却关不掉 = 死循环吞键。
-  // 因此：动画结束后（650ms）弹层若还在 → 判定关闭失败：
-  //   · 退掉桥哨兵（下一次返回不再被吞，让浏览器原生后退接管——宁可页面被带走也不卡死）；
-  //   · LOG 记录失败（真机可查）。
-  // 弹层真没了 → 退桥归零（幂等）。
+  // 关闭弹层（v1.9.25 重写）：
+  // ⚠️ 绝不能点知乎的 [aria-label=关闭] 按钮——v1.9.24 起它被我们 relocation 并绑了
+  // 自有 handler（backOnce），closeCommentModal 点它 = 递归触发 handler = 消费自己
+  // 刚 rearm 的哨兵 = 空转（真机日志实锤：×-button → back 与 close 互相嵌套）。
+  // 知乎该按钮本就无事件绑定（废弃控件），点击它从来不能真正关弹层。
+  // 现役关闭通道只有 Escape（部分渲染态有效）+ 失败放行（v1.9.20）。
   function closeCommentModal() {
-    const found = locateModal();
-    if (!found) return;
-    const scope = found.layer || found.mc;
-    const btn = scope.querySelector(CLOSE_SEL) || document.querySelector(CLOSE_SEL);
-    if (btn) clickLikeUser(btn); else sendEscape();
+    sendEscape();
     // 兜底：一拍之后若仍开着，再补一发 Escape
     setTimeout(() => {
       if (modalEl()) sendEscape();
     }, 350);
-    // 动画结束点：确认结果
+    // 动画结束点：确认结果。失败 → 退桥放行（返回键交还浏览器），成功 → 退桥归零。
     setTimeout(() => {
       if (!alive()) return;
       quietClose = 0;
       if (modalEl()) {
         LOG('close FAILED — release guard');
-        drainSentinels();              // 关闭失败：退桥，返回键交还浏览器
+        drainSentinels();
       } else {
-        drainSentinels();              // 成功：退桥归零（幂等）
+        drainSentinels();
       }
     }, 650);
   }
@@ -1542,7 +1604,13 @@
   // 等动画结束确认弹层真没了再退掉它（quietClose 窗口内 popstate 只做标记）。
   window.addEventListener('popstate', () => {
     if (!alive()) return;
-    if (selfPop) { selfPop = false; return; }
+    if (selfPop) {
+      selfPop = false;
+      if (!selfPopBypass) return;          // 普通 backOnce：吞掉（tick/drain 语义）
+      selfPopBypass = false;               // ×路径：继续走完整分派
+      LOG('popstate bypass (× path)');
+      // 落到下方正常分派逻辑（guardPushed=false 之后）
+    }
     if (!CFG.commentBack) return;        // 用户关掉了「返回键关弹层」，一切交还浏览器
     // 关闭动画窗口内又按了一次返回：栈顶是桥哨兵，退掉它 = 用户看到的「关闭」，
     // UI 不再动（closeCommentModal 的 waiter 会收尾）。
@@ -2538,7 +2606,7 @@
     obs.disconnect(); clearTimeout(timer); clearTimeout(zoomFixTimer); clearInterval(poll); st.remove();
     curZ = 1; document.documentElement.style.removeProperty('zoom');
   };
-  window.__z2mVersion = '1.9.23';   // 诊断口子：真机确认在跑的版本
+  window.__z2mVersion = '1.9.28';   // 诊断口子：真机确认在跑的版本
   window.__z2mTick = tick;
   window.__z2mSync = syncCommentModal;
   // 测试口子：单测直接调 holder 钳制（test-holder-pin.js 构造吹大场景后调它断言钳制效果）

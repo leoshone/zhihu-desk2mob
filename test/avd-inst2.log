@@ -1,0 +1,3 @@
+confirm tabs: 0
+pages: http://localhost:8099/zhihu-desk2mob.user.js? | https://www.baidu.com/
+exit=1

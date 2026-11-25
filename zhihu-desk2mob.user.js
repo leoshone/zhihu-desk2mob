@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         知乎桌面版·手机单列适配 (Zhihu Desktop for Mobile)
 // @namespace    zhihu2mob
-// @version      1.9.20
+// @version      1.9.21
 // @description  在 Kiwi/Chrome「桌面版网站」模式下，把知乎桌面版重排为手机单列、正常字号。适配首页/问答/专栏，评论可正常展开收起；评论弹层支持返回键关闭，并修正其顶部不可达/右侧裁切（且**不再能被横向滑动推走**）；发布框去掉会撑高布局的「同时发布到想法」、按钮与头像尺寸归一；评论/正文里点开的图片查看器补偿反缩放，放大的图片回到屏幕中央显示（此前会整体跑出屏幕、只露一角；v1.4.16 起改为跟随知乎逐帧动画持续复位；**v1.4.17 起另支持正文图的第二种查看器——放大图直接挂在 body 下、类名全是 emotion hash，此前完全没被接管、图停在屏幕外**）；清掉右边缘残留的侧栏/页脚（帮助中心、举报中心、关于知乎等）；限制双指缩小——内容不会被缩到小于「恰好铺满」，不会变成半屏小字；正文字号按「屏上换算因子」微调（1.00，靠收窄列宽实现，不改 font-size）；**块状版式去掉内容列两侧的灰色留白，让块铺满整列（块与块之间的灰色间隔保留）**；隐藏首页「写想法」卡片里塌成竖排的「同步到圈子」、并把「发想法」按钮收进屏幕内完整可见；首页信息流的封面缩略图按正文行数定尺寸（默认 3 行，宽 190 → 152px），上下与文字精确对齐，正文在封面右侧与**下方**环绕（不再是窄列）；**卡片底部的「赞同 / 评论 / 收藏 …」操作栏在窄列里自动换行，右侧那几个按钮不再被屏幕裁掉（此前「赞同 7435 / 269 条评论 / 327 / 137 / 分享」只露到 327）**；问题页滚动后的吸顶标题栏里，「标题」与「关注问题」按钮压成一行（都缩小、标题左移，可见字数从 6.8 字提到 8.6 字）；**热榜页的条目缩略图按标题行数定尺寸（默认 2 行高，宽 190 → 81px），「N 万热度/分享」行收回文档流不再叠在摘要上（并连同知乎那块写死 190x105 的 ::after 灰色占位一起缩小，图片缩小后不再露灰边）**；**专栏页「推荐专栏」列表卡片里那张右侧的文章预览图也按正文行数缩小（默认 3 行，图底对齐第 3 行文字底），正文从第 4 行起回落全宽（不再是图片旁的窄列）**；**修掉圈子（PinItem）图文网格里缩略图被撑成竖图高、溢出格子盖住下方「评论」栏的问题**；**圈子页底部「与圈友分享你的想法…」浮动框下移、并在页面上水平居中（框内图标与文案保持知乎默认）**；**专栏文章底部「推荐阅读」横滑轮播改为第一张卡片对齐正文左缘、完整可见，其余卡片由右往左滑出可见（原版居中对齐会把第一张挤出屏幕左边、被裁掉）；且「推荐阅读」标题与第一张卡片都与正文一样保留左留白、不顶到手机边缘**；**登录/注册页（v1.4.18 起）去掉撑满首屏的背景插画、隐藏「打开知乎App」二维码推广面板，登录卡片占满整列——手机号/密码等输入区域不再被屏幕右缘裁掉**；**个人主页（v1.4.19 起）清掉桌面出血负 margin 与 content-box 撑宽、头像独立成行居中、名字/签名/「关注他·发私信」占满整行不再互相遮挡、正文解除 524px 写死宽度，顶部导航可横向滑动；v1.4.20 修复吸顶 tab 条 portal 叠在顶部导航上的错乱；v1.4.21 隐藏顶部导航壳的横向滚动条（新内核下显示为「关注」下方灰色横线）**；**v1.5.0 适配知乎 2026-11 改版（新增桌面左侧栏 + 新顶部导航 LeanAppHeaderBar）：按几何特征识别并隐藏左侧栏（入口在顶栏都有，属去重不砍功能），内容区壳与列容器解除桌面写死宽（1104/784px）收回满宽，内容壳内拒绝收缩的 320px 右栏（个人主页/搜索页把内容挤成 38px 竖排的元凶）一并隐藏，问题页隐藏按钮行左侧 24px 竖排数据窄条（好问题/评论/关注/浏览在窄列糊成一片），个人主页隐藏新版吸顶 tab 条 portal（.ProfileMain-contents），圈子页成员头像行允许换行（此前横排溢出屏幕 746px），新增 CFG.forceSW 调试口子供桌面环境复现真机窄列；v1.5.1 修右栏隐藏被记忆化挡住（搜索/个人主页的右栏异步渲染，首拍处理时不存在、之后永远漏网，真机 search 页 main 被挤成 38px 竖排——右栏与内容壳改每拍重查）；走查 8 页（首页/热榜/问答/专栏/个人主页/登录/圈子/搜索）DOM 断言全部 0 溢出；v1.5.5 修顶部导航 tab 消失（tab 容器 flex-basis 704px 被窄行收缩压成 0，导航壳内全部 flex-shrink:0 靠横滑），问题页恢复 12px 侧边距（新版问题页去掉了块内边距、bleedEdges 前提失效致标题/按钮贴边）；v1.5.6b 修 wrap 条件漏洞（回答页按钮行本身 254px < 列宽，行宽条件永不成立 → wrap 改无条件写）；v1.5.6 修回答页（/question/x/answer/y）问题头三按钮与数据重叠（数据窄条被压成 0 宽，隐藏条件去掉宽度下限）、底部浮动操作栏加 12px 内边距不再贴边；v1.5.2 隐藏首页右缘竖排残留（创作中心/ICP 备案 24px 竖条）；v1.5.3 修复新版写想法卡片：快捷入口行（提问/写回答/发视频…）允许换行+文字 nowrap（此前被压成 54px 逐字竖排），「发想法」按钮壳移动到工具栏下方独立一行右对齐；v1.6.0~1.6.3 内容壳 40px padding 收敛为全站统一 16px（谷歌移动搜索/知乎 App 等主流一致，此前 52px 每侧、内容利用率仅 71%），底部浮动操作栏同步 16px（此前画在 x=298 溢出列外，relative 左移会压到视频图标）**；v1.9.17 重写评论「回复线程」的返回键语义——不再用 display 手术模拟视图切换（真机上会把知乎自己的切换钉死，导致「第二次点查看全部回复点不动」），改为返回时点知乎自带的 ‹（实测要打到它的父级 SPAN，点 svg 图标本身无效）原生回列表，历史哨兵恒为一层且用户手动退层时主动撤回——「从回复页返回却跳过评论页直接回问答页」「按了返回没反应」「关掉评论弹层要多按一次返回」「关弹层的关闭动画里连按返回会直接退出问答页」等错位问题一并消失；v1.9.20 起每拍校验「弹层/线程可见 ⇔ 栈顶有哨兵」的不变式（消灭一切补压空窗），且弹层关闭失败时自动放行返回键（宁可关不掉也不吞键卡死）。提示：需配合浏览器「请求桌面版网站」开关使用；未开桌面模式时脚本自动不生效。
 // @match        https://www.zhihu.com/*
 // @match        https://zhuanlan.zhihu.com/*
@@ -1123,6 +1123,7 @@
   let guardPushed = false;   // 哨兵历史条目是否处于已压入状态
   let armAt = 0;             // 最近一次压入哨兵的时刻（反向清理的宽限期，见 syncCommentModal）
   let quietClose = 0;        // 关闭动画保护窗的截止时刻（声明提前避免 TDZ，见 popstate/closeCommentModal）
+  let lastPopstateAt = 0;    // 最近一次用户手势返回（popstate）的时刻——tick 与之竞争的静默期基准
   let selfPop = false;       // 标记「由脚本主动 history.back()」，用于区分用户返回
   let modalWasOpen = false;  // 上一拍的弹层开关状态
 
@@ -1326,9 +1327,18 @@
     // pushGuard / dropGuard 都幂等，每拍调用不会多压/多退。
     if (CFG.commentBack) {
       const uiOpen = !!(open || threadBackArrow());
-      if (uiOpen && !sentinelOnTop()) { pushGuard(); LOG('tick rearm (invariant)'); }
-      else if (!uiOpen && sentinelOnTop() && Date.now() - armAt > 1500
-               && Date.now() > quietClose) { LOG('tick drop (invariant)'); dropGuard(); }
+      if (uiOpen && !sentinelOnTop()) {
+        // ⚠️ 正向补压仅在「距上次 popstate ≥ 600ms」时由 tick 执行。
+        // popstate 路径自己会 rearm；tick 在手势返回后立即插一脚 pushState 会与
+        // Chrome 预测式返回手势的预览期竞争（renderer 忙 = 判定无响应 = 直通系统返回）。
+        if (Date.now() - lastPopstateAt > 600) { pushGuard(); LOG('tick rearm (invariant)'); }
+      } else if (!uiOpen && sentinelOnTop() && Date.now() - armAt > 1500
+               && Date.now() - lastPopstateAt > 2500
+               && Date.now() > quietClose) {
+        // 反向清理同样避开手势返回后的窗口：popstate 分支自己会 drain，
+        // tick 抢跑会引发连续 backOnce，同样的竞争。
+        LOG('tick drop (invariant)'); dropGuard();
+      }
     }
     if (open) fixCommentModal();
     revealInlineComments();
@@ -1489,7 +1499,7 @@
     const cur = history.state;
     if (cur && (cur.z2mThread === 1 || cur.z2mComment === 1)) {
       backOnce();
-      setTimeout(() => drainSentinels(n + 1), 150);
+      setTimeout(() => drainSentinels(n + 1), 260);
     }
   }
   // 点「查看全部 N 条回复」：只记录「内联入口」的滚动锚点，**不再压哨兵、不再碰 display**。
@@ -1534,12 +1544,15 @@
       drainSentinels();
       return;
     }
-    // ③ 刚点完 ‹：知乎是异步把线程节点摘掉的。**主路径由每拍不变式兜住**（可见⇔哨兵），
-    //    这里只处理滚动锚点：若 300ms 后线程和弹层都没了（内联线程收起），把视口带回
-    //    点击前的评论区。（补压不再依赖这个 setTimeout——空窗已由不变式消灭。）
+    // ③ 刚点完 ‹：知乎是异步把线程节点摘掉的。先**同步补压**守住（用户连按第二下的保护，
+    //    不能等 tick——tick 有 600ms 静默期防手势竞争）。若 300ms 后发现弹层真没了
+    //    （内联线程收起），waiter 再把这条哨兵退掉。
+    rearmGuard();
     setTimeout(() => {
       if (!alive()) return;
       if (threadBackArrow() || modalEl()) return;
+      LOG('post-‹ waiter: modal gone, release');
+      drainSentinels();
       if (preThreadScroll && Date.now() < preThreadScroll.until) {
         const anchor = preThreadScroll;
         preThreadScroll = null;
@@ -2470,7 +2483,7 @@
     obs.disconnect(); clearTimeout(timer); clearTimeout(zoomFixTimer); clearInterval(poll); st.remove();
     curZ = 1; document.documentElement.style.removeProperty('zoom');
   };
-  window.__z2mVersion = '1.9.20';   // 诊断口子：真机确认在跑的版本
+  window.__z2mVersion = '1.9.21';   // 诊断口子：真机确认在跑的版本
   window.__z2mTick = tick;
   window.__z2mSync = syncCommentModal;
   // 测试口子：单测直接调 holder 钳制（test-holder-pin.js 构造吹大场景后调它断言钳制效果）
